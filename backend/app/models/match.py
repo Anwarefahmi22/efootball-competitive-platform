@@ -14,6 +14,7 @@ class MatchStatus(str, Enum):
     READY = "ready"
     IN_PROGRESS = "in_progress"
     RESULT_SUBMITTED = "result_submitted"
+    DISPUTED = "disputed"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 

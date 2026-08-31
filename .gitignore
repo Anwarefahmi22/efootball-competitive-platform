@@ -114,3 +114,4 @@ local.properties
 # OS
 .DS_Store
 Thumbs.db
+backend/storage/

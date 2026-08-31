@@ -1,18 +1,24 @@
+import mimetypes
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import get_current_user
 from app.core.bracket import advance_winner
+from app.core.permissions import get_current_admin
 from app.core.rating import new_rating
+from app.core.storage import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES, save_evidence_image
 from app.db.session import get_db
+from app.models.evidence import MatchEvidence
 from app.models.match import Match, MatchStatus
 from app.models.rating import PlayerRating
 from app.models.user import User
-from app.schemas.match import MatchRead, SubmitResult
+from app.schemas.evidence import DisputeCreate, EvidenceRead, ResolveDispute
+from app.schemas.match import MatchRead
 
 router = APIRouter()
 tournament_matches_router = APIRouter()
@@ -41,6 +47,24 @@ async def _apply_elo(db: AsyncSession, winner_id: UUID, loser_id: UUID) -> None:
     loser.losses += 1
 
 
+async def _finalize_match(db: AsyncSession, match: Match, score_a: int, score_b: int) -> None:
+    if score_a == score_b:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Draws are not allowed"
+        )
+    winner_id = match.player_a_id if score_a > score_b else match.player_b_id
+    loser_id = match.player_b_id if winner_id == match.player_a_id else match.player_a_id
+
+    match.score_a = score_a
+    match.score_b = score_b
+    match.winner_id = winner_id
+    match.status = MatchStatus.COMPLETED
+    match.completed_at = datetime.now(timezone.utc)
+
+    await _apply_elo(db, winner_id, loser_id)
+    await advance_winner(db, match, winner_id)
+
+
 @router.get("/{match_id}", response_model=MatchRead)
 async def get_match(match_id: UUID, db: AsyncSession = Depends(get_db)) -> Match:
     result = await db.execute(select(Match).where(Match.id == match_id))
@@ -62,18 +86,19 @@ async def list_tournament_matches(
     return list(result.scalars().all())
 
 
-@router.post("/{match_id}/submit-result", response_model=MatchRead)
+@router.post("/{match_id}/submit-result", response_model=EvidenceRead, status_code=status.HTTP_201_CREATED)
 async def submit_result(
     match_id: UUID,
-    payload: SubmitResult,
+    score_a: int = Form(...),
+    score_b: int = Form(...),
+    image: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> Match:
+) -> MatchEvidence:
     result = await db.execute(select(Match).where(Match.id == match_id))
     match = result.scalar_one_or_none()
     if match is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
-
     if current_user.id not in {match.player_a_id, match.player_b_id}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -82,28 +107,180 @@ async def submit_result(
     if match.status not in {MatchStatus.READY, MatchStatus.IN_PROGRESS}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Match is not accepting results",
+            detail="Match is not accepting a new result submission",
         )
-    if match.player_a_id is None or match.player_b_id is None:
+    if score_a == score_b:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Draws are not allowed")
+
+    content_type = image.content_type or mimetypes.guess_type(image.filename or "")[0]
+    if content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Match does not have two players"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only JPEG or PNG images are accepted",
         )
-    if payload.score_a == payload.score_b:
+    file_bytes = await image.read()
+    if len(file_bytes) > MAX_UPLOAD_BYTES:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Draws are not allowed"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Image exceeds 8MB limit"
+        )
+    extension = ".png" if content_type == "image/png" else ".jpg"
+    saved_path = save_evidence_image(str(match_id), file_bytes, extension)
+
+    evidence = MatchEvidence(
+        match_id=match.id,
+        submitted_by=current_user.id,
+        claimed_score_a=score_a,
+        claimed_score_b=score_b,
+        image_path=saved_path,
+    )
+    db.add(evidence)
+    match.status = MatchStatus.RESULT_SUBMITTED
+    await db.commit()
+    await db.refresh(evidence)
+    return evidence
+
+
+@router.get("/{match_id}/evidence", response_model=list[EvidenceRead])
+async def list_evidence(
+    match_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[MatchEvidence]:
+    match_result = await db.execute(select(Match).where(Match.id == match_id))
+    match = match_result.scalar_one_or_none()
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    if current_user.id not in {match.player_a_id, match.player_b_id}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only match participants can view evidence",
+        )
+    result = await db.execute(
+        select(MatchEvidence)
+        .where(MatchEvidence.match_id == match_id)
+        .order_by(MatchEvidence.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.get("/{match_id}/evidence/{evidence_id}/image")
+async def get_evidence_image(
+    match_id: UUID,
+    evidence_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> FileResponse:
+    match_result = await db.execute(select(Match).where(Match.id == match_id))
+    match = match_result.scalar_one_or_none()
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    if current_user.id not in {match.player_a_id, match.player_b_id}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only match participants can view evidence"
+        )
+    result = await db.execute(
+        select(MatchEvidence).where(
+            MatchEvidence.id == evidence_id, MatchEvidence.match_id == match_id
+        )
+    )
+    evidence = result.scalar_one_or_none()
+    if evidence is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found")
+    return FileResponse(evidence.image_path)
+
+
+@router.post("/{match_id}/confirm", response_model=MatchRead)
+async def confirm_result(
+    match_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Match:
+    result = await db.execute(select(Match).where(Match.id == match_id))
+    match = result.scalar_one_or_none()
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    if match.status != MatchStatus.RESULT_SUBMITTED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No pending result to confirm"
         )
 
-    winner_id = match.player_a_id if payload.score_a > payload.score_b else match.player_b_id
-    loser_id = match.player_b_id if winner_id == match.player_a_id else match.player_a_id
+    evidence_result = await db.execute(
+        select(MatchEvidence)
+        .where(MatchEvidence.match_id == match_id)
+        .order_by(MatchEvidence.created_at.desc())
+    )
+    evidence = evidence_result.scalars().first()
+    if evidence is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No evidence found")
+    if current_user.id not in {match.player_a_id, match.player_b_id}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a match participant")
+    if current_user.id == evidence.submitted_by:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The submitting player cannot confirm their own result",
+        )
 
-    match.score_a = payload.score_a
-    match.score_b = payload.score_b
-    match.winner_id = winner_id
-    match.status = MatchStatus.COMPLETED
-    match.completed_at = datetime.now(timezone.utc)
+    await _finalize_match(db, match, evidence.claimed_score_a, evidence.claimed_score_b)
+    await db.commit()
+    await db.refresh(match)
+    return match
 
-    await _apply_elo(db, winner_id, loser_id)
-    await advance_winner(db, match, winner_id)
+
+@router.post("/{match_id}/dispute", response_model=MatchRead)
+async def dispute_result(
+    match_id: UUID,
+    payload: DisputeCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Match:
+    result = await db.execute(select(Match).where(Match.id == match_id))
+    match = result.scalar_one_or_none()
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    if match.status != MatchStatus.RESULT_SUBMITTED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No pending result to dispute"
+        )
+
+    evidence_result = await db.execute(
+        select(MatchEvidence)
+        .where(MatchEvidence.match_id == match_id)
+        .order_by(MatchEvidence.created_at.desc())
+    )
+    evidence = evidence_result.scalars().first()
+    if evidence is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No evidence found")
+    if current_user.id not in {match.player_a_id, match.player_b_id}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a match participant")
+    if current_user.id == evidence.submitted_by:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The submitting player cannot dispute their own result",
+        )
+
+    match.status = MatchStatus.DISPUTED
+    await db.commit()
+    await db.refresh(match)
+    return match
+
+
+@router.post("/{match_id}/resolve-dispute", response_model=MatchRead)
+async def resolve_dispute(
+    match_id: UUID,
+    payload: ResolveDispute,
+    _admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+) -> Match:
+    result = await db.execute(select(Match).where(Match.id == match_id))
+    match = result.scalar_one_or_none()
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    if match.status != MatchStatus.DISPUTED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Match is not under dispute"
+        )
+
+    await _finalize_match(db, match, payload.score_a, payload.score_b)
     await db.commit()
     await db.refresh(match)
     return match

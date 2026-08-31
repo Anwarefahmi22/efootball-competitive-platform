@@ -12,6 +12,7 @@ from app.core.bracket import advance_winner
 from app.core.permissions import get_current_admin
 from app.core.rating import new_rating
 from app.core.storage import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES, save_evidence_image
+from app.core.trust import record_confirmed_match, record_dispute_filed, record_dispute_resolved
 from app.db.session import get_db
 from app.models.evidence import MatchEvidence
 from app.models.match import Match, MatchStatus
@@ -221,6 +222,7 @@ async def confirm_result(
         )
 
     await _finalize_match(db, match, evidence.claimed_score_a, evidence.claimed_score_b)
+    await record_confirmed_match(db, match.player_a_id, match.player_b_id)
     await db.commit()
     await db.refresh(match)
     return match
@@ -259,6 +261,8 @@ async def dispute_result(
         )
 
     match.status = MatchStatus.DISPUTED
+    match.disputed_by = current_user.id
+    await record_dispute_filed(db, current_user.id, evidence.submitted_by)
     await db.commit()
     await db.refresh(match)
     return match
@@ -278,6 +282,23 @@ async def resolve_dispute(
     if match.status != MatchStatus.DISPUTED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Match is not under dispute"
+        )
+
+    evidence_result = await db.execute(
+        select(MatchEvidence)
+        .where(MatchEvidence.match_id == match_id)
+        .order_by(MatchEvidence.created_at.desc())
+    )
+    evidence = evidence_result.scalars().first()
+    submitter_was_correct = (
+        evidence is not None
+        and evidence.claimed_score_a == payload.score_a
+        and evidence.claimed_score_b == payload.score_b
+    )
+
+    if evidence is not None and match.disputed_by is not None:
+        await record_dispute_resolved(
+            db, evidence.submitted_by, match.disputed_by, submitter_was_correct
         )
 
     await _finalize_match(db, match, payload.score_a, payload.score_b)

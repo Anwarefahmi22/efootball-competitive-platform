@@ -15,6 +15,7 @@ class TournamentCreate(BaseModel):
     description: str | None = None
     format: TournamentFormat = TournamentFormat.SINGLE_ELIMINATION
     max_participants: int
+    entry_fee: int = 0
     starts_at: datetime | None = None
 
     @field_validator("max_participants")
@@ -47,6 +48,8 @@ class TournamentRead(BaseModel):
     format: TournamentFormat
     status: TournamentStatus
     max_participants: int
+    entry_fee: int
+    prize_pool: int
     created_by: UUID
     starts_at: datetime | None
     created_at: datetime

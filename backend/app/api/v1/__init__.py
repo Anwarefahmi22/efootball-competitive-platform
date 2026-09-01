@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import analytics, auth, economy, fraud, matches, posts, ratings, social, tournaments, trust, users
+from app.api.v1 import analytics, auth, economy, fraud, matches, posts, ratings, seasons, social, tournaments, trust, users
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -17,3 +17,4 @@ api_router.include_router(fraud.router, prefix="/fraud", tags=["fraud"])
 api_router.include_router(posts.router, prefix="/posts", tags=["posts"])
 api_router.include_router(economy.router, prefix="/economy", tags=["economy"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(seasons.router, prefix="/seasons", tags=["seasons"])

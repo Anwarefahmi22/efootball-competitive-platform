@@ -38,6 +38,7 @@ def _to_read(tournament: Tournament) -> TournamentRead:
         entry_fee=tournament.entry_fee,
         prize_pool=tournament.prize_pool,
         draw_completed=tournament.draw_completed,
+        season_id=tournament.season_id,
         created_by=tournament.created_by,
         starts_at=tournament.starts_at,
         created_at=tournament.created_at,
@@ -74,6 +75,7 @@ async def create_tournament(
         prize_pool=0,
         created_by=current_user.id,
         starts_at=payload.starts_at,
+        season_id=payload.season_id,
     )
     db.add(tournament)
     await db.commit()

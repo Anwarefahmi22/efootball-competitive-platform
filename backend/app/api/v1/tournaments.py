@@ -8,10 +8,12 @@ from sqlalchemy.orm import selectinload
 from app.api.v1.auth import get_current_user
 from app.core.bracket import generate_bracket, is_power_of_two
 from app.core.economy import debit
+from app.core.league import compute_standings, generate_league_schedule
 from app.db.session import get_db
 from app.models.economy import TransactionType
-from app.models.tournament import Tournament, TournamentParticipant, TournamentStatus
+from app.models.tournament import Tournament, TournamentFormat, TournamentParticipant, TournamentStatus
 from app.models.user import User
+from app.schemas.league import StandingRow
 from app.schemas.tournament import ParticipantPublic, TournamentCreate, TournamentRead
 
 router = APIRouter()
@@ -109,6 +111,19 @@ async def get_tournament(
     return _to_read(tournament)
 
 
+@router.get("/{tournament_id}/standings", response_model=list[StandingRow])
+async def get_standings(tournament_id: UUID, db: AsyncSession = Depends(get_db)) -> list[StandingRow]:
+    tournament = await _load_tournament(db, tournament_id)
+    if tournament is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+    if tournament.format != TournamentFormat.LEAGUE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Standings only apply to league tournaments"
+        )
+    rows = await compute_standings(db, tournament_id)
+    return [StandingRow(**r) for r in rows]
+
+
 @router.post("/{tournament_id}/join", response_model=TournamentRead)
 async def join_tournament(
     tournament_id: UUID,
@@ -167,13 +182,22 @@ async def start_tournament(
         )
 
     count = len(tournament.participants)
-    if count < 2 or not is_power_of_two(count):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Participant count must be a power of 2 (at least 2) to start the bracket",
-        )
 
-    await generate_bracket(db, tournament, list(tournament.participants))
+    if tournament.format == TournamentFormat.LEAGUE:
+        if count < 2:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="League needs at least 2 participants"
+            )
+        await generate_league_schedule(db, tournament, list(tournament.participants))
+        tournament.status = TournamentStatus.IN_PROGRESS
+    else:
+        if count < 2 or not is_power_of_two(count):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Participant count must be a power of 2 (at least 2) to start the bracket",
+            )
+        await generate_bracket(db, tournament, list(tournament.participants))
+
     await db.commit()
     loaded = await _load_tournament(db, tournament.id)
     assert loaded is not None

@@ -11,6 +11,7 @@ from app.db.session import Base
 
 class TournamentFormat(str, Enum):
     SINGLE_ELIMINATION = "single_elimination"
+    LEAGUE = "league"
 
 
 class TournamentStatus(str, Enum):

@@ -10,8 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.auth import get_current_user
 from app.core.bracket import advance_winner
 from app.core.economy import credit
+from app.core.league import compute_standings, is_league_complete
 from app.core.permissions import get_current_admin
-from app.core.rating import new_rating
+from app.core.rating import new_rating, new_rating_draw
 from app.core.storage import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES, save_evidence_image
 from app.core.trust import record_confirmed_match, record_dispute_filed, record_dispute_resolved
 from app.db.session import get_db
@@ -19,13 +20,21 @@ from app.models.economy import TransactionType
 from app.models.evidence import MatchEvidence
 from app.models.match import Match, MatchStatus
 from app.models.rating import PlayerRating
-from app.models.tournament import Tournament, TournamentStatus
+from app.models.tournament import Tournament, TournamentFormat, TournamentStatus
 from app.models.user import User
 from app.schemas.evidence import DisputeCreate, EvidenceRead, ResolveDispute
 from app.schemas.match import MatchRead
 
 router = APIRouter()
 tournament_matches_router = APIRouter()
+
+
+async def _get_tournament(db: AsyncSession, tournament_id: UUID) -> Tournament:
+    result = await db.execute(select(Tournament).where(Tournament.id == tournament_id))
+    tournament = result.scalar_one_or_none()
+    if tournament is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+    return tournament
 
 
 async def _get_or_create_rating(db: AsyncSession, user_id: UUID) -> PlayerRating:
@@ -38,7 +47,7 @@ async def _get_or_create_rating(db: AsyncSession, user_id: UUID) -> PlayerRating
     return rating
 
 
-async def _apply_elo(db: AsyncSession, winner_id: UUID, loser_id: UUID) -> None:
+async def _apply_elo_win(db: AsyncSession, winner_id: UUID, loser_id: UUID) -> None:
     winner = await _get_or_create_rating(db, winner_id)
     loser = await _get_or_create_rating(db, loser_id)
     winner_new = new_rating(winner.rating, loser.rating, 1.0)
@@ -51,11 +60,18 @@ async def _apply_elo(db: AsyncSession, winner_id: UUID, loser_id: UUID) -> None:
     loser.losses += 1
 
 
-async def _distribute_prize_if_complete(db: AsyncSession, tournament_id: UUID, winner_id: UUID) -> None:
-    result = await db.execute(select(Tournament).where(Tournament.id == tournament_id))
-    tournament = result.scalar_one_or_none()
-    if tournament is None:
-        return
+async def _apply_elo_draw(db: AsyncSession, player_a_id: UUID, player_b_id: UUID) -> None:
+    a = await _get_or_create_rating(db, player_a_id)
+    b = await _get_or_create_rating(db, player_b_id)
+    a_new = new_rating_draw(a.rating, b.rating)
+    b_new = new_rating_draw(b.rating, a.rating)
+    a.rating = a_new
+    b.rating = b_new
+    a.matches_played += 1
+    b.matches_played += 1
+
+
+async def _distribute_elimination_prize(db: AsyncSession, tournament: Tournament, winner_id: UUID) -> None:
     if (
         tournament.status == TournamentStatus.COMPLETED
         and not tournament.prize_distributed
@@ -68,23 +84,50 @@ async def _distribute_prize_if_complete(db: AsyncSession, tournament_id: UUID, w
         tournament.prize_distributed = True
 
 
-async def _finalize_match(db: AsyncSession, match: Match, score_a: int, score_b: int) -> None:
-    if score_a == score_b:
+async def _distribute_league_prize_if_complete(db: AsyncSession, tournament: Tournament) -> None:
+    if not await is_league_complete(db, tournament.id):
+        return
+    tournament.status = TournamentStatus.COMPLETED
+    if tournament.prize_distributed or tournament.prize_pool <= 0:
+        return
+    standings = await compute_standings(db, tournament.id)
+    if not standings:
+        return
+    top_player_id = standings[0]["user_id"]
+    await credit(
+        db, top_player_id, tournament.prize_pool, TransactionType.PRIZE_PAYOUT,
+        f"league prize for finishing 1st in tournament {tournament.id}",
+    )
+    tournament.prize_distributed = True
+
+
+async def _finalize_match(db: AsyncSession, match: Match, tournament: Tournament, score_a: int, score_b: int) -> None:
+    is_league = tournament.format == TournamentFormat.LEAGUE
+
+    if score_a == score_b and not is_league:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Draws are not allowed"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Draws are not allowed in elimination format"
         )
-    winner_id = match.player_a_id if score_a > score_b else match.player_b_id
-    loser_id = match.player_b_id if winner_id == match.player_a_id else match.player_a_id
 
     match.score_a = score_a
     match.score_b = score_b
-    match.winner_id = winner_id
     match.status = MatchStatus.COMPLETED
     match.completed_at = datetime.now(timezone.utc)
 
-    await _apply_elo(db, winner_id, loser_id)
-    await advance_winner(db, match, winner_id)
-    await _distribute_prize_if_complete(db, match.tournament_id, winner_id)
+    if score_a == score_b:
+        match.winner_id = None
+        await _apply_elo_draw(db, match.player_a_id, match.player_b_id)
+    else:
+        winner_id = match.player_a_id if score_a > score_b else match.player_b_id
+        loser_id = match.player_b_id if winner_id == match.player_a_id else match.player_a_id
+        match.winner_id = winner_id
+        await _apply_elo_win(db, winner_id, loser_id)
+
+    if is_league:
+        await _distribute_league_prize_if_complete(db, tournament)
+    else:
+        await advance_winner(db, match, match.winner_id)
+        await _distribute_elimination_prize(db, tournament, match.winner_id)
 
 
 @router.get("/{match_id}", response_model=MatchRead)
@@ -131,7 +174,9 @@ async def submit_result(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Match is not accepting a new result submission",
         )
-    if score_a == score_b:
+
+    tournament = await _get_tournament(db, match.tournament_id)
+    if score_a == score_b and tournament.format != TournamentFormat.LEAGUE:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Draws are not allowed")
 
     content_type = image.content_type or mimetypes.guess_type(image.filename or "")[0]
@@ -242,7 +287,8 @@ async def confirm_result(
             detail="The submitting player cannot confirm their own result",
         )
 
-    await _finalize_match(db, match, evidence.claimed_score_a, evidence.claimed_score_b)
+    tournament = await _get_tournament(db, match.tournament_id)
+    await _finalize_match(db, match, tournament, evidence.claimed_score_a, evidence.claimed_score_b)
     await record_confirmed_match(db, match.player_a_id, match.player_b_id)
     await db.commit()
     await db.refresh(match)
@@ -322,7 +368,8 @@ async def resolve_dispute(
             db, evidence.submitted_by, match.disputed_by, submitter_was_correct
         )
 
-    await _finalize_match(db, match, payload.score_a, payload.score_b)
+    tournament = await _get_tournament(db, match.tournament_id)
+    await _finalize_match(db, match, tournament, payload.score_a, payload.score_b)
     await db.commit()
     await db.refresh(match)
     return match

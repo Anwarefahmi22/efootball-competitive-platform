@@ -32,7 +32,8 @@ def build_round_robin_schedule(player_ids: list[UUID]) -> list[list[tuple[UUID, 
 async def generate_league_schedule(
     db: AsyncSession, tournament: Tournament, participants: list[TournamentParticipant]
 ) -> None:
-    schedule = build_round_robin_schedule([p.user_id for p in participants])
+    ordered = sorted(participants, key=lambda p: p.seed or 0)
+    schedule = build_round_robin_schedule([p.user_id for p in ordered])
     for round_index, pairs in enumerate(schedule, start=1):
         for slot_index, (player_a, player_b) in enumerate(pairs):
             db.add(

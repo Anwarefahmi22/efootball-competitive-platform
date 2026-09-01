@@ -12,6 +12,7 @@ from app.db.session import Base
 class TournamentFormat(str, Enum):
     SINGLE_ELIMINATION = "single_elimination"
     LEAGUE = "league"
+    GROUP_KNOCKOUT = "group_knockout"
 
 
 class TournamentStatus(str, Enum):
@@ -41,6 +42,7 @@ class Tournament(Base):
     prize_distributed: Mapped[bool] = mapped_column(nullable=False, default=False)
     draw_completed: Mapped[bool] = mapped_column(nullable=False, default=False)
     requires_approval: Mapped[bool] = mapped_column(nullable=False, default=False)
+    num_groups: Mapped[int | None] = mapped_column(Integer, nullable=True)
     season_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("seasons.id"), nullable=True
     )
@@ -77,6 +79,9 @@ class TournamentParticipant(Base):
     )
     seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="approved")
+    group_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("groups.id"), nullable=True
+    )
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

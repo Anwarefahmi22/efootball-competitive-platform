@@ -15,6 +15,7 @@ class TransactionType(str, Enum):
     PRIZE_PAYOUT = "prize_payout"
     WITHDRAWAL_REQUEST = "withdrawal_request"
     WITHDRAWAL_REJECTED_REFUND = "withdrawal_rejected_refund"
+    ENTRY_FEE_REFUND = "entry_fee_refund"
     ADJUSTMENT = "adjustment"
 
 

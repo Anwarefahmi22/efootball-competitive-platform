@@ -16,6 +16,7 @@ class TournamentCreate(BaseModel):
     format: TournamentFormat = TournamentFormat.SINGLE_ELIMINATION
     max_participants: int
     entry_fee: int = 0
+    requires_approval: bool = False
     season_id: UUID | None = None
     starts_at: datetime | None = None
 
@@ -36,6 +37,7 @@ class ParticipantPublic(BaseModel):
     user_id: UUID
     display_name: str
     seed: int | None
+    status: str
 
 
 class TournamentRead(BaseModel):
@@ -50,6 +52,7 @@ class TournamentRead(BaseModel):
     entry_fee: int
     prize_pool: int
     draw_completed: bool
+    requires_approval: bool
     season_id: UUID | None
     created_by: UUID
     starts_at: datetime | None

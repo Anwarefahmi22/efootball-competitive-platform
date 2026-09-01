@@ -40,6 +40,9 @@ class Tournament(Base):
     prize_pool: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     prize_distributed: Mapped[bool] = mapped_column(nullable=False, default=False)
     draw_completed: Mapped[bool] = mapped_column(nullable=False, default=False)
+    season_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("seasons.id"), nullable=True
+    )
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )

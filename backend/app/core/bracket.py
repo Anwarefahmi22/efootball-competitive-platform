@@ -21,27 +21,32 @@ def num_rounds(participant_count: int) -> int:
 
 
 def next_match_placement(round_slot: int) -> tuple[int, str]:
-    """Map a match slot in the current round to (next_round_slot, side)."""
     next_slot = round_slot // 2
     side = "a" if round_slot % 2 == 0 else "b"
     return next_slot, side
 
 
-async def generate_bracket(
-    db: AsyncSession,
-    tournament: Tournament,
-    participants: list[TournamentParticipant],
-) -> None:
-    n = len(participants)
-    if not is_power_of_two(n):
-        raise ValueError("Participant count must be a power of 2")
-
+def assign_random_seeds(participants: list[TournamentParticipant]) -> None:
+    """The draw: randomly assigns seed numbers 1..n. Does NOT create matches —
+    that happens separately when the tournament is started, using this order."""
     shuffled = list(participants)
     random.shuffle(shuffled)
     for seed, participant in enumerate(shuffled, start=1):
         participant.seed = seed
 
-    by_seed = sorted(shuffled, key=lambda p: p.seed or 0)
+
+async def build_bracket_matches(
+    db: AsyncSession,
+    tournament: Tournament,
+    participants: list[TournamentParticipant],
+) -> None:
+    """Creates matches from ALREADY-SEEDED participants (via assign_random_seeds
+    during the draw step). Does not re-shuffle — the draw is final."""
+    n = len(participants)
+    if not is_power_of_two(n):
+        raise ValueError("Participant count must be a power of 2")
+
+    by_seed = sorted(participants, key=lambda p: p.seed or 0)
     rounds = num_rounds(n)
 
     round_one_count = n // 2

@@ -48,6 +48,7 @@ class TournamentRead(BaseModel):
     max_participants: int
     entry_fee: int
     prize_pool: int
+    draw_completed: bool
     created_by: UUID
     starts_at: datetime | None
     created_at: datetime

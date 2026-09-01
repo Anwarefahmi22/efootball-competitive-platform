@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.v1.auth import get_current_user
-from app.core.bracket import generate_bracket, is_power_of_two
+from app.core.bracket import assign_random_seeds, build_bracket_matches, is_power_of_two
 from app.core.economy import debit
 from app.core.league import compute_standings, generate_league_schedule
 from app.db.session import get_db
@@ -37,6 +37,7 @@ def _to_read(tournament: Tournament) -> TournamentRead:
         max_participants=tournament.max_participants,
         entry_fee=tournament.entry_fee,
         prize_pool=tournament.prize_pool,
+        draw_completed=tournament.draw_completed,
         created_by=tournament.created_by,
         starts_at=tournament.starts_at,
         created_at=tournament.created_at,
@@ -159,6 +160,51 @@ async def join_tournament(
     return _to_read(loaded)
 
 
+@router.post("/{tournament_id}/draw", response_model=TournamentRead)
+async def draw_tournament(
+    tournament_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> TournamentRead:
+    """Performs the draw: randomly assigns seed numbers to participants and
+    closes registration. Does NOT create matches yet — call /start afterward."""
+    tournament = await _load_tournament(db, tournament_id)
+    if tournament is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+    if tournament.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can perform the draw"
+        )
+    if tournament.draw_completed:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Draw already performed")
+    if tournament.status != TournamentStatus.REGISTRATION_OPEN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Draw can only be performed while registration is open",
+        )
+
+    count = len(tournament.participants)
+    if tournament.format == TournamentFormat.SINGLE_ELIMINATION:
+        if count < 2 or not is_power_of_two(count):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Participant count must be a power of 2 (at least 2) to draw",
+            )
+    else:
+        if count < 2:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Need at least 2 participants to draw"
+            )
+
+    assign_random_seeds(list(tournament.participants))
+    tournament.status = TournamentStatus.REGISTRATION_CLOSED
+    tournament.draw_completed = True
+    await db.commit()
+    loaded = await _load_tournament(db, tournament.id)
+    assert loaded is not None
+    return _to_read(loaded)
+
+
 @router.post("/{tournament_id}/start", response_model=TournamentRead)
 async def start_tournament(
     tournament_id: UUID,
@@ -172,31 +218,22 @@ async def start_tournament(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can start this tournament"
         )
-    if tournament.status not in (
-        TournamentStatus.REGISTRATION_OPEN,
-        TournamentStatus.REGISTRATION_CLOSED,
-    ):
+    if not tournament.draw_completed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The draw must be performed first — call /draw before /start",
+        )
+    if tournament.status != TournamentStatus.REGISTRATION_CLOSED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Tournament cannot be started from the current status",
         )
 
-    count = len(tournament.participants)
-
     if tournament.format == TournamentFormat.LEAGUE:
-        if count < 2:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="League needs at least 2 participants"
-            )
         await generate_league_schedule(db, tournament, list(tournament.participants))
         tournament.status = TournamentStatus.IN_PROGRESS
     else:
-        if count < 2 or not is_power_of_two(count):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Participant count must be a power of 2 (at least 2) to start the bracket",
-            )
-        await generate_bracket(db, tournament, list(tournament.participants))
+        await build_bracket_matches(db, tournament, list(tournament.participants))
 
     await db.commit()
     loaded = await _load_tournament(db, tournament.id)

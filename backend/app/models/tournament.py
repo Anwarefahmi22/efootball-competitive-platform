@@ -40,6 +40,7 @@ class Tournament(Base):
     prize_pool: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     prize_distributed: Mapped[bool] = mapped_column(nullable=False, default=False)
     draw_completed: Mapped[bool] = mapped_column(nullable=False, default=False)
+    requires_approval: Mapped[bool] = mapped_column(nullable=False, default=False)
     season_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("seasons.id"), nullable=True
     )
@@ -75,6 +76,7 @@ class TournamentParticipant(Base):
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
     seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="approved")
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -8,11 +8,21 @@ from sqlalchemy.orm import selectinload
 from app.api.v1.auth import get_current_user
 from app.core.bracket import assign_random_seeds, build_bracket_matches, is_power_of_two
 from app.core.economy import credit, debit
+from app.core.groups import (
+    assign_seeded_groups,
+    compute_group_standings,
+    generate_group_matches,
+    get_qualifiers,
+    is_group_stage_complete,
+    is_valid_group_count,
+)
 from app.core.league import compute_standings, generate_league_schedule
 from app.db.session import get_db
 from app.models.economy import TransactionType
+from app.models.group import Group
 from app.models.tournament import Tournament, TournamentFormat, TournamentParticipant, TournamentStatus
 from app.models.user import User
+from app.schemas.group import GroupRead, GroupStandingRow
 from app.schemas.league import StandingRow
 from app.schemas.tournament import ParticipantPublic, TournamentCreate, TournamentRead
 
@@ -22,31 +32,18 @@ router = APIRouter()
 def _to_read(tournament: Tournament) -> TournamentRead:
     participants = [
         ParticipantPublic(
-            user_id=p.user_id,
-            display_name=p.user.display_name if p.user else "",
-            seed=p.seed,
-            status=p.status,
+            user_id=p.user_id, display_name=p.user.display_name if p.user else "", seed=p.seed, status=p.status
         )
         for p in tournament.participants
     ]
     return TournamentRead(
-        id=tournament.id,
-        name=tournament.name,
-        description=tournament.description,
-        format=tournament.format,
-        status=tournament.status,
-        max_participants=tournament.max_participants,
-        entry_fee=tournament.entry_fee,
-        prize_pool=tournament.prize_pool,
-        draw_completed=tournament.draw_completed,
-        requires_approval=tournament.requires_approval,
-        season_id=tournament.season_id,
-        created_by=tournament.created_by,
-        starts_at=tournament.starts_at,
-        created_at=tournament.created_at,
-        updated_at=tournament.updated_at,
-        participant_count=len(tournament.participants),
-        participants=participants,
+        id=tournament.id, name=tournament.name, description=tournament.description,
+        format=tournament.format, status=tournament.status, max_participants=tournament.max_participants,
+        entry_fee=tournament.entry_fee, prize_pool=tournament.prize_pool,
+        draw_completed=tournament.draw_completed, requires_approval=tournament.requires_approval,
+        num_groups=tournament.num_groups, season_id=tournament.season_id, created_by=tournament.created_by,
+        starts_at=tournament.starts_at, created_at=tournament.created_at, updated_at=tournament.updated_at,
+        participant_count=len(tournament.participants), participants=participants,
     )
 
 
@@ -75,23 +72,26 @@ async def _refund_and_remove(db: AsyncSession, tournament: Tournament, participa
 
 @router.post("", response_model=TournamentRead, status_code=status.HTTP_201_CREATED)
 async def create_tournament(
-    payload: TournamentCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    payload: TournamentCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
     if payload.entry_fee < 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="entry_fee cannot be negative")
+    if payload.format == TournamentFormat.GROUP_KNOCKOUT:
+        if payload.num_groups is None or not is_valid_group_count(payload.num_groups):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="num_groups must be a power of 2 (2, 4, 8...) for group_knockout format",
+            )
+        if payload.max_participants < payload.num_groups * 2:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="max_participants must be at least 2x num_groups",
+            )
     tournament = Tournament(
-        name=payload.name,
-        description=payload.description,
-        format=payload.format,
-        status=TournamentStatus.REGISTRATION_OPEN,
-        max_participants=payload.max_participants,
-        entry_fee=payload.entry_fee,
-        prize_pool=0,
-        requires_approval=payload.requires_approval,
-        created_by=current_user.id,
-        starts_at=payload.starts_at,
+        name=payload.name, description=payload.description, format=payload.format,
+        status=TournamentStatus.REGISTRATION_OPEN, max_participants=payload.max_participants,
+        entry_fee=payload.entry_fee, prize_pool=0, requires_approval=payload.requires_approval,
+        num_groups=payload.num_groups, created_by=current_user.id, starts_at=payload.starts_at,
         season_id=payload.season_id,
     )
     db.add(tournament)
@@ -104,16 +104,13 @@ async def create_tournament(
 @router.get("", response_model=list[TournamentRead])
 async def list_tournaments(
     status_filter: TournamentStatus | None = Query(default=None, alias="status"),
-    limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100), offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
 ) -> list[TournamentRead]:
     stmt = (
         select(Tournament)
         .options(selectinload(Tournament.participants).selectinload(TournamentParticipant.user))
-        .order_by(Tournament.created_at.desc())
-        .limit(limit)
-        .offset(offset)
+        .order_by(Tournament.created_at.desc()).limit(limit).offset(offset)
     )
     if status_filter is not None:
         stmt = stmt.where(Tournament.status == status_filter)
@@ -131,11 +128,8 @@ async def get_tournament(tournament_id: UUID, db: AsyncSession = Depends(get_db)
 
 @router.patch("/{tournament_id}", response_model=TournamentRead)
 async def update_tournament(
-    tournament_id: UUID,
-    name: str | None = None,
-    description: str | None = None,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    tournament_id: UUID, name: str | None = None, description: str | None = None,
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db),
 ) -> TournamentRead:
     tournament = await _load_tournament(db, tournament_id)
     if tournament is None:
@@ -156,9 +150,7 @@ async def update_tournament(
 
 @router.post("/{tournament_id}/cancel", response_model=TournamentRead)
 async def cancel_tournament(
-    tournament_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    tournament_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
     tournament = await _load_tournament(db, tournament_id)
     if tournament is None:
@@ -167,7 +159,6 @@ async def cancel_tournament(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can cancel this tournament")
     if tournament.status in (TournamentStatus.COMPLETED, TournamentStatus.CANCELLED):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tournament already finished or cancelled")
-
     for participant in list(tournament.participants):
         await _refund_and_remove(db, tournament, participant)
     tournament.status = TournamentStatus.CANCELLED
@@ -188,11 +179,25 @@ async def get_standings(tournament_id: UUID, db: AsyncSession = Depends(get_db))
     return [StandingRow(**r) for r in rows]
 
 
+@router.get("/{tournament_id}/groups", response_model=list[GroupRead])
+async def get_groups(tournament_id: UUID, db: AsyncSession = Depends(get_db)) -> list[GroupRead]:
+    tournament = await _load_tournament(db, tournament_id)
+    if tournament is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+    if tournament.format != TournamentFormat.GROUP_KNOCKOUT:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Groups only apply to group_knockout tournaments")
+    groups_result = await db.execute(select(Group).where(Group.tournament_id == tournament_id).order_by(Group.name))
+    groups = list(groups_result.scalars().all())
+    out = []
+    for g in groups:
+        standings = await compute_group_standings(db, g.id)
+        out.append(GroupRead(id=g.id, name=g.name, standings=[GroupStandingRow(**r) for r in standings]))
+    return out
+
+
 @router.post("/{tournament_id}/join", response_model=TournamentRead)
 async def join_tournament(
-    tournament_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    tournament_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
     tournament = await _load_tournament(db, tournament_id)
     if tournament is None:
@@ -203,14 +208,9 @@ async def join_tournament(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already joined this tournament")
     if len(tournament.participants) >= tournament.max_participants:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tournament is full")
-
     if tournament.entry_fee > 0:
-        await debit(
-            db, current_user.id, tournament.entry_fee, TransactionType.ENTRY_FEE,
-            f"entry fee for tournament {tournament.id}",
-        )
+        await debit(db, current_user.id, tournament.entry_fee, TransactionType.ENTRY_FEE, f"entry fee for tournament {tournament.id}")
         tournament.prize_pool += tournament.entry_fee
-
     initial_status = "pending" if tournament.requires_approval else "approved"
     db.add(TournamentParticipant(tournament_id=tournament.id, user_id=current_user.id, status=initial_status))
     await db.commit()
@@ -221,20 +221,16 @@ async def join_tournament(
 
 @router.post("/{tournament_id}/leave", response_model=TournamentRead)
 async def leave_tournament(
-    tournament_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    tournament_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
     tournament = await _load_tournament(db, tournament_id)
     if tournament is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
     if tournament.status != TournamentStatus.REGISTRATION_OPEN:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot leave after registration has closed")
-
     participant = next((p for p in tournament.participants if p.user_id == current_user.id), None)
     if participant is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You are not registered in this tournament")
-
     await _refund_and_remove(db, tournament, participant)
     await db.commit()
     loaded = await _load_tournament(db, tournament.id)
@@ -244,23 +240,18 @@ async def leave_tournament(
 
 @router.post("/{tournament_id}/participants/{user_id}/approve", response_model=TournamentRead)
 async def approve_participant(
-    tournament_id: UUID,
-    user_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    tournament_id: UUID, user_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
     tournament = await _load_tournament(db, tournament_id)
     if tournament is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
     if tournament.created_by != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can approve participants")
-
     participant = next((p for p in tournament.participants if p.user_id == user_id), None)
     if participant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Participant not found")
     if participant.status != "pending":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Participant is not pending approval")
-
     participant.status = "approved"
     await db.commit()
     loaded = await _load_tournament(db, tournament.id)
@@ -270,10 +261,7 @@ async def approve_participant(
 
 @router.post("/{tournament_id}/participants/{user_id}/reject", response_model=TournamentRead)
 async def reject_participant(
-    tournament_id: UUID,
-    user_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    tournament_id: UUID, user_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
     tournament = await _load_tournament(db, tournament_id)
     if tournament is None:
@@ -282,11 +270,9 @@ async def reject_participant(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can reject participants")
     if tournament.status != TournamentStatus.REGISTRATION_OPEN:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot reject after registration has closed")
-
     participant = next((p for p in tournament.participants if p.user_id == user_id), None)
     if participant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Participant not found")
-
     await _refund_and_remove(db, tournament, participant)
     await db.commit()
     loaded = await _load_tournament(db, tournament.id)
@@ -296,9 +282,7 @@ async def reject_participant(
 
 @router.post("/{tournament_id}/draw", response_model=TournamentRead)
 async def draw_tournament(
-    tournament_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    tournament_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
     tournament = await _load_tournament(db, tournament_id)
     if tournament is None:
@@ -312,17 +296,19 @@ async def draw_tournament(
 
     approved = _approved(tournament)
     count = len(approved)
+
     if tournament.format == TournamentFormat.SINGLE_ELIMINATION:
         if count < 2 or not is_power_of_two(count):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Approved participant count must be a power of 2 (at least 2) to draw",
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Approved participant count must be a power of 2 (at least 2) to draw")
+        assign_random_seeds(approved)
+    elif tournament.format == TournamentFormat.GROUP_KNOCKOUT:
+        if tournament.num_groups is None or count < tournament.num_groups * 2:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough approved participants for the configured number of groups")
+        await assign_seeded_groups(db, tournament, approved, tournament.num_groups)
     else:
         if count < 2:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Need at least 2 approved participants to draw")
 
-    assign_random_seeds(approved)
     tournament.status = TournamentStatus.REGISTRATION_CLOSED
     tournament.draw_completed = True
     await db.commit()
@@ -333,9 +319,7 @@ async def draw_tournament(
 
 @router.post("/{tournament_id}/start", response_model=TournamentRead)
 async def start_tournament(
-    tournament_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    tournament_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
     tournament = await _load_tournament(db, tournament_id)
     if tournament is None:
@@ -347,13 +331,43 @@ async def start_tournament(
     if tournament.status != TournamentStatus.REGISTRATION_CLOSED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tournament cannot be started from the current status")
 
-    approved = _approved(tournament)
     if tournament.format == TournamentFormat.LEAGUE:
-        await generate_league_schedule(db, tournament, approved)
+        await generate_league_schedule(db, tournament, _approved(tournament))
+        tournament.status = TournamentStatus.IN_PROGRESS
+    elif tournament.format == TournamentFormat.GROUP_KNOCKOUT:
+        groups_result = await db.execute(select(Group).where(Group.tournament_id == tournament.id))
+        groups = list(groups_result.scalars().all())
+        await generate_group_matches(db, tournament, groups)
         tournament.status = TournamentStatus.IN_PROGRESS
     else:
-        await build_bracket_matches(db, tournament, approved)
+        await build_bracket_matches(db, tournament, _approved(tournament))
 
+    await db.commit()
+    loaded = await _load_tournament(db, tournament.id)
+    assert loaded is not None
+    return _to_read(loaded)
+
+
+@router.post("/{tournament_id}/start-knockout", response_model=TournamentRead)
+async def start_knockout_stage(
+    tournament_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> TournamentRead:
+    tournament = await _load_tournament(db, tournament_id)
+    if tournament is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+    if tournament.created_by != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can start the knockout stage")
+    if tournament.format != TournamentFormat.GROUP_KNOCKOUT:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only applicable to group_knockout tournaments")
+    if not await is_group_stage_complete(db, tournament.id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Group stage is not complete yet")
+
+    qualifiers = await get_qualifiers(db, tournament.id)
+    qualified_participants = [p for uid in qualifiers for p in tournament.participants if p.user_id == uid]
+    for i, p in enumerate(qualified_participants, start=1):
+        p.seed = i
+
+    await build_bracket_matches(db, tournament, qualified_participants)
     await db.commit()
     loaded = await _load_tournament(db, tournament.id)
     assert loaded is not None

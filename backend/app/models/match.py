@@ -31,6 +31,9 @@ class Match(Base):
     # generation time and MUST be used for ordering/advancement — created_at
     # and id are unreliable (same-transaction timestamps + random UUIDs).
     bracket_slot: Mapped[int] = mapped_column(Integer, nullable=False)
+    group_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("groups.id"), nullable=True
+    )
     player_a_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )

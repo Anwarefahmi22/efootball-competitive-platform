@@ -1,3 +1,4 @@
+from app.models.economy import Transaction, Wallet, WithdrawalRequest
 from app.models.evidence import MatchEvidence
 from app.models.match import Match
 from app.models.rating import PlayerRating
@@ -19,4 +20,7 @@ __all__ = [
     "Comment",
     "PostLike",
     "Follow",
+    "Wallet",
+    "Transaction",
+    "WithdrawalRequest",
 ]

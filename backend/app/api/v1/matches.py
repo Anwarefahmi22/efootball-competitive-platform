@@ -9,14 +9,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import get_current_user
 from app.core.bracket import advance_winner
+from app.core.economy import credit
 from app.core.permissions import get_current_admin
 from app.core.rating import new_rating
 from app.core.storage import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES, save_evidence_image
 from app.core.trust import record_confirmed_match, record_dispute_filed, record_dispute_resolved
 from app.db.session import get_db
+from app.models.economy import TransactionType
 from app.models.evidence import MatchEvidence
 from app.models.match import Match, MatchStatus
 from app.models.rating import PlayerRating
+from app.models.tournament import Tournament, TournamentStatus
 from app.models.user import User
 from app.schemas.evidence import DisputeCreate, EvidenceRead, ResolveDispute
 from app.schemas.match import MatchRead
@@ -48,6 +51,23 @@ async def _apply_elo(db: AsyncSession, winner_id: UUID, loser_id: UUID) -> None:
     loser.losses += 1
 
 
+async def _distribute_prize_if_complete(db: AsyncSession, tournament_id: UUID, winner_id: UUID) -> None:
+    result = await db.execute(select(Tournament).where(Tournament.id == tournament_id))
+    tournament = result.scalar_one_or_none()
+    if tournament is None:
+        return
+    if (
+        tournament.status == TournamentStatus.COMPLETED
+        and not tournament.prize_distributed
+        and tournament.prize_pool > 0
+    ):
+        await credit(
+            db, winner_id, tournament.prize_pool, TransactionType.PRIZE_PAYOUT,
+            f"prize for winning tournament {tournament.id}",
+        )
+        tournament.prize_distributed = True
+
+
 async def _finalize_match(db: AsyncSession, match: Match, score_a: int, score_b: int) -> None:
     if score_a == score_b:
         raise HTTPException(
@@ -64,6 +84,7 @@ async def _finalize_match(db: AsyncSession, match: Match, score_a: int, score_b:
 
     await _apply_elo(db, winner_id, loser_id)
     await advance_winner(db, match, winner_id)
+    await _distribute_prize_if_complete(db, match.tournament_id, winner_id)
 
 
 @router.get("/{match_id}", response_model=MatchRead)

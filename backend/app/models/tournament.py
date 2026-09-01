@@ -35,6 +35,9 @@ class Tournament(Base):
         String(32), nullable=False, default=TournamentStatus.REGISTRATION_OPEN
     )
     max_participants: Mapped[int] = mapped_column(Integer, nullable=False)
+    entry_fee: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    prize_pool: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    prize_distributed: Mapped[bool] = mapped_column(nullable=False, default=False)
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )

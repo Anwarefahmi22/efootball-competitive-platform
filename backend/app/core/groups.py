@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import string
 from uuid import UUID
 
@@ -177,14 +178,19 @@ async def _apply_head_to_head_tiebreak(db: AsyncSession, group_id: UUID, rows: l
                         a["points"] += 3
                     else:
                         b["points"] += 3
-            cluster_sorted = sorted(
-                cluster,
-                key=lambda r: (
-                    -h2h_stats[r["user_id"]]["points"],
-                    -h2h_stats[r["user_id"]]["goal_difference"],
-                    -h2h_stats[r["user_id"]]["goals_for"],
-                ),
-            )
+            # If head-to-head still leaves a full tie (e.g. a perfect cyclic
+            # tie: A beats B, B beats C, C beats A with identical scores),
+            # fall back to a deterministic pseudo-random order seeded by
+            # group_id so the ranking is stable across repeated requests for
+            # the same tournament, but effectively random across different
+            # tournaments/groups.
+            def _tiebreak_key(r: dict) -> tuple:
+                h2h = h2h_stats[r["user_id"]]
+                seed_input = f"{group_id}:{r['user_id']}".encode()
+                deterministic_rand = int(hashlib.sha256(seed_input).hexdigest(), 16)
+                return (-h2h["points"], -h2h["goal_difference"], -h2h["goals_for"], deterministic_rand)
+
+            cluster_sorted = sorted(cluster, key=_tiebreak_key)
             result.extend(cluster_sorted)
         i = j
     return result

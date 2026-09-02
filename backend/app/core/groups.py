@@ -132,7 +132,62 @@ async def compute_group_standings(db: AsyncSession, group_id: UUID) -> list[dict
         })
 
     rows.sort(key=lambda r: (-r["points"], -r["goal_difference"], -r["goals_for"]))
+    rows = await _apply_head_to_head_tiebreak(db, group_id, rows)
     return rows
+
+
+async def _apply_head_to_head_tiebreak(db: AsyncSession, group_id: UUID, rows: list[dict]) -> list[dict]:
+    """When two or more players are tied on points after the primary sort,
+    re-order that tied cluster using a mini head-to-head table computed only
+    from matches played among the tied players themselves — same approach
+    FIFA uses for World Cup group stage tiebreaks."""
+    if len(rows) < 2:
+        return rows
+
+    matches_result = await db.execute(
+        select(Match).where(Match.group_id == group_id, Match.status == MatchStatus.COMPLETED)
+    )
+    all_matches = list(matches_result.scalars().all())
+
+    result: list[dict] = []
+    i = 0
+    while i < len(rows):
+        j = i + 1
+        while j < len(rows) and rows[j]["points"] == rows[i]["points"]:
+            j += 1
+        cluster = rows[i:j]
+        if len(cluster) == 1:
+            result.append(cluster[0])
+        else:
+            tied_ids = {r["user_id"] for r in cluster}
+            h2h_stats = {
+                r["user_id"]: {"points": 0, "goal_difference": 0, "goals_for": 0} for r in cluster
+            }
+            for m in all_matches:
+                if m.player_a_id in tied_ids and m.player_b_id in tied_ids:
+                    a, b = h2h_stats[m.player_a_id], h2h_stats[m.player_b_id]
+                    a["goals_for"] += m.score_a
+                    a["goal_difference"] += m.score_a - m.score_b
+                    b["goals_for"] += m.score_b
+                    b["goal_difference"] += m.score_b - m.score_a
+                    if m.score_a == m.score_b:
+                        a["points"] += 1
+                        b["points"] += 1
+                    elif m.score_a > m.score_b:
+                        a["points"] += 3
+                    else:
+                        b["points"] += 3
+            cluster_sorted = sorted(
+                cluster,
+                key=lambda r: (
+                    -h2h_stats[r["user_id"]]["points"],
+                    -h2h_stats[r["user_id"]]["goal_difference"],
+                    -h2h_stats[r["user_id"]]["goals_for"],
+                ),
+            )
+            result.extend(cluster_sorted)
+        i = j
+    return result
 
 
 async def is_group_stage_complete(db: AsyncSession, tournament_id: UUID) -> bool:

@@ -84,9 +84,18 @@ async def build_bracket_matches(
 async def matches_in_round(
     db: AsyncSession, tournament_id: UUID, round_number: int
 ) -> list[Match]:
+    # CRITICAL: group_id.is_(None) restricts this to knockout-stage matches
+    # only. Group-stage matches reuse round_number 1..N for their own
+    # internal round-robin schedule, and without this filter a knockout
+    # winner could be silently advanced into a leftover group-stage match
+    # instead of the real next knockout round.
     result = await db.execute(
         select(Match)
-        .where(Match.tournament_id == tournament_id, Match.round_number == round_number)
+        .where(
+            Match.tournament_id == tournament_id,
+            Match.round_number == round_number,
+            Match.group_id.is_(None),
+        )
         .order_by(Match.bracket_slot)
     )
     return list(result.scalars().all())

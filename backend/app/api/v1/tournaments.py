@@ -20,6 +20,7 @@ from app.core.league import compute_standings, generate_league_schedule
 from app.db.session import get_db
 from app.models.economy import TransactionType
 from app.models.group import Group
+from app.models.match import Match
 from app.models.tournament import Tournament, TournamentFormat, TournamentParticipant, TournamentStatus
 from app.models.user import User
 from app.schemas.group import GroupRead, GroupStandingRow
@@ -361,6 +362,12 @@ async def start_knockout_stage(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only applicable to group_knockout tournaments")
     if not await is_group_stage_complete(db, tournament.id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Group stage is not complete yet")
+
+    existing_knockout = await db.execute(
+        select(Match).where(Match.tournament_id == tournament.id, Match.group_id.is_(None))
+    )
+    if existing_knockout.scalars().first() is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Knockout stage already started")
 
     qualifiers = await get_qualifiers(db, tournament.id)
     qualified_participants = [p for uid in qualifiers for p in tournament.participants if p.user_id == uid]

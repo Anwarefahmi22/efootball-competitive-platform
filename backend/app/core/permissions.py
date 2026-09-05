@@ -23,3 +23,11 @@ async def get_current_admin(
             status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
         )
     return current_user
+
+
+async def is_admin(db: AsyncSession, user_id) -> bool:
+    result = await db.execute(
+        text("SELECT is_admin FROM users WHERE id = :uid"), {"uid": str(user_id)}
+    )
+    row = result.first()
+    return bool(row and row[0])

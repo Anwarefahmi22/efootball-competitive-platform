@@ -26,7 +26,7 @@ class PlayerAnalytics(BaseModel):
     avg_goals_scored: float
     avg_goals_conceded: float
     trust_score: int
-    wallet_balance: int
+    wallet_balance: int | None
     tournaments_won: int
 
 

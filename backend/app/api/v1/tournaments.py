@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.api.v1.auth import get_current_user
 from app.core.bracket import assign_random_seeds, build_bracket_matches, is_power_of_two
 from app.core.economy import credit, debit
+from app.core.permissions import is_admin
 from app.core.groups import (
     assign_seeded_groups,
     compute_group_standings,
@@ -42,7 +43,8 @@ def _to_read(tournament: Tournament) -> TournamentRead:
         format=tournament.format, status=tournament.status, max_participants=tournament.max_participants,
         entry_fee=tournament.entry_fee, prize_pool=tournament.prize_pool,
         draw_completed=tournament.draw_completed, requires_approval=tournament.requires_approval,
-        num_groups=tournament.num_groups, season_id=tournament.season_id, created_by=tournament.created_by,
+        num_groups=tournament.num_groups, season_id=tournament.season_id, winner_id=tournament.winner_id,
+        created_by=tournament.created_by,
         starts_at=tournament.starts_at, created_at=tournament.created_at, updated_at=tournament.updated_at,
         participant_count=len(tournament.participants), participants=participants,
     )
@@ -156,10 +158,19 @@ async def cancel_tournament(
     tournament = await _load_tournament(db, tournament_id)
     if tournament is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
-    if tournament.created_by != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can cancel this tournament")
     if tournament.status in (TournamentStatus.COMPLETED, TournamentStatus.CANCELLED):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tournament already finished or cancelled")
+    if tournament.status == TournamentStatus.IN_PROGRESS:
+        # A tournament already underway can only be cancelled by a platform
+        # admin — not by the organizer, to prevent an organizer cancelling
+        # (and refunding everyone) after seeing they are losing.
+        if not await is_admin(db, current_user.id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only a platform admin can cancel a tournament that is already in progress",
+            )
+    elif tournament.created_by != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can cancel this tournament")
     for participant in list(tournament.participants):
         await _refund_and_remove(db, tournament, participant)
     tournament.status = TournamentStatus.CANCELLED

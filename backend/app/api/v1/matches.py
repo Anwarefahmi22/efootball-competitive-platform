@@ -82,10 +82,10 @@ async def _distribute_league_prize_if_complete(db: AsyncSession, tournament: Tou
     if not await is_league_complete(db, tournament.id):
         return
     tournament.status = TournamentStatus.COMPLETED
-    if tournament.prize_distributed or tournament.prize_pool <= 0:
-        return
     standings = await compute_standings(db, tournament.id)
-    if not standings:
+    if standings:
+        tournament.winner_id = standings[0]["user_id"]
+    if tournament.prize_distributed or tournament.prize_pool <= 0 or not standings:
         return
     await credit(
         db, standings[0]["user_id"], tournament.prize_pool, TransactionType.PRIZE_PAYOUT,

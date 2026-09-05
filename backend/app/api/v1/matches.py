@@ -50,8 +50,12 @@ async def _get_or_create_rating(db: AsyncSession, user_id: UUID) -> PlayerRating
 async def _apply_elo_win(db: AsyncSession, winner_id: UUID, loser_id: UUID) -> None:
     winner = await _get_or_create_rating(db, winner_id)
     loser = await _get_or_create_rating(db, loser_id)
-    winner.rating = new_rating(winner.rating, loser.rating, 1.0)
-    loser.rating = new_rating(loser.rating, winner.rating, 0.0)
+    # CRITICAL: capture BOTH original ratings before mutating either one.
+    # Using winner.rating after it was already updated corrupts the loser's
+    # calculation (breaks ELO's zero-sum symmetry).
+    winner_old, loser_old = winner.rating, loser.rating
+    winner.rating = new_rating(winner_old, loser_old, 1.0)
+    loser.rating = new_rating(loser_old, winner_old, 0.0)
     winner.matches_played += 1
     loser.matches_played += 1
     winner.wins += 1
@@ -61,10 +65,9 @@ async def _apply_elo_win(db: AsyncSession, winner_id: UUID, loser_id: UUID) -> N
 async def _apply_elo_draw(db: AsyncSession, player_a_id: UUID, player_b_id: UUID) -> None:
     a = await _get_or_create_rating(db, player_a_id)
     b = await _get_or_create_rating(db, player_b_id)
-    a_new = new_rating_draw(a.rating, b.rating)
-    b_new = new_rating_draw(b.rating, a.rating)
-    a.rating = a_new
-    b.rating = b_new
+    a_old, b_old = a.rating, b.rating
+    a.rating = new_rating_draw(a_old, b_old)
+    b.rating = new_rating_draw(b_old, a_old)
     a.matches_played += 1
     b.matches_played += 1
 

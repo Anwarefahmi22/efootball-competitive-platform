@@ -116,6 +116,7 @@ async def advance_winner(db: AsyncSession, match: Match, winner_id: UUID) -> Non
     )
     if not next_round_matches:
         tournament.status = TournamentStatus.COMPLETED
+        tournament.winner_id = winner_id
         return
 
     next_slot, side = next_match_placement(slot)

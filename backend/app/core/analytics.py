@@ -87,22 +87,15 @@ async def get_player_analytics(db: AsyncSession, user_id: UUID) -> dict | None:
     wins = rating.wins if rating else 0
     losses = rating.losses if rating else 0
 
+    # Accurate regardless of prize amount — reads the tournament's own
+    # winner_id, set at the moment it was actually completed (works for
+    # free tournaments too, not just ones with a distributed prize).
     tournaments_won_result = await db.execute(
-        select(func.count())
-        .select_from(Tournament)
-        .join(TournamentParticipant, TournamentParticipant.tournament_id == Tournament.id)
-        .where(
-            Tournament.status == TournamentStatus.COMPLETED,
-            Tournament.prize_distributed.is_(True),
+        select(func.count()).select_from(Tournament).where(
+            Tournament.winner_id == user_id, Tournament.status == TournamentStatus.COMPLETED
         )
     )
-    # Approximate: count tournaments this user won via prize payout transactions instead (more accurate)
-    prize_wins_result = await db.execute(
-        select(func.count()).select_from(Transaction).where(
-            Transaction.user_id == user_id, Transaction.type == TransactionType.PRIZE_PAYOUT
-        )
-    )
-    tournaments_won = prize_wins_result.scalar_one()
+    tournaments_won = tournaments_won_result.scalar_one()
 
     return {
         "user_id": user_id,

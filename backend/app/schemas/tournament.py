@@ -56,6 +56,7 @@ class TournamentRead(BaseModel):
     requires_approval: bool
     num_groups: int | None
     season_id: UUID | None
+    winner_id: UUID | None
     created_by: UUID
     starts_at: datetime | None
     created_at: datetime

@@ -46,6 +46,9 @@ class Tournament(Base):
     season_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("seasons.id"), nullable=True
     )
+    winner_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )

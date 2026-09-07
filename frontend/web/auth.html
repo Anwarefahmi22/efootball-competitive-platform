@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>الدخول — eFootball Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .auth-card {
+      width: 100%; max-width: 430px;
+      background: linear-gradient(180deg, #10281c 0%, #0b1e13 100%);
+      border: 1px solid #1f4a33; border-radius: 18px;
+      padding: 34px 30px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+      animation: cardIn .4s ease;
+    }
+    @keyframes cardIn { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .logo { text-align: center; margin-bottom: 22px; }
+    .logo .mark {
+      font-family: "Orbitron", monospace; font-size: 1.5rem; color: #a3ff12;
+      letter-spacing: 2px; font-weight: 700; text-shadow: 0 0 24px rgba(163,255,18,.35);
+    }
+    .logo .sub { color: #9dbfae; font-size: .85rem; margin-top: 6px; }
+    .tabs { display: flex; margin: 18px 0 22px; background: #0a1a11; border-radius: 12px; padding: 4px; border: 1px solid #1f4a33; }
+    .tabs button {
+      flex: 1; padding: 11px; font-family: inherit; font-weight: 700; font-size: .95rem;
+      background: transparent; color: #9dbfae; border: none; border-radius: 9px; cursor: pointer;
+      transition: all .15s ease;
+    }
+    .tabs button.active { background: #a3ff12; color: #081309; }
+    form { display: none; flex-direction: column; gap: 14px; }
+    form.active { display: flex; }
+    .field-row { display: flex; flex-direction: column; }
+    .hint { font-size: .8rem; color: #9dbfae; margin-top: 10px; text-align: center; }
+    .err { color: #ff4d5e; font-size: .85rem; font-weight: 600; display: none; }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="logo">
+      <div class="mark">⚡ EFOOTBALL ARENA</div>
+      <div class="sub">بطاقة دخول الملعب</div>
+    </div>
+
+    <div class="tabs">
+      <button id="tab-login" class="active" type="button">دخول</button>
+      <button id="tab-register" type="button">حساب جديد</button>
+    </div>
+
+    <!-- Login -->
+    <form id="form-login" class="active">
+      <div class="field-row">
+        <label class="lbl" for="login-email">البريد الإلكتروني</label>
+        <input class="field" id="login-email" type="email" required placeholder="player@arena.gg" />
+      </div>
+      <div class="field-row">
+        <label class="lbl" for="login-password">كلمة المرور</label>
+        <input class="field" id="login-password" type="password" required placeholder="••••••••" />
+      </div>
+      <div class="err" id="login-err"></div>
+      <button class="btn btn-primary" id="btn-login" type="submit">دخول الملعب ⚽</button>
+      <div class="hint">ليس لديك حساب؟ افتح تبويب «حساب جديد»</div>
+    </form>
+
+    <!-- Register -->
+    <form id="form-register">
+      <div class="field-row">
+        <label class="lbl" for="reg-name">اسم اللاعب (الظاهر للجميع)</label>
+        <input class="field" id="reg-name" type="text" required minlength="2" maxlength="100" placeholder="مثال: أبو تريكة 7" />
+      </div>
+      <div class="field-row">
+        <label class="lbl" for="reg-email">البريد الإلكتروني</label>
+        <input class="field" id="reg-email" type="email" required placeholder="player@arena.gg" />
+      </div>
+      <div class="field-row">
+        <label class="lbl" for="reg-password">كلمة المرور (8 خانات على الأقل)</label>
+        <input class="field" id="reg-password" type="password" required minlength="8" placeholder="••••••••" />
+      </div>
+      <div class="err" id="reg-err"></div>
+      <button class="btn btn-primary" id="btn-register" type="submit">إنشاء الحساب والمشاركة 🏆</button>
+      <div class="hint">سيبدأ تقييمك معنا من <b>1000</b> نقطة ELO</div>
+    </form>
+  </div>
+
+  <script src="/shared/api.js"></script>
+  <script>
+    const tabLogin = document.getElementById("tab-login");
+    const tabRegister = document.getElementById("tab-register");
+    const formLogin = document.getElementById("form-login");
+    const formRegister = document.getElementById("form-register");
+
+    function setTab(which) {
+      tabLogin.classList.toggle("active", which === "login");
+      tabRegister.classList.toggle("active", which !== "login");
+      formLogin.classList.toggle("active", which === "login");
+      formRegister.classList.toggle("active", which !== "login");
+    }
+    tabLogin.addEventListener("click", () => setTab("login"));
+    tabRegister.addEventListener("click", () => setTab("register"));
+
+    const showErr = (id, msg) => { const e = el(id); e.textContent = msg; e.style.display = "block"; };
+
+    formLogin.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = el("btn-login"); btn.disabled = true; btn.textContent = "جارٍ الدخول...";
+      el("login-err").style.display = "none";
+      try {
+        const pair = await apiFetch("/auth/login", {
+          noAuth: true, method: "POST",
+          body: JSON.stringify({ email: el("login-email").value.trim(), password: el("login-password").value }),
+        });
+        Auth.save(pair);
+        toast("مرحبًا بعودتك! جارٍ فتح لوحتك...", "ok");
+        setTimeout(() => { location.href = "/app/dashboard.html"; }, 700);
+      } catch (err) {
+        showErr("login-err", err.detail || "فشل الدخول");
+        btn.disabled = false; btn.textContent = "دخول الملعب ⚽";
+      }
+    });
+
+    formRegister.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = el("btn-register"); btn.disabled = true; btn.textContent = "جارٍ إنشاء الحساب...";
+      el("reg-err").style.display = "none";
+      try {
+        const pair = await apiFetch("/auth/register", {
+          noAuth: true, method: "POST",
+          body: JSON.stringify({
+            email: el("reg-email").value.trim(),
+            password: el("reg-password").value,
+            display_name: el("reg-name").value.trim(),
+          }),
+        });
+        Auth.save(pair);
+        toast("تم إنشاء حسابك! أهلًا بك في الساحة 🏟️", "ok");
+        setTimeout(() => { location.href = "/app/dashboard.html"; }, 700);
+      } catch (err) {
+        let msg = err.detail || "فشل التسجيل";
+        if (err.status === 409) msg = "هذا البريد مسجَّل مسبقًا — جرّب الدخول";
+        showErr("reg-err", msg);
+        btn.disabled = false; btn.textContent = "إنشاء الحساب والمشاركة 🏆";
+      }
+    });
+  </script>
+</body>
+</html>

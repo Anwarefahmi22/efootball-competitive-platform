@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة اللاعب — eFootball Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/theme.css" />
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="spinner"></div>
+
+    <main id="content" style="display:none">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px">
+        <div>
+          <h1 class="page-title" id="hello-name">لوحة اللاعب</h1>
+          <div class="muted" id="player-email"></div>
+        </div>
+        <a class="btn btn-ghost" href="#" id="btn-refresh">تحديث البيانات ↻</a>
+      </div>
+
+      <!-- KPI cards -->
+      <div class="grid cols-4" style="margin-top:22px">
+        <div class="card hoverable">
+          <div class="stat-value" id="kpi-elo">—</div>
+          <div class="stat-label">تقييم ELO</div>
+        </div>
+        <div class="card hoverable">
+          <div class="stat-value" id="kpi-trust" style="font-size:1.6rem">—</div>
+          <div class="stat-label">درجة الثقة <span id="trust-badge" class="badge">—</span></div>
+          <div class="progress" style="margin-top:10px"><i id="trust-bar" style="width:0%"></i></div>
+        </div>
+        <div class="card hoverable">
+          <div class="stat-value" id="kpi-wallet">—</div>
+          <div class="stat-label">رصيد المحفظة (عملة)</div>
+        </div>
+        <div class="card hoverable">
+          <div class="stat-value" id="kpi-matches">—</div>
+          <div class="stat-label">مباريات فوز / خسارة</div>
+        </div>
+      </div>
+
+      <!-- Tournaments -->
+      <div class="section-title">بطولاتي القادمة والجارية</div>
+      <div id="my-tournaments" class="grid cols-3"></div>
+
+      <!-- Ratings leaderboard preview -->
+      <div class="section-title">أعلى 5 لاعبين في التصنيف</div>
+      <div class="card">
+        <table class="table">
+          <thead><tr><th>#</th><th>اللاعب</th><th>ELO</th><th>مباريات</th><th>فاز / خسر</th></tr></thead>
+          <tbody id="leaderboard-body"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="/shared/api.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script>
+    const ME = "/auth/me";
+
+    async function loadMe() {
+      // /auth/me is not guaranteed; fall back to decoding-less approach: try it, else show minimal info
+      try {
+        return await apiFetch("/auth/me");
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function loadTrust() {
+      try {
+        const r = await fetch("http://localhost:8000/api/v1/ratings/leaderboard", {
+          headers: { Authorization: "Bearer " + Auth.token() },
+        });
+        if (!r.ok) return [];
+        return await r.json();
+      } catch (_) { return []; }
+    }
+
+    function render() {
+      const dashboard = async () => {
+        if (!(await requireAuthOrRedirect())) return;
+        const me = await loadMe();
+        if (me) {
+          el("hello-name").textContent = "أهلاً، " + (me.display_name || "لاعب");
+          el("player-email").textContent = me.email || "";
+        }
+
+        const board = await loadTrust();
+        // find my row by display name if needed
+        if (board.length) {
+          el("leaderboard-body").innerHTML = board.slice(0, 5).map((row, i) => `
+            <tr>
+              <td class="num">${i + 1}</td>
+              <td>${row.display_name}</td>
+              <td class="num" style="color:var(--neon)">${row.rating}</td>
+              <td>${row.matches_played}</td>
+              <td>${row.wins} / ${row.losses}</td>
+            </tr>`).join("");
+        } else {
+          el("leaderboard-body").innerHTML = `<tr><td colspan="5" class="empty">لا يوجد لاعبون مصنفون بعد</td></tr>`;
+        }
+
+        // Trust + Wallet require my user id; decode JWT payload
+        try {
+          const token = Auth.token();
+          const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+          const uid = payload.sub;
+          const [trust, wallet] = await Promise.all([
+            apiFetch("/trust/" + uid).catch(() => null),
+            apiFetch("/economy/wallet/me").catch(() => null),
+          ]);
+          if (trust) {
+            el("kpi-trust").textContent = trust.trust_score;
+            el("trust-bar").style.width = trust.trust_score + "%";
+            const b = el("trust-badge");
+            if (trust.trust_score >= 80) { b.textContent = "موثوق"; b.classList.add("open"); }
+            else if (trust.trust_score >= 50) { b.textContent = "مقبول"; }
+            else { b.textContent = "تحت المراقبة"; b.style.color = "var(--danger)"; }
+          }
+          if (wallet) el("kpi-wallet").textContent = wallet.balance.toLocaleString("en");
+          // rating from leaderboard
+          const mine = board.find((r) => r.user_id === uid);
+          if (mine) {
+            el("kpi-elo").textContent = mine.rating;
+            el("kpi-matches").textContent = mine.wins + " / " + mine.losses;
+          }
+          localStorage.setItem(USER_KEY, uid);
+        } catch (_) {}
+
+        el("loading").style.display = "none";
+        el("content").style.display = "block";
+      };
+      dashboard();
+    }
+    render();
+    el("btn-refresh").addEventListener("click", () => location.reload());
+  </script>
+</body>
+</html>

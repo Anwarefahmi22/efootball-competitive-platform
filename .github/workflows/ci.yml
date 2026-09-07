@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: efootball
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/efootball
+      JWT_SECRET_KEY: ci-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run migrations
+        run: alembic upgrade head
+
+      - name: Start API
+        run: |
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          echo $! > uvicorn.pid
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/health && break || sleep 1
+          done
+
+      - name: Smoke test /health
+        run: |
+          curl -sf http://localhost:8000/health | grep ok
+
+      - name: Smoke test OpenAPI docs
+        run: |
+          curl -sf http://localhost:8000/docs > /dev/null
+
+      - name: Smoke test registration + login
+        run: |
+          EMAIL="ci-$(date +%s)@example.com"
+          curl -sf -X POST http://localhost:8000/api/v1/auth/register \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"$EMAIL\",\"password\":\"Str0ngPass!\",\"display_name\":\"CI Bot\"}" \
+            | tee /tmp/register.json | grep -q access_token
+          python - <<'PY'
+          import json
+          with open("/tmp/register.json") as f:
+              data = json.load(f)
+          assert data["refresh_token"], "missing refresh_token"
+          print("register OK")
+          PY
+
+      - name: Stop API
+        if: always()
+        run: |
+          kill $(cat uvicorn.pid) 2>/dev/null || true

@@ -3,8 +3,8 @@
 from alembic import op
 
 
-revision = "012_free_competition"
-down_revision = "011_tournament_winner"
+revision = "013_free_competition"
+down_revision = "012"
 branch_labels = None
 depends_on = None
 

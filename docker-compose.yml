@@ -15,8 +15,13 @@ services:
       timeout: 3s
       retries: 10
 
+  # The API serves the web frontend itself — one container for everything.
+  # Open http://localhost:8000/ directly; the nginx service below is only
+  # kept for the legacy split-dev setup.
   api:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     depends_on:
       db:
         condition: service_healthy
@@ -25,16 +30,12 @@ services:
       JWT_SECRET_KEY: dev-secret-change-in-production
     ports:
       - "8000:8000"
-    volumes:
-      - evidence_storage:/app/storage
-    command: >
-      sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   web:
     image: nginx:alpine
     depends_on:
       - api
+    profiles: ["legacy"]
     ports:
       - "8080:80"
     volumes:
@@ -42,4 +43,3 @@ services:
 
 volumes:
   pgdata:
-  evidence_storage:

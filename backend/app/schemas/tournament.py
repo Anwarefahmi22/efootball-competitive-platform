@@ -23,6 +23,8 @@ class TournamentCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_participants_for_format(self) -> "TournamentCreate":
+        if self.entry_fee != 0:
+            raise ValueError("Tournaments are free: entry_fee must be 0")
         if self.format == TournamentFormat.SINGLE_ELIMINATION:
             if self.max_participants < 4 or self.max_participants > 64 or not _is_power_of_two(self.max_participants):
                 raise ValueError(

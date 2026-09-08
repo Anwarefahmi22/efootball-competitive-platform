@@ -7,7 +7,6 @@ from sqlalchemy.orm import selectinload
 
 from app.api.v1.auth import get_current_user
 from app.core.bracket import assign_random_seeds, build_bracket_matches, is_power_of_two
-from app.core.economy import credit, debit
 from app.core.permissions import is_admin
 from app.core.groups import (
     assign_seeded_groups,
@@ -19,7 +18,6 @@ from app.core.groups import (
 )
 from app.core.league import compute_standings, generate_league_schedule
 from app.db.session import get_db
-from app.models.economy import TransactionType
 from app.models.group import Group
 from app.models.match import Match
 from app.models.tournament import Tournament, TournamentFormat, TournamentParticipant, TournamentStatus
@@ -64,12 +62,6 @@ def _approved(tournament: Tournament) -> list[TournamentParticipant]:
 
 
 async def _refund_and_remove(db: AsyncSession, tournament: Tournament, participant: TournamentParticipant) -> None:
-    if tournament.entry_fee > 0:
-        await credit(
-            db, participant.user_id, tournament.entry_fee, TransactionType.ENTRY_FEE_REFUND,
-            f"refund for leaving/rejected from tournament {tournament.id}",
-        )
-        tournament.prize_pool = max(0, tournament.prize_pool - tournament.entry_fee)
     await db.delete(participant)
 
 
@@ -77,8 +69,6 @@ async def _refund_and_remove(db: AsyncSession, tournament: Tournament, participa
 async def create_tournament(
     payload: TournamentCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
-    if payload.entry_fee < 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="entry_fee cannot be negative")
     if payload.format == TournamentFormat.GROUP_KNOCKOUT:
         if payload.num_groups is None or not is_valid_group_count(payload.num_groups):
             raise HTTPException(
@@ -93,7 +83,7 @@ async def create_tournament(
     tournament = Tournament(
         name=payload.name, description=payload.description, format=payload.format,
         status=TournamentStatus.REGISTRATION_OPEN, max_participants=payload.max_participants,
-        entry_fee=payload.entry_fee, prize_pool=0, requires_approval=payload.requires_approval,
+        entry_fee=0, prize_pool=0, requires_approval=payload.requires_approval,
         num_groups=payload.num_groups, created_by=current_user.id, starts_at=payload.starts_at,
         season_id=payload.season_id,
     )
@@ -220,9 +210,6 @@ async def join_tournament(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already joined this tournament")
     if len(tournament.participants) >= tournament.max_participants:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tournament is full")
-    if tournament.entry_fee > 0:
-        await debit(db, current_user.id, tournament.entry_fee, TransactionType.ENTRY_FEE, f"entry fee for tournament {tournament.id}")
-        tournament.prize_pool += tournament.entry_fee
     initial_status = "pending" if tournament.requires_approval else "approved"
     db.add(TournamentParticipant(tournament_id=tournament.id, user_id=current_user.id, status=initial_status))
     await db.commit()

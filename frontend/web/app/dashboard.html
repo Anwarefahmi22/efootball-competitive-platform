@@ -13,28 +13,37 @@
     <div id="loading" class="spinner"></div>
 
     <main id="content" style="display:none">
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px">
+      <div class="page-toolbar">
         <div>
           <h1 class="page-title" id="hello-name">لوحة اللاعب</h1>
           <div class="muted" id="player-email"></div>
         </div>
-        <a class="btn btn-ghost" href="#" id="btn-refresh">تحديث البيانات ↻</a>
+        <button class="btn btn-ghost" type="button" id="btn-refresh">تحديث البيانات ↻</button>
       </div>
 
+      <section class="next-action" aria-labelledby="next-action-title">
+        <div id="next-action-copy">
+          <span class="eyebrow">الخطوة التالية</span>
+          <h2 id="next-action-title">جاهز للمنافسة؟</h2>
+          <p>استكشف البطولات المفتوحة وانضم إلى أول مباراة في مسيرتك.</p>
+        </div>
+        <a class="btn btn-primary" href="/app/tournaments.html">استعرض البطولات</a>
+      </section>
+
       <!-- KPI cards -->
-      <div class="grid cols-4" style="margin-top:22px">
+      <div class="grid cols-4 page-list">
         <div class="card hoverable">
           <div class="stat-value" id="kpi-elo">—</div>
           <div class="stat-label">تقييم ELO</div>
         </div>
         <div class="card hoverable">
-          <div class="stat-value" id="kpi-trust" style="font-size:1.6rem">—</div>
+          <div class="stat-value trust-value" id="kpi-trust">—</div>
           <div class="stat-label">درجة الثقة <span id="trust-badge" class="badge">—</span></div>
-          <div class="progress" style="margin-top:10px"><i id="trust-bar" style="width:0%"></i></div>
+          <div class="progress progress-spaced"><i id="trust-bar" style="width:0%"></i></div>
         </div>
         <div class="card hoverable">
-          <div class="stat-value" id="kpi-wallet">—</div>
-          <div class="stat-label">رصيد المحفظة (عملة)</div>
+          <div class="stat-value">🆓</div>
+          <div class="stat-label">منصة مجانية بالكامل</div>
         </div>
         <div class="card hoverable">
           <div class="stat-value" id="kpi-matches">—</div>
@@ -44,12 +53,15 @@
 
       <!-- Tournaments -->
       <div class="section-title">بطولاتي القادمة والجارية</div>
-      <div id="my-tournaments" class="grid cols-3"></div>
+      <div id="my-tournaments" class="grid cols-3">
+        <div class="empty card" style="grid-column:1/-1">لم تنضم إلى أي بطولة بعد. ابدأ من البطولات المفتوحة.</div>
+      </div>
 
       <!-- Ratings leaderboard preview -->
       <div class="section-title">أعلى 5 لاعبين في التصنيف</div>
       <div class="card">
         <table class="table">
+          <caption class="sr-only">معاينة أعلى خمسة لاعبين في التصنيف</caption>
           <thead><tr><th>#</th><th>اللاعب</th><th>ELO</th><th>مباريات</th><th>فاز / خسر</th></tr></thead>
           <tbody id="leaderboard-body"></tbody>
         </table>
@@ -61,6 +73,17 @@
   <script src="/shared/nav.js"></script>
   <script>
     const ME = "/auth/me";
+    const numberFormat = new Intl.NumberFormat("ar-EG");
+    const formatStatus = (status) => ({
+      registration_open: "التسجيل مفتوح",
+      registration_closed: "التسجيل مغلق",
+      in_progress: "جارية",
+      completed: "منتهية",
+      cancelled: "ملغاة",
+    }[status] || status);
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
+    }[char]));
 
     async function loadMe() {
       // /auth/me is not guaranteed; fall back to decoding-less approach: try it, else show minimal info
@@ -71,14 +94,34 @@
       }
     }
 
-    async function loadTrust() {
-      try {
-        const r = await fetch("http://localhost:8000/api/v1/ratings/leaderboard", {
-          headers: { Authorization: "Bearer " + Auth.token() },
-        });
-        if (!r.ok) return [];
-        return await r.json();
-      } catch (_) { return []; }
+    async function loadLeaderboard() {
+      return apiFetch("/ratings/leaderboard");
+    }
+
+    function renderTournaments(list) {
+      const target = el("my-tournaments");
+      if (!list.length) {
+        target.innerHTML = `<div class="empty card" style="grid-column:1/-1">لم تنضم إلى أي بطولة بعد. <a href="/app/tournaments.html">استعرض البطولات المفتوحة</a></div>`;
+        return;
+      }
+      target.innerHTML = list.slice(0, 3).map((tournament) => {
+        const pct = tournament.max_participants
+          ? Math.round((tournament.participant_count || 0) * 100 / tournament.max_participants)
+          : 0;
+        return `
+          <article class="card tournament-card">
+            <div class="tournament-card__head">
+              <h2>${escapeHtml(tournament.name)}</h2>
+              <span class="badge ${tournament.status}">${formatStatus(tournament.status)}</span>
+            </div>
+            <div class="tournament-card__meta">
+              <span>👥 ${numberFormat.format(tournament.participant_count)}/${numberFormat.format(tournament.max_participants)}</span>
+              <span>🆓 مجانية</span>
+            </div>
+            <div class="progress" role="progressbar" aria-label="نسبة امتلاء البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+            <a class="btn btn-ghost" href="/app/tournaments.html">عرض البطولات</a>
+          </article>`;
+      }).join("");
     }
 
     function render() {
@@ -90,8 +133,15 @@
           el("player-email").textContent = me.email || "";
         }
 
-        const board = await loadTrust();
-        // find my row by display name if needed
+        const [board, tournaments] = await Promise.all([
+          loadLeaderboard(),
+          apiFetch("/tournaments"),
+        ]);
+        const uid = me && me.id;
+        const mineTournaments = uid
+          ? tournaments.filter((tournament) => tournament.participants.some((participant) => participant.user_id === uid))
+          : [];
+        renderTournaments(mineTournaments);
         if (board.length) {
           el("leaderboard-body").innerHTML = board.slice(0, 5).map((row, i) => `
             <tr>
@@ -105,15 +155,8 @@
           el("leaderboard-body").innerHTML = `<tr><td colspan="5" class="empty">لا يوجد لاعبون مصنفون بعد</td></tr>`;
         }
 
-        // Trust + Wallet require my user id; decode JWT payload
-        try {
-          const token = Auth.token();
-          const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-          const uid = payload.sub;
-          const [trust, wallet] = await Promise.all([
-            apiFetch("/trust/" + uid).catch(() => null),
-            apiFetch("/economy/wallet/me").catch(() => null),
-          ]);
+        if (uid) {
+          const trust = await apiFetch("/trust/" + uid).catch(() => null);
           if (trust) {
             el("kpi-trust").textContent = trust.trust_score;
             el("trust-bar").style.width = trust.trust_score + "%";
@@ -122,7 +165,6 @@
             else if (trust.trust_score >= 50) { b.textContent = "مقبول"; }
             else { b.textContent = "تحت المراقبة"; b.style.color = "var(--danger)"; }
           }
-          if (wallet) el("kpi-wallet").textContent = wallet.balance.toLocaleString("en");
           // rating from leaderboard
           const mine = board.find((r) => r.user_id === uid);
           if (mine) {
@@ -130,12 +172,14 @@
             el("kpi-matches").textContent = mine.wins + " / " + mine.losses;
           }
           localStorage.setItem(USER_KEY, uid);
-        } catch (_) {}
+        }
 
         el("loading").style.display = "none";
         el("content").style.display = "block";
       };
-      dashboard();
+      dashboard().catch((error) => {
+        el("loading").outerHTML = `<div class="empty card" role="alert">تعذر تحميل لوحة اللاعب: ${escapeHtml(error.detail || "حاول تحديث الصفحة.")}</div>`;
+      });
     }
     render();
     el("btn-refresh").addEventListener("click", () => location.reload());

@@ -388,7 +388,7 @@ GET /health
 - Matches مع submit-result وconfirm وdispute وresolve-dispute وevidence.
 - Ratings وtrust وfraud analytics.
 - Posts/comments/likes/follows.
-- Wallet/transactions/deposits/withdrawals.
+- Free competition only: no wallet, transactions, deposits, withdrawals, entry fees, or cash prizes are exposed to platform users.
 - Seasons وplatform/player/tournament analytics.
 
 قواعد العمل:

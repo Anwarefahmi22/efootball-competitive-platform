@@ -9,14 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import get_current_user
 from app.core.bracket import advance_winner
-from app.core.economy import credit
 from app.core.league import compute_standings, is_league_complete
 from app.core.permissions import get_current_admin
 from app.core.rating import new_rating, new_rating_draw
 from app.core.storage import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES, save_evidence_image
 from app.core.trust import record_confirmed_match, record_dispute_filed, record_dispute_resolved
 from app.db.session import get_db
-from app.models.economy import TransactionType
 from app.models.evidence import MatchEvidence
 from app.models.match import Match, MatchStatus
 from app.models.rating import PlayerRating
@@ -73,9 +71,7 @@ async def _apply_elo_draw(db: AsyncSession, player_a_id: UUID, player_b_id: UUID
 
 
 async def _distribute_knockout_prize(db: AsyncSession, tournament: Tournament, winner_id: UUID) -> None:
-    if tournament.status == TournamentStatus.COMPLETED and not tournament.prize_distributed and tournament.prize_pool > 0:
-        await credit(db, winner_id, tournament.prize_pool, TransactionType.PRIZE_PAYOUT, f"prize for winning tournament {tournament.id}")
-        tournament.prize_distributed = True
+    return
 
 
 async def _distribute_league_prize_if_complete(db: AsyncSession, tournament: Tournament) -> None:
@@ -85,13 +81,8 @@ async def _distribute_league_prize_if_complete(db: AsyncSession, tournament: Tou
     standings = await compute_standings(db, tournament.id)
     if standings:
         tournament.winner_id = standings[0]["user_id"]
-    if tournament.prize_distributed or tournament.prize_pool <= 0 or not standings:
+    if not standings:
         return
-    await credit(
-        db, standings[0]["user_id"], tournament.prize_pool, TransactionType.PRIZE_PAYOUT,
-        f"league prize for finishing 1st in tournament {tournament.id}",
-    )
-    tournament.prize_distributed = True
 
 
 async def _finalize_match(db: AsyncSession, match: Match, tournament: Tournament, score_a: int, score_b: int) -> None:

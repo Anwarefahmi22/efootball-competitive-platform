@@ -10,14 +10,14 @@
 </head>
 <body>
   <div class="container">
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px">
+    <div class="page-toolbar">
       <h1 class="page-title">🏟️ البطولات</h1>
-      <div style="display:flex; gap:10px; flex-wrap:wrap">
-        <select class="field" id="filter-status" style="width:auto; min-width:150px">
+      <div class="toolbar-actions">
+        <select class="field" id="filter-status">
           <option value="">كل الحالات</option>
           <option value="draft">مسودة</option>
-          <option value="open" selected>مفتوحة للتسجيل</option>
-          <option value="running">جارية</option>
+          <option value="registration_open" selected>مفتوحة للتسجيل</option>
+          <option value="in_progress">جارية</option>
           <option value="completed">منتهية</option>
           <option value="cancelled">ملغاة</option>
         </select>
@@ -25,35 +25,33 @@
       </div>
     </div>
 
-    <div id="list" class="grid cols-3" style="margin-top:22px"></div>
+    <div id="list" class="grid cols-3 page-list"></div>
 
     <!-- Create modal -->
-    <dialog id="dlg-create" style="background:transparent; border:none; padding:0">
-      <form class="card" id="form-create" method="dialog" style="width:min(480px,92vw); display:flex; flex-direction:column; gap:12px">
-        <h3 style="color:var(--neon); font-family:'Orbitron'">بطولة جديدة</h3>
-        <div><label class="lbl">اسم البطولة</label><input class="field" id="t-name" required /></div>
-        <div><label class="lbl">الوصف (اختياري)</label><textarea class="field" id="t-desc" rows="2"></textarea></div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-          <div><label class="lbl">النظام</label>
+    <dialog id="dlg-create" aria-labelledby="create-title" style="background:transparent; border:none; padding:0">
+      <form class="card dialog-form" id="form-create" method="dialog">
+        <h3 id="create-title" class="accent-text">بطولة جديدة</h3>
+        <div><label class="lbl" for="t-name">اسم البطولة</label><input class="field" id="t-name" name="name" required /></div>
+        <div><label class="lbl" for="t-desc">الوصف (اختياري)</label><textarea class="field" id="t-desc" name="description" rows="2"></textarea></div>
+        <div class="form-grid">
+          <div><label class="lbl" for="t-format">النظام</label>
             <select class="field" id="t-format">
               <option value="single_elimination">خروج المغلوب</option>
               <option value="league">دوري كامل</option>
             </select>
           </div>
-          <div><label class="lbl">عدد المشاركين</label>
+          <div><label class="lbl" for="t-max">عدد المشاركين</label>
             <select class="field" id="t-max">
               <option>4</option><option>8</option><option selected>16</option><option>32</option><option>64</option>
             </select>
           </div>
         </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-          <div><label class="lbl">رسوم الدخول</label><input class="field" id="t-fee" type="number" min="0" value="0" /></div>
-          <div><label class="lbl">موافقة المنظم مطلوبة؟</label>
+        <div>
+          <label class="lbl" for="t-approval">موافقة المنظم مطلوبة؟</label>
             <select class="field" id="t-approval"><option value="false">لا — انضمام مباشر</option><option value="true">نعم</option></select>
-          </div>
         </div>
-        <div class="err muted" id="t-err" style="color:var(--danger); font-size:.85rem"></div>
-        <div style="display:flex; gap:10px; justify-content:flex-end">
+        <div class="err muted error-text" id="t-err"></div>
+        <div class="form-actions">
           <button class="btn btn-ghost" id="t-cancel" type="button">إلغاء</button>
           <button class="btn btn-primary" type="submit">إنشاء</button>
         </div>
@@ -64,28 +62,33 @@
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
-    const fmtLabel = { single_elimination: "خروج المغلوب", league: "دوري" };
+    const fmtLabel = { single_elimination: "خروج المغلوب", league: "دوري", group_knockout: "مجموعات وإقصائيات" };
+    const numberFormat = new Intl.NumberFormat("ar-EG");
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
+    }[char]));
 
     function card(t) {
       const pct = t.max_participants ? Math.round((t.participant_count || 0) * 100 / t.max_participants) : 0;
       return `
-      <div class="card hoverable">
-        <div style="display:flex; justify-content:space-between; align-items:center">
-          <h3 style="margin:0">${t.name}</h3>
+      <article class="card hoverable tournament-card">
+        <div class="tournament-card__head">
+          <h2>${escapeHtml(t.name)}</h2>
           <span class="badge ${t.status}">${statusLabel(t.status)}</span>
         </div>
-        <div class="muted" style="margin:8px 0 14px; font-size:.9rem">${(t.description || "بدون وصف").slice(0, 90)}</div>
-        <div style="display:flex; gap:16px; font-size:.85rem; color:var(--muted)">
-          <span>🎮 ${fmtLabel[t.format] || t.format}</span>
-          <span>👥 ${t.participant_count}/${t.max_participants}</span>
-          <span>💰 رسوم ${t.entry_fee}</span>
+        <p class="tournament-card__description">${escapeHtml((t.description || "بطولة جديدة بانتظار المنافسين.").slice(0, 110))}</p>
+        <div class="tournament-card__meta">
+          <span>🎮 ${fmtLabel[t.format] || escapeHtml(t.format)}</span>
+          <span>👥 ${numberFormat.format(t.participant_count || 0)}/${numberFormat.format(t.max_participants)}</span>
+          <span>🆓 مجانية بالكامل</span>
         </div>
-        <div class="progress" style="margin:12px 0"><i style="width:${pct}%"></i></div>
-        <div style="display:flex; gap:10px">
-          ${t.status === "open" ? `<button class="btn btn-primary" style="flex:1; padding:9px" data-join="${t.id}">انضم الآن</button>` : ""}
-          <button class="btn btn-ghost" style="flex:1; padding:9px" data-open="${t.id}">تفاصيل</button>
+        <div class="tournament-card__prize"><span>المنافسة</span><strong>نقاط وتصنيف</strong></div>
+        <div class="progress" role="progressbar" aria-label="نسبة امتلاء البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+        <div class="tournament-card__footer"><span class="muted">${numberFormat.format(pct)}% ممتلئة</span>
+          ${t.status === "registration_open" ? `<button class="btn btn-primary" type="button" data-join="${t.id}">انضم الآن</button>` : ""}
+          <a class="btn btn-ghost" href="/app/tournament.html?id=${encodeURIComponent(t.id)}">التفاصيل</a>
         </div>
-      </div>`;
+      </article>`;
     }
 
     let caches = [];
@@ -98,11 +101,11 @@
         if (status) list = list.filter((t) => t.status === status);
         el("list").innerHTML = list.length
           ? list.map(card).join("")
-          : `<div class="empty" style="grid-column:1/-1">لا توجد بطولات بهذه الحالة — <a href="#" id="first-create">أنشئ أول بطولة</a></div>`;
+          : `<div class="empty card grid-span">لا توجد بطولات بهذه الحالة — <a href="#" id="first-create">أنشئ أول بطولة</a></div>`;
         document.querySelectorAll("[data-join]").forEach((b) => b.addEventListener("click", () => join(b.dataset.join)));
         el("first-create")?.addEventListener("click", (e) => { e.preventDefault(); openCreate(); });
       } catch (err) {
-        el("list").innerHTML = `<div class="empty" style="grid-column:1/-1">${err.detail || "تعذر التحميل"}</div>`;
+        el("list").innerHTML = `<div class="empty grid-span" role="alert">${escapeHtml(err.detail || "تعذر التحميل")}</div>`;
       }
     }
 
@@ -133,14 +136,14 @@
         description: el("t-desc").value.trim() || null,
         format: el("t-format").value,
         max_participants: maxp,
-        entry_fee: parseInt(el("t-fee").value || "0", 10),
+        entry_fee: 0,
         requires_approval: el("t-approval").value === "true",
       };
       try {
         await apiFetch("/tournaments", { method: "POST", body: JSON.stringify(body) });
         dlg.close();
         toast("تم إنشاء البطولة! 🏆");
-        el("filter-status").value = "open";
+        el("filter-status").value = "registration_open";
         load();
       } catch (err) {
         el("t-err").textContent = err.detail || "فشل الإنشاء";

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1e13" />
+  <title>تفاصيل المباراة — eFootball Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/theme.css" />
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="spinner"></div>
+    <main id="content" hidden>
+      <a class="back-link" id="back-link" href="/app/tournaments.html">← العودة إلى البطولة</a>
+      <section class="card match-hero" id="match-summary"></section>
+      <section class="card" id="result-panel">
+        <div class="section-heading"><h2>إرسال النتيجة</h2><span class="muted">أرفق لقطة واضحة من المباراة</span></div>
+        <form id="result-form" class="result-form">
+          <div class="score-inputs">
+            <label class="lbl" for="score-a">نتيجة اللاعب الأول<input class="field" id="score-a" name="score_a" type="number" min="0" max="99" required /></label>
+            <span class="score-divider">:</span>
+            <label class="lbl" for="score-b">نتيجة اللاعب الثاني<input class="field" id="score-b" name="score_b" type="number" min="0" max="99" required /></label>
+          </div>
+          <label class="lbl" for="evidence-image">صورة الدليل<input class="field" id="evidence-image" name="image" type="file" accept="image/jpeg,image/png" required /></label>
+          <p class="muted form-hint">الصيغ المدعومة: JPG وPNG، والحد الأقصى 8MB.</p>
+          <div id="form-error" class="form-error" role="alert" hidden></div>
+          <button class="btn btn-primary" type="submit">إرسال النتيجة والدليل</button>
+        </form>
+        <div id="pending-actions" class="pending-actions" hidden>
+          <p>تم إرسال نتيجة. راجع الدليل ثم أكد النتيجة أو افتح نزاعًا إذا كانت غير صحيحة.</p>
+          <div><button class="btn btn-primary" id="confirm-result" type="button">تأكيد النتيجة</button><button class="btn btn-danger" id="dispute-result" type="button">فتح نزاع</button></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="section-heading"><h2>الأدلة المرسلة</h2></div>
+        <div id="evidence-list"></div>
+      </section>
+    </main>
+  </div>
+  <dialog id="dispute-dialog" class="modal-dialog" aria-labelledby="dispute-title">
+    <form method="dialog" id="dispute-form">
+      <span class="eyebrow">إجراء يحتاج مراجعة</span>
+      <h2 id="dispute-title">فتح نزاع</h2>
+      <p class="muted">اشرح سبب اعتراضك على النتيجة ليتمكن المشرف من مراجعته.</p>
+      <label class="lbl" for="dispute-reason">سبب النزاع<textarea class="field" id="dispute-reason" rows="4" maxlength="1000" placeholder="اكتب التفاصيل هنا (اختياري)"></textarea></label>
+      <div class="dialog-actions"><button class="btn btn-ghost" value="cancel" type="submit">إلغاء</button><button class="btn btn-danger" id="submit-dispute" value="default" type="submit">إرسال النزاع</button></div>
+    </form>
+  </dialog>
+  <script src="/shared/api.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get("id");
+    const labels = { waiting: "بانتظار المباراة", ready: "جاهزة", in_progress: "جارية", result_submitted: "النتيجة مرسلة", disputed: "قيد النزاع", completed: "مكتملة", cancelled: "ملغاة" };
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+    let currentMatch;
+
+    function renderMatch(match) {
+      currentMatch = match;
+      el("match-summary").innerHTML = `<span class="eyebrow">مركز المباراة</span><span class="badge ${match.status}">${labels[match.status] || match.status}</span><h1>مباراة الجولة ${match.round_number}</h1><div class="match-hero__score"><span>${match.score_a ?? "—"}</span><b>:</b><span>${match.score_b ?? "—"}</span></div><p class="muted">المباراة بين لاعبي البطولة. يتم اعتماد النتيجة بعد مراجعة الطرف الآخر.</p>`;
+      const canSubmit = ["ready", "in_progress"].includes(match.status);
+      el("result-panel").hidden = !canSubmit && match.status !== "result_submitted";
+      el("result-form").hidden = !canSubmit;
+      el("pending-actions").hidden = match.status !== "result_submitted";
+    }
+
+    async function loadEvidence() {
+      const evidence = await apiFetch(`/matches/${id}/evidence`);
+      el("evidence-list").innerHTML = evidence.length
+        ? evidence.map((item) => `<div class="evidence-row"><span>${item.claimed_score_a} : ${item.claimed_score_b}</span><span class="muted">${new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.created_at))}</span><button class="btn btn-ghost evidence-view" type="button" data-evidence-id="${encodeURIComponent(item.id)}">عرض الدليل</button></div>`).join("")
+        : `<div class="empty">لم يتم إرسال أدلة بعد.</div>`;
+      document.querySelectorAll(".evidence-view").forEach((button) => {
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          button.textContent = "جارٍ التحميل…";
+          try {
+            const blob = await apiFetchFile(`/matches/${id}/evidence/${button.dataset.evidenceId}/image`);
+            const url = URL.createObjectURL(blob);
+            const preview = window.open(url, "_blank", "noopener");
+            if (!preview) toast("اسمح بالنوافذ المنبثقة لعرض الدليل.", "error");
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+          } catch (error) {
+            toast(error.detail || "تعذر تحميل الدليل.", "error");
+          } finally {
+            button.disabled = false;
+            button.textContent = "عرض الدليل";
+          }
+        });
+      });
+    }
+
+    async function load() {
+      if (!id) throw { detail: "معرّف المباراة غير موجود." };
+      const match = await apiFetch(`/matches/${id}`);
+      renderMatch(match);
+      if (match.tournament_id) el("back-link").href = `/app/tournament.html?id=${encodeURIComponent(match.tournament_id)}`;
+      await loadEvidence();
+    }
+
+    el("result-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = event.currentTarget.querySelector("button[type=submit]");
+      const formData = new FormData(event.currentTarget);
+      button.disabled = true; button.textContent = "جارٍ إرسال النتيجة…";
+      el("form-error").hidden = true;
+      try {
+        await apiFetch(`/matches/${id}/submit-result`, { method: "POST", body: formData });
+        toast("تم إرسال النتيجة والدليل.");
+        await load();
+      } catch (error) {
+        el("form-error").textContent = error.detail || "تعذر إرسال النتيجة.";
+        el("form-error").hidden = false;
+      } finally {
+        button.disabled = false; button.textContent = "إرسال النتيجة والدليل";
+      }
+    });
+    el("confirm-result").addEventListener("click", async () => {
+      try { await apiFetch(`/matches/${id}/confirm`, { method: "POST" }); toast("تم تأكيد النتيجة."); await load(); }
+      catch (error) { toast(error.detail || "تعذر تأكيد النتيجة.", "error"); }
+    });
+    el("dispute-result").addEventListener("click", async () => {
+      el("dispute-reason").value = "";
+      el("dispute-dialog").showModal();
+    });
+    el("dispute-form").addEventListener("submit", async (event) => {
+      if (event.submitter?.value !== "default") return;
+      event.preventDefault();
+      const button = el("submit-dispute");
+      button.disabled = true;
+      try {
+        await apiFetch(`/matches/${id}/dispute`, { method: "POST", body: JSON.stringify({ reason: el("dispute-reason").value.trim() }) });
+        el("dispute-dialog").close();
+        toast("تم فتح النزاع.");
+        await load();
+      } catch (error) {
+        toast(error.detail || "تعذر فتح النزاع.", "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    if (!Auth.loggedIn()) location.href = "/auth.html?next=" + encodeURIComponent(location.pathname + location.search);
+    else load().then(() => { el("loading").hidden = true; el("content").hidden = false; }).catch((error) => {
+      el("loading").outerHTML = `<div class="empty card" role="alert">${escapeHtml(error.detail || "تعذر تحميل المباراة.")}</div>`;
+    });
+  </script>
+</body>
+</html>

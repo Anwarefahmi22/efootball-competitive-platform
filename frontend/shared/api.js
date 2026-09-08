@@ -74,6 +74,8 @@ function toast(message, type = "info") {
   if (!holder) {
     holder = document.createElement("div");
     holder.id = "efa-toast";
+    holder.setAttribute("aria-live", "polite");
+    holder.setAttribute("role", "status");
     document.body.appendChild(holder);
   }
   const t = document.createElement("div");

@@ -15,6 +15,7 @@
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+html { color-scheme: dark; }
 body {
   margin: 0;
   font-family: "Cairo", "Segoe UI", sans-serif;
@@ -79,7 +80,7 @@ h1, h2, h3 { margin: 0 0 .5em; }
   display: inline-block; cursor: pointer; text-align: center;
   font-family: inherit; font-weight: 700; font-size: 1rem;
   padding: 12px 22px; border-radius: 10px; border: 1px solid transparent;
-  transition: all .15s ease;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease, opacity .15s ease;
 }
 .btn-primary { background: var(--neon); color: #081309; }
 .btn-primary:hover { background: #b8ff45; box-shadow: 0 0 22px rgba(163, 255, 18, .35); }
@@ -91,11 +92,15 @@ h1, h2, h3 { margin: 0 0 .5em; }
 input.field, select.field, textarea.field {
   width: 100%; font-family: inherit; font-size: 1rem;
   background: #0a1a11; border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; padding: 12px 14px; outline: none;
+  border-radius: 10px; padding: 12px 14px;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
-input.field:focus, select.field:focus, textarea.field:focus {
+input.field:focus-visible, select.field:focus-visible, textarea.field:focus-visible {
   border-color: var(--neon); box-shadow: 0 0 0 3px rgba(163, 255, 18, .12);
+}
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--neon);
+  outline-offset: 3px;
 }
 label.lbl { display: block; margin: 0 0 6px; color: var(--muted); font-weight: 600; font-size: .9rem; }
 
@@ -134,3 +139,11 @@ table.table tr:hover td { background: rgba(163, 255, 18, .04); }
 .spinner { border: 3px solid var(--line); border-top-color: var(--neon); border-radius: 50%; width: 28px; height: 28px; animation: spin .8s linear infinite; margin: 20px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

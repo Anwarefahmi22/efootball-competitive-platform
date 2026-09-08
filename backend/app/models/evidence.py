@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,6 +21,10 @@ class MatchEvidence(Base):
     claimed_score_a: Mapped[int] = mapped_column(Integer, nullable=False)
     claimed_score_b: Mapped[int] = mapped_column(Integer, nullable=False)
     image_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    # Evidence bytes live in the DB, not on disk: free hosting tiers
+    # (e.g. Render) have ephemeral filesystems, so files would vanish on
+    # every redeploy. image_path keeps only the original filename.
+    image_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     # OCR text extraction is deferred to a follow-up (requires tesseract-ocr
     # binary on Termux). Column kept nullable so it can be filled in later
     # without another migration.

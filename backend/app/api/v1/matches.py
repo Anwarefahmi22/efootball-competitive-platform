@@ -1,9 +1,10 @@
 import mimetypes
+import uuid as uuid_module
 from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +14,7 @@ from app.core.economy import credit
 from app.core.league import compute_standings, is_league_complete
 from app.core.permissions import get_current_admin
 from app.core.rating import new_rating, new_rating_draw
-from app.core.storage import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES, save_evidence_image
+from app.core.storage import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES
 from app.core.trust import record_confirmed_match, record_dispute_filed, record_dispute_resolved
 from app.db.session import get_db
 from app.models.economy import TransactionType
@@ -171,11 +172,9 @@ async def submit_result(
     if len(file_bytes) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image exceeds 8MB limit")
     extension = ".png" if content_type == "image/png" else ".jpg"
-    saved_path = save_evidence_image(str(match_id), file_bytes, extension)
-
     evidence = MatchEvidence(
         match_id=match.id, submitted_by=current_user.id, claimed_score_a=score_a, claimed_score_b=score_b,
-        image_path=saved_path,
+        image_path=f"{match_id}_{uuid_module.uuid4().hex}{extension}", image_data=file_bytes,
     )
     db.add(evidence)
     match.status = MatchStatus.RESULT_SUBMITTED
@@ -197,7 +196,7 @@ async def list_evidence(match_id: UUID, current_user: User = Depends(get_current
 
 
 @router.get("/{match_id}/evidence/{evidence_id}/image")
-async def get_evidence_image(match_id: UUID, evidence_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> FileResponse:
+async def get_evidence_image(match_id: UUID, evidence_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> Response:
     match_result = await db.execute(select(Match).where(Match.id == match_id))
     match = match_result.scalar_one_or_none()
     if match is None:
@@ -206,9 +205,10 @@ async def get_evidence_image(match_id: UUID, evidence_id: UUID, current_user: Us
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only match participants can view evidence")
     result = await db.execute(select(MatchEvidence).where(MatchEvidence.id == evidence_id, MatchEvidence.match_id == match_id))
     evidence = result.scalar_one_or_none()
-    if evidence is None:
+    if evidence is None or evidence.image_data is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found")
-    return FileResponse(evidence.image_path)
+    media_type = "image/png" if (evidence.image_path or "").endswith(".png") else "image/jpeg"
+    return Response(content=evidence.image_data, media_type=media_type)
 
 
 @router.post("/{match_id}/confirm", response_model=MatchRead)

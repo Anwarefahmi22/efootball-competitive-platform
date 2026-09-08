@@ -1,5 +1,9 @@
 /* eFootball Arena — shared UI helpers (RTL) */
-const API_BASE = "http://localhost:8000/api/v1";
+// In production the API serves the frontend itself, so /api/v1 lives on the
+// same origin. The classic local dev setup (nginx on :8080) still targets
+// localhost:8000 explicitly.
+const API_BASE =
+  location.port === "8080" ? "http://localhost:8000/api/v1" : location.origin + "/api/v1";
 
 const TOKEN_KEY = "efa_access_token";
 const REFRESH_KEY = "efa_refresh_token";

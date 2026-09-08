@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1e13" />
   <title>ملف اللاعب — eFootball Arena</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/theme.css" />
@@ -26,27 +27,29 @@
           apiFetch("/ratings/" + uid).catch(() => null),
         ]);
         el("pcard").innerHTML = `
-          <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap">
-            <div style="width:84px; height:84px; border-radius:50%; background:#0a1a11; display:flex; align-items:center; justify-content:center; font-size:2.4rem; border:2px solid var(--neon-dim)">⚽</div>
-            <div style="flex:1">
-              <h2 style="margin:0; color:var(--neon)">${p.display_name}</h2>
-              <div class="muted" style="margin-top:6px">${p.country || "🌍 دولة غير محددة"} · IGN: ${p.efootball_ign || "—"} · منذ ${new Date(p.created_at).toLocaleDateString("ar")}</div>
+          <div class="profile-hero">
+            <div class="profile-avatar" aria-hidden="true">⚽</div>
+            <div class="profile-identity">
+              <span class="eyebrow">ملف اللاعب</span>
+              <h1>${escapeHtml(p.display_name)}</h1>
+              <div class="muted">${escapeHtml(p.country || "🌍 دولة غير محددة")} · IGN: ${escapeHtml(p.efootball_ign || "—")} · منذ ${new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium" }).format(new Date(p.created_at))}</div>
             </div>
-            <div style="text-align:center">
+            <div class="profile-rating">
               <div class="stat-value num">${rating ? rating.rating : "—"}</div>
               <div class="stat-label">ELO</div>
             </div>
           </div>
-          ${p.bio ? `<p class="muted" style="margin-top:16px">${p.bio}</p>` : ""}
-          <div class="grid cols-3" style="margin-top:18px">
-            <div class="card"><span class="badge">${trust ? trust.trust_score + " ثقة" : "ثقة: —"}</span></div>
-            <div class="card"><span class="badge">${rating ? "مباريات: " + rating.matches_played : ""}</span></div>
-            <div class="card"><span class="badge">${rating ? rating.wins + " فوز / " + rating.losses + " خسارة" : ""}</span></div>
+          ${p.bio ? `<p class="profile-bio">${escapeHtml(p.bio)}</p>` : `<p class="profile-bio muted">لم يضف اللاعب نبذة بعد.</p>`}
+          <div class="grid cols-3 profile-stats">
+            <div class="profile-stat"><span class="stat-label">الثقة</span><strong>${trust ? trust.trust_score : "—"}</strong></div>
+            <div class="profile-stat"><span class="stat-label">المباريات</span><strong>${rating ? rating.matches_played : "—"}</strong></div>
+            <div class="profile-stat"><span class="stat-label">السجل</span><strong>${rating ? rating.wins + " / " + rating.losses : "—"}</strong></div>
           </div>`;
       } catch (err) {
-        el("pcard").innerHTML = `<div class="empty">${err.detail || "تعذر تحميل الملف"}</div>`;
+        el("pcard").innerHTML = `<div class="empty" role="alert">${escapeHtml(err.detail || "تعذر تحميل الملف")}</div>`;
       }
     })();
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
   </script>
 </body>
 </html>

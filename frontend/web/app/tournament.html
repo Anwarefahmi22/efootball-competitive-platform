@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1e13" />
+  <title>تفاصيل البطولة — eFootball Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/theme.css" />
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="spinner"></div>
+    <main id="content" hidden>
+      <a class="back-link" href="/app/tournaments.html">← العودة إلى البطولات</a>
+      <section class="tournament-hero card" id="tournament-summary"></section>
+
+      <div class="tournament-layout">
+        <section class="card">
+          <div class="section-heading"><h2>المشاركون</h2><span id="participant-count" class="badge"></span></div>
+          <div id="participants" class="participant-list"></div>
+        </section>
+        <section class="card" id="standings-section">
+          <div class="section-heading"><h2 id="table-title">الترتيب</h2></div>
+          <div class="table-scroll"><table class="table"><caption class="sr-only">ترتيب لاعبي البطولة</caption><thead><tr><th>#</th><th>اللاعب</th><th>لعب</th><th>فاز</th><th>نقاط</th></tr></thead><tbody id="standings"></tbody></table></div>
+        </section>
+      </div>
+
+      <section class="card" id="groups-section" hidden>
+        <div class="section-heading"><h2>المجموعات</h2></div>
+        <div id="groups" class="grid cols-3"></div>
+      </section>
+
+      <section class="card matches-panel">
+        <div class="section-heading"><h2>المباريات</h2><span class="muted">حسب الجولة والمكان</span></div>
+        <div id="matches"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/shared/api.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get("id");
+    const numberFormat = new Intl.NumberFormat("ar-EG");
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
+    }[char]));
+    const labels = {
+      registration_open: "التسجيل مفتوح", registration_closed: "التسجيل مغلق",
+      in_progress: "جارية", completed: "منتهية", cancelled: "ملغاة",
+    };
+    const formatLabel = { single_elimination: "خروج المغلوب", league: "دوري", group_knockout: "مجموعات وإقصائيات" };
+    const matchLabels = {
+      waiting: "بانتظار المباراة", ready: "جاهزة", in_progress: "جارية",
+      result_submitted: "النتيجة مرسلة", disputed: "قيد النزاع", completed: "مكتملة", cancelled: "ملغاة",
+    };
+
+    function renderSummary(tournament) {
+      const pct = tournament.max_participants ? Math.round(tournament.participant_count * 100 / tournament.max_participants) : 0;
+      el("tournament-summary").innerHTML = `
+        <div class="tournament-hero__top"><span class="eyebrow">مركز البطولة</span><span class="badge ${tournament.status}">${labels[tournament.status] || tournament.status}</span></div>
+        <h1>${escapeHtml(tournament.name)}</h1>
+        <p>${escapeHtml(tournament.description || "لا يوجد وصف لهذه البطولة.")}</p>
+        <div class="tournament-stats">
+          <span><b>${formatLabel[tournament.format] || escapeHtml(tournament.format)}</b><small>النظام</small></span>
+          <span><b>مجاني</b><small>التكلفة</small></span>
+          <span><b>ELO</b><small>المكافأة التنافسية</small></span>
+          <span><b>${numberFormat.format(tournament.participant_count)}/${numberFormat.format(tournament.max_participants)}</b><small>المشاركون</small></span>
+        </div>
+        <div class="progress" role="progressbar" aria-label="نسبة امتلاء البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+        <div class="tournament-hero__actions">${tournament.status === "registration_open" ? `<button class="btn btn-primary" id="join">انضم إلى البطولة</button>` : ""}<a class="btn btn-ghost" href="/app/tournaments.html">استعراض بطولات أخرى</a></div>`;
+      el("participant-count").textContent = `${numberFormat.format(tournament.participant_count)} مشارك`;
+      const joined = tournament.participants.some((participant) => participant.user_id === localStorage.getItem(USER_KEY));
+      if (joined && tournament.status === "registration_open") {
+        el("join").textContent = "مغادرة البطولة";
+        el("join").className = "btn btn-danger";
+        el("join").onclick = () => changeParticipation("leave");
+      } else {
+        el("join")?.addEventListener("click", () => changeParticipation("join"));
+      }
+    }
+
+    function renderParticipants(participants) {
+      el("participants").innerHTML = participants.length
+        ? participants.map((participant, index) => `<div class="participant-row"><span class="participant-rank">${index + 1}</span><strong>${escapeHtml(participant.display_name)}</strong><span class="badge">${escapeHtml(participant.status)}</span></div>`).join("")
+        : `<div class="empty">لا يوجد مشاركون بعد.</div>`;
+    }
+
+    function renderStandings(rows) {
+      el("standings").innerHTML = rows.length
+        ? rows.map((row, index) => `<tr><td class="num">${index + 1}</td><td>${escapeHtml(row.display_name)}</td><td>${row.played}</td><td>${row.wins}</td><td class="num">${row.points}</td></tr>`).join("")
+        : `<tr><td colspan="5" class="empty">لا توجد نتائج بعد.</td></tr>`;
+    }
+
+    function renderGroups(groups) {
+      if (!groups.length) return;
+      el("groups-section").hidden = false;
+      el("groups").innerHTML = groups.map((group) => `<article class="group-card"><h3>${escapeHtml(group.name)}</h3>${group.standings.map((row, index) => `<div class="participant-row"><span>${index + 1}</span><strong>${escapeHtml(row.display_name)}</strong><span>${row.points} ن</span></div>`).join("")}</article>`).join("");
+    }
+
+    function renderMatches(matches) {
+      el("matches").innerHTML = matches.length
+        ? matches.map((match) => `<a class="match-row match-link" href="/app/match.html?id=${encodeURIComponent(match.id)}"><div><strong>الجولة ${match.round_number}</strong><span class="muted"> · المباراة ${match.bracket_slot ?? "—"}</span></div><span class="match-score">${match.score_a ?? "—"} : ${match.score_b ?? "—"}</span><span class="badge ${match.status}">${matchLabels[match.status] || match.status}</span></a>`).join("")
+        : `<div class="empty">لم يتم إنشاء مباريات هذه البطولة بعد.</div>`;
+    }
+
+    async function changeParticipation(action) {
+      try {
+        await apiFetch(`/tournaments/${id}/${action}`, { method: "POST", noBody: true });
+        toast(action === "join" ? "تم الانضمام إلى البطولة!" : "تمت مغادرة البطولة.");
+        load();
+      } catch (error) {
+        toast(error.detail || "تعذر تنفيذ العملية.", "error");
+      }
+    }
+
+    async function load() {
+      if (!id) throw { detail: "معرّف البطولة غير موجود." };
+      const [tournament, me] = await Promise.all([
+        apiFetch(`/tournaments/${id}`),
+        apiFetch("/auth/me"),
+      ]);
+      localStorage.setItem(USER_KEY, me.id);
+      renderSummary(tournament);
+      renderParticipants(tournament.participants);
+      const requests = [apiFetch(`/tournaments/${id}/matches`)];
+      if (tournament.format === "league") requests.push(apiFetch(`/tournaments/${id}/standings`));
+      else if (tournament.format === "group_knockout") requests.push(apiFetch(`/tournaments/${id}/groups`));
+      const [matches, extra] = await Promise.all(requests);
+      renderMatches(matches);
+      if (tournament.format === "league") renderStandings(extra);
+      if (tournament.format === "group_knockout") renderGroups(extra);
+    }
+
+    if (!Auth.loggedIn()) location.href = "/auth.html?next=" + encodeURIComponent(location.pathname + location.search);
+    else load().then(() => { el("loading").hidden = true; el("content").hidden = false; }).catch((error) => {
+      el("loading").outerHTML = `<div class="empty card" role="alert">${escapeHtml(error.detail || "تعذر تحميل البطولة.")}</div>`;
+    });
+  </script>
+</body>
+</html>

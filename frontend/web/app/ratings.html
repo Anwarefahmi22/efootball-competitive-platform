@@ -3,15 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1e13" />
   <title>التصنيف العام — eFootball Arena</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/theme.css" />
 </head>
 <body>
   <div class="container">
-    <h1 class="page-title">📊 التصنيف العام (ELO)</h1>
-    <div class="card" style="margin-top:16px; overflow-x:auto">
+    <div class="page-heading">
+      <div><span class="eyebrow">ساحة المنافسة</span><h1 class="page-title">📊 التصنيف العام (ELO)</h1><p class="muted">تابع أفضل اللاعبين واكتشف موقعك بين المنافسين.</p></div>
+      <label class="search-field" for="player-search">بحث عن لاعب<input class="field" id="player-search" type="search" placeholder="اكتب اسم اللاعب…" autocomplete="off" /></label>
+    </div>
+    <div class="card leaderboard-card">
       <table class="table">
+        <caption class="sr-only">جدول التصنيف العام للاعبي المنصة</caption>
         <thead><tr><th>#</th><th>اللاعب</th><th>ELO</th><th>مباريات</th><th>فاز</th><th>خسر</th></tr></thead>
         <tbody id="body"></tbody>
       </table>
@@ -23,19 +28,26 @@
     (async () => {
       try {
         const rows = await apiFetch("/ratings/leaderboard");
-        el("body").innerHTML = rows.map((r, i) => `
+        const search = el("player-search");
+        const render = (visibleRows) => el("body").innerHTML = visibleRows.map((r, i) => `
           <tr>
             <td class="num">${i + 1}</td>
-            <td><a href="/app/profile.html?user=${r.user_id}">${r.display_name}</a></td>
-            <td class="num" style="color:var(--neon)">${r.rating}</td>
+            <td><a class="player-link" href="/app/profile.html?user=${encodeURIComponent(r.user_id)}">${escapeHtml(r.display_name)}</a></td>
+            <td class="num accent-text">${r.rating}</td>
             <td>${r.matches_played}</td>
-            <td style="color:var(--neon)">${r.wins}</td>
-            <td style="color:var(--danger)">${r.losses}</td>
-          </tr>`).join("") || `<tr><td colspan="6" class="empty">لا يوجد لاعبون مصنفون بعد</td></tr>`;
+            <td class="accent-text">${r.wins}</td>
+            <td class="danger-text">${r.losses}</td>
+          </tr>`).join("") || `<tr><td colspan="6" class="empty">لا توجد نتائج مطابقة.</td></tr>`;
+        render(rows);
+        search.addEventListener("input", () => {
+          const term = search.value.trim().toLocaleLowerCase();
+          render(rows.filter((row) => row.display_name.toLocaleLowerCase().includes(term)));
+        });
       } catch (err) {
-        el("body").innerHTML = `<tr><td colspan="6" class="empty">${err.detail || "تعذر التحميل"}</td></tr>`;
+        el("body").innerHTML = `<tr><td colspan="6" class="empty" role="alert">${escapeHtml(err.detail || "تعذر التحميل")}</td></tr>`;
       }
     })();
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
   </script>
 </body>
 </html>

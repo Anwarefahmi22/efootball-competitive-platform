@@ -9,41 +9,89 @@
   <link rel="stylesheet" href="/shared/theme.css" />
 </head>
 <body>
-  <div class="container" style="max-width:800px">
-    <div class="card" id="pcard">
+  <div class="container profile-page">
+    <a class="back-link" href="/app/ratings.html">← العودة إلى التصنيف</a>
+    <div class="card profile-shell" id="pcard">
       <div class="spinner"></div>
     </div>
   </div>
+  <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
     (async () => {
       const uid = new URLSearchParams(location.search).get("user");
       if (!uid) { el("pcard").innerHTML = `<div class="empty">لم يُحدد اللاعب — <a href="/app/ratings.html">اذهب إلى التصنيف</a></div>`; return; }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uid)) {
+        el("pcard").innerHTML = `<div class="empty" role="alert"><h2>رابط الملف غير صالح</h2><p class="muted">افتح ملف اللاعب من صفحة التصنيف لاستخدام معرّف صحيح.</p><a class="btn btn-primary" href="/app/ratings.html">العودة إلى التصنيف</a></div>`;
+        return;
+      }
       try {
-        const [p, trust, rating] = await Promise.all([
+        const [p, trust, rating, leaderboard] = await Promise.all([
           apiFetch("/users/" + uid),
           apiFetch("/trust/" + uid).catch(() => null),
           apiFetch("/ratings/" + uid).catch(() => null),
+          apiFetch("/ratings/leaderboard").catch(() => []),
         ]);
+        const rank = rating ? leaderboard.findIndex((row) => row.user_id === uid) + 1 : 0;
+        const matches = rating?.matches_played || 0;
+        const wins = rating?.wins || 0;
+        const losses = rating?.losses || 0;
+        const winRate = matches ? Math.round((wins / matches) * 100) : 0;
+        const trustScore = trust?.trust_score ?? 0;
+        const initials = escapeHtml((p.display_name || "EA").trim().slice(0, 2).toUpperCase());
+        const joined = new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium" }).format(new Date(p.created_at));
         el("pcard").innerHTML = `
-          <div class="profile-hero">
-            <div class="profile-avatar" aria-hidden="true">⚽</div>
-            <div class="profile-identity">
-              <span class="eyebrow">ملف اللاعب</span>
-              <h1>${escapeHtml(p.display_name)}</h1>
-              <div class="muted">${escapeHtml(p.country || "🌍 دولة غير محددة")} · IGN: ${escapeHtml(p.efootball_ign || "—")} · منذ ${new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium" }).format(new Date(p.created_at))}</div>
+          <div class="profile-cover">
+            <div class="profile-cover__glow"></div>
+            <div class="profile-hero">
+              <div class="profile-avatar${p.avatar_url ? " has-image" : ""}" aria-label="الصورة الشخصية">
+                ${p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="صورة ${escapeHtml(p.display_name)}">` : `<span>${initials}</span>`}
+              </div>
+              <div class="profile-identity">
+                <div class="profile-status"><i></i> لاعب نشط</div>
+                <h1>${escapeHtml(p.display_name)}</h1>
+                <div class="muted">${escapeHtml(p.country || "🌍 دولة غير محددة")} <span class="profile-dot">•</span> IGN: ${escapeHtml(p.efootball_ign || "—")}</div>
+              </div>
+              <div class="profile-rating">
+                <span class="profile-rating__label">التقييم الحالي</span>
+                <strong class="num">${rating ? rating.rating : "—"}</strong>
+                <span class="profile-rating__suffix">ELO</span>
+              </div>
             </div>
-            <div class="profile-rating">
-              <div class="stat-value num">${rating ? rating.rating : "—"}</div>
-              <div class="stat-label">ELO</div>
-            </div>
+            <div class="profile-cover__meta"><span>عضو منذ ${joined}</span><span>${rank ? `المرتبة #${rank}` : "لم يدخل التصنيف بعد"}</span></div>
           </div>
-          ${p.bio ? `<p class="profile-bio">${escapeHtml(p.bio)}</p>` : `<p class="profile-bio muted">لم يضف اللاعب نبذة بعد.</p>`}
-          <div class="grid cols-3 profile-stats">
-            <div class="profile-stat"><span class="stat-label">الثقة</span><strong>${trust ? trust.trust_score : "—"}</strong></div>
-            <div class="profile-stat"><span class="stat-label">المباريات</span><strong>${rating ? rating.matches_played : "—"}</strong></div>
-            <div class="profile-stat"><span class="stat-label">السجل</span><strong>${rating ? rating.wins + " / " + rating.losses : "—"}</strong></div>
+          <div class="profile-intro">
+            <div>
+              <h2>هوية اللاعب</h2>
+              <p class="profile-bio">${escapeHtml(p.bio || "هذا اللاعب لم يضف نبذة تعريفية بعد.")}</p>
+            </div>
+            <div class="profile-badge">⚡ تنافسي<br><small>جاهز للمواجهة</small></div>
+          </div>
+          <div class="profile-metric-strip" aria-label="إحصائيات اللاعب">
+            <div><span>المباريات</span><strong>${matches}</strong></div>
+            <div><span>الانتصارات</span><strong class="accent-text">${wins}</strong></div>
+            <div><span>الخسائر</span><strong class="danger-text">${losses}</strong></div>
+            <div><span>نسبة الفوز</span><strong>${winRate}%</strong></div>
+          </div>
+          <div class="profile-panels">
+            <section class="profile-panel">
+              <div class="section-heading"><h2>مؤشر الثقة</h2><span class="badge open">${trustScore >= 80 ? "موثوق" : trustScore >= 50 ? "مقبول" : "جديد"}</span></div>
+              <div class="trust-score"><strong class="num">${trust ? trustScore : "—"}</strong><span>/ 100</span></div>
+              <div class="progress profile-progress" role="progressbar" aria-label="درجة الثقة" aria-valuenow="${trustScore}" aria-valuemin="0" aria-valuemax="100"><i style="width:${trustScore}%"></i></div>
+              <p class="muted">تُبنى الثقة من الالتزام بالمواعيد وتأكيد نتائج المباريات.</p>
+            </section>
+            <section class="profile-panel">
+              <div class="section-heading"><h2>سجل المنافسة</h2><span class="panel-icon">↗</span></div>
+              <div class="record-line"><span>نسبة الفوز</span><strong>${winRate}%</strong></div>
+              <div class="progress profile-progress"><i style="width:${winRate}%"></i></div>
+              <div class="record-line"><span>التقييم</span><strong>${rating ? rating.rating : "—"} ELO</strong></div>
+              <p class="muted">واصل اللعب لرفع ترتيبك في الساحة.</p>
+            </section>
+          </div>
+          <div class="profile-footer">
+            <span class="muted">ملف عام للاعب في eFootball Arena</span>
+            <a class="btn btn-ghost" href="/app/tournaments.html">استكشف البطولات</a>
           </div>`;
       } catch (err) {
         el("pcard").innerHTML = `<div class="empty" role="alert">${escapeHtml(err.detail || "تعذر تحميل الملف")}</div>`;

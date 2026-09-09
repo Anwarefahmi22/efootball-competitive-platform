@@ -66,6 +66,10 @@ body{
 .btn-neon:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(163,255,18,.5)}
 .btn-ghost{border:1px solid var(--border);color:var(--white);background:transparent}
 .btn-ghost:hover{border-color:var(--neon);color:var(--neon)}
+.language-picker{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--border);border-radius:999px;color:var(--muted)}
+.language-picker select{border:0;background:transparent;color:var(--white);font:inherit;cursor:pointer}
+.language-picker option{background:var(--pitch);color:var(--white)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
 /* ===== HERO ===== */
 .hero{position:relative;padding:110px 0 90px;text-align:center}
@@ -197,6 +201,7 @@ footer b{color:var(--neon);font-family:'Orbitron'}
 .reveal.in{opacity:1;transform:none}
 @media(max-width:900px){.hero-grid{grid-template-columns:1fr;gap:42px;text-align:center}.hero-copy{margin-inline:auto}.hero-copy .lead{margin-inline:auto}.hero-copy .hero-cta{justify-content:center}.hero-visual{min-height:350px}}
 @media(max-width:720px){.nav-links{display:none}.hero{padding-top:72px}.hero-visual{min-height:315px}.live-card{transform:none}.hero .stats{margin-top:56px}}
+@media(max-width:520px){.nav-inner>div:last-child .btn{padding-inline:14px;font-size:.85rem}.language-picker{padding-inline:8px}.language-picker select{max-width:82px;font-size:.85rem}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}.kicker{animation:none}.btn,.card{transition:none}}
 a:focus-visible,.btn:focus-visible{outline:3px solid var(--neon);outline-offset:4px}
 </style>
@@ -214,7 +219,18 @@ a:focus-visible,.btn:focus-visible{outline:3px solid var(--neon);outline-offset:
       <a href="#trust">نظام الثقة</a>
       <a href="#cta">ابدأ الآن</a>
     </div>
-    <a class="btn btn-neon" href="/auth.html">انضم مجانًا</a>
+    <div style="display:flex;align-items:center;gap:10px">
+      <label class="language-picker" title="اللغة">
+        <span aria-hidden="true">文</span>
+        <span class="sr-only">اللغة</span>
+        <select id="landing-language" aria-label="اللغة">
+          <option value="ar">العربية</option>
+          <option value="fr">Français</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <a class="btn btn-neon" href="/auth.html">انضم مجانًا</a>
+    </div>
   </div>
 </nav>
 
@@ -355,19 +371,33 @@ a:focus-visible,.btn:focus-visible{outline:3px solid var(--neon);outline-offset:
   </div>
 </footer>
 
+<script src="/shared/i18n.js"></script>
 <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const language = document.getElementById("landing-language");
+    language.value = i18n.current();
+    language.addEventListener("change", () => i18n.setLanguage(language.value));
+    i18n.apply();
+  });
 /* عدّاد الأرقام + reveal on scroll */
 const io=new IntersectionObserver(es=>es.forEach(e=>{
   if(e.isIntersecting){e.target.classList.add('in');
     e.target.querySelectorAll('[data-count]').forEach(el=>{
       const t=+el.dataset.count;let c=0;const step=t/60;
-      const tick=()=>{c+=step;if(c<t){el.textContent=Math.floor(c).toLocaleString('ar-EG');requestAnimationFrame(tick)}else{el.textContent=t.toLocaleString('ar-EG')}};
+      const locale = i18n.current() === 'ar' ? 'ar-EG' : i18n.current() === 'fr' ? 'fr-FR' : 'en-US';
+      const tick=()=>{c+=step;if(c<t){el.textContent=Math.floor(c).toLocaleString(locale);requestAnimationFrame(tick)}else{el.textContent=t.toLocaleString(locale)}};
       tick();
     });
     io.unobserve(e.target);
   }
 }),{threshold:.15});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+document.addEventListener('languagechange', () => {
+  const locale = i18n.current() === 'ar' ? 'ar-EG' : i18n.current() === 'fr' ? 'fr-FR' : 'en-US';
+  document.querySelectorAll('[data-count]').forEach(el => {
+    el.textContent = Number(el.dataset.count).toLocaleString(locale);
+  });
+});
 </script>
 </body>
 </html>

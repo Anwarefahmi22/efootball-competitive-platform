@@ -13,6 +13,9 @@ class PostType(str, Enum):
     TEXT = "text"
     IMAGE = "image"
     MATCH_RESULT = "match_result"
+    ACHIEVEMENT = "achievement"
+    TOURNAMENT = "tournament"
+    GENERAL = "general"
 
 
 class Post(Base):

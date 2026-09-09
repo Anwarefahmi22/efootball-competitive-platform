@@ -12,6 +12,8 @@ class PostRead(BaseModel):
     id: UUID
     author_id: UUID
     author_name: str = ""
+    author_avatar_url: str | None = None
+    author_country: str | None = None
     post_type: PostType
     content: str | None
     has_image: bool = False

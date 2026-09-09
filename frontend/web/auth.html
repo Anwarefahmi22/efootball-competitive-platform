@@ -10,8 +10,96 @@
   <link rel="stylesheet" href="/shared/theme.css" />
   <style>
     body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    body { position: relative; overflow: hidden; isolation: isolate; }
+    .club-strip {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 3;
+      height: 58px; overflow: hidden;
+      display: flex; align-items: center;
+      border-bottom: 1px solid rgba(163,255,18,.16);
+      background: rgba(3,16,9,.68);
+      backdrop-filter: blur(10px);
+      direction: ltr;
+      mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    }
+    .club-track {
+      display: flex; align-items: center; gap: 18px;
+      width: max-content; padding-inline: 18px;
+      animation: clubs-scroll 34s linear infinite;
+    }
+    .club-group { display: flex; align-items: center; gap: 18px; }
+    .club-item {
+      display: inline-flex; align-items: center; gap: 9px;
+      min-width: max-content; color: #d8eee0;
+      font-size: .78rem; font-weight: 800; letter-spacing: .02em;
+      white-space: nowrap;
+    }
+    .club-crest {
+      display: grid; place-items: center;
+      width: 30px; height: 30px;
+      border: 1px solid rgba(255,255,255,.34);
+      border-radius: 6px;
+      padding: 3px; object-fit: contain;
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 0 8px rgba(163,255,18,.12);
+    }
+    @keyframes clubs-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+    .auth-background {
+      position: fixed; inset: 0; z-index: -1; overflow: hidden;
+      pointer-events: none;
+      background:
+        linear-gradient(135deg, rgba(3,16,9,.72), rgba(4,26,15,.54)),
+        url("https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=2200&q=82")
+        center / cover no-repeat;
+      transform: scale(1.03);
+    }
+    .auth-background::before,
+    .auth-background::after {
+      content: ""; position: absolute; pointer-events: none;
+    }
+    .auth-background::before {
+      inset: 0;
+      background: rgba(3,16,9,.18);
+      backdrop-filter: blur(1.5px) saturate(.82);
+    }
+    .auth-background::after {
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 26%, rgba(2,10,6,.42) 100%);
+    }
+    .floating-ball {
+      position: absolute; display: grid; place-items: center;
+      width: var(--ball-size); height: var(--ball-size);
+      left: var(--ball-left); top: var(--ball-top);
+      border-radius: 50%; opacity: var(--ball-opacity);
+      font-size: calc(var(--ball-size) * .48);
+      background:
+        radial-gradient(circle at 32% 26%, rgba(255,255,255,.9) 0 4%, transparent 5%),
+        linear-gradient(145deg, rgba(163,255,18,.48), rgba(34,197,94,.38));
+      border: 1px solid rgba(224,255,199,.34);
+      box-shadow: 0 0 3px rgba(163,255,18,.1), inset -8px -10px 18px rgba(5,19,10,.28);
+      animation: float-ball var(--ball-duration) ease-in-out infinite alternate;
+      animation-delay: var(--ball-delay);
+    }
+    .floating-ball::after {
+      content: ""; position: absolute; inset: 18%;
+      border: 1px dashed rgba(255,255,255,.52); border-radius: 50%;
+      transform: rotate(28deg);
+    }
+    @keyframes float-ball {
+      0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+      35% { transform: translate3d(var(--ball-x), var(--ball-y), 0) rotate(80deg); }
+      70% { transform: translate3d(var(--ball-x-reverse), var(--ball-y-reverse), 0) rotate(170deg); }
+      100% { transform: translate3d(var(--ball-x-end), var(--ball-y-end), 0) rotate(260deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .floating-ball, .club-track { animation: none; }
+    }
     .auth-card {
       width: 100%; max-width: 430px;
+      position: relative;
+      margin-top: 58px;
       background: linear-gradient(180deg, #10281c 0%, #0b1e13 100%);
       border: 1px solid #1f4a33; border-radius: 18px;
       padding: 34px 30px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
@@ -39,7 +127,48 @@
   </style>
 </head>
 <body>
+  <div class="club-strip" aria-label="أندية eFootball العالمية">
+    <div class="club-track">
+      <div class="club-group">
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/541.png" alt="Real Madrid crest">Real Madrid</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/529.png" alt="Barcelona crest">Barcelona</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/33.png" alt="Manchester United crest">Manchester United</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/50.png" alt="Manchester City crest">Manchester City</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/157.png" alt="Bayern Munich crest">Bayern Munich</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/85.png" alt="Paris Saint-Germain crest">Paris Saint-Germain</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/40.png" alt="Liverpool crest">Liverpool</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/505.png" alt="Inter Milan crest">Inter Milan</span>
+      </div>
+      <div class="club-group" aria-hidden="true">
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/541.png" alt="">Real Madrid</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/529.png" alt="">Barcelona</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/33.png" alt="">Manchester United</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/50.png" alt="">Manchester City</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/157.png" alt="">Bayern Munich</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/85.png" alt="">Paris Saint-Germain</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/40.png" alt="">Liverpool</span>
+        <span class="club-item"><img class="club-crest" src="https://media.api-sports.io/football/teams/505.png" alt="">Inter Milan</span>
+      </div>
+    </div>
+  </div>
+  <div class="auth-background" aria-hidden="true">
+    <span class="floating-ball" style="--ball-size:164px;--ball-left:4%;--ball-top:8%;--ball-opacity:.52;--ball-duration:14s;--ball-delay:-3s;--ball-x:180px;--ball-y:120px;--ball-x-reverse:360px;--ball-y-reverse:300px;--ball-x-end:90px;--ball-y-end:470px">⚽</span>
+    <span class="floating-ball" style="--ball-size:94px;--ball-left:18%;--ball-top:72%;--ball-opacity:.36;--ball-duration:18s;--ball-delay:-8s;--ball-x:220px;--ball-y:-170px;--ball-x-reverse:430px;--ball-y-reverse:-40px;--ball-x-end:150px;--ball-y-end:-300px">⚽</span>
+    <span class="floating-ball" style="--ball-size:226px;--ball-left:74%;--ball-top:4%;--ball-opacity:.42;--ball-duration:21s;--ball-delay:-11s;--ball-x:-220px;--ball-y:180px;--ball-x-reverse:-430px;--ball-y-reverse:390px;--ball-x-end:-110px;--ball-y-end:560px">⚽</span>
+    <span class="floating-ball" style="--ball-size:125px;--ball-left:88%;--ball-top:58%;--ball-opacity:.48;--ball-duration:17s;--ball-delay:-5s;--ball-x:-190px;--ball-y:-210px;--ball-x-reverse:-410px;--ball-y-reverse:-30px;--ball-x-end:-150px;--ball-y-end:-380px">⚽</span>
+    <span class="floating-ball" style="--ball-size:70px;--ball-left:60%;--ball-top:86%;--ball-opacity:.32;--ball-duration:13s;--ball-delay:-2s;--ball-x:-150px;--ball-y:-100px;--ball-x-reverse:-330px;--ball-y-reverse:-240px;--ball-x-end:-80px;--ball-y-end:-400px">⚽</span>
+    <span class="floating-ball" style="--ball-size:109px;--ball-left:1%;--ball-top:42%;--ball-opacity:.3;--ball-duration:23s;--ball-delay:-14s;--ball-x:240px;--ball-y:-100px;--ball-x-reverse:390px;--ball-y-reverse:180px;--ball-x-end:180px;--ball-y-end:420px">⚽</span>
+  </div>
   <div class="auth-card">
+    <label class="language-picker auth-language" title="اللغة">
+      <span aria-hidden="true">文</span>
+      <span class="sr-only">اللغة</span>
+      <select id="auth-language" aria-label="اللغة">
+        <option value="ar">العربية</option>
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+      </select>
+    </label>
     <div class="logo">
       <div class="mark">⚡ EFOOTBALL ARENA</div>
       <div class="sub">بطاقة دخول الملعب</div>
@@ -62,7 +191,7 @@
       </div>
       <div class="err" id="login-err" role="alert"></div>
       <button class="btn btn-primary" id="btn-login" type="submit">دخول الملعب ⚽</button>
-      <div class="hint">ليس لديك حساب؟ افتح تبويب «حساب جديد»</div>
+      <div class="hint" data-i18n="ليس لديك حساب؟ افتح تبويب «حساب جديد»">ليس لديك حساب؟ افتح تبويب «حساب جديد»</div>
     </form>
 
     <!-- Register -->
@@ -81,12 +210,16 @@
       </div>
       <div class="err" id="reg-err" role="alert"></div>
       <button class="btn btn-primary" id="btn-register" type="submit">إنشاء الحساب والمشاركة 🏆</button>
-      <div class="hint">سيبدأ تقييمك معنا من <b>1000</b> نقطة ELO</div>
+      <div class="hint" data-i18n="سيبدأ تقييمك معنا من 1000 نقطة ELO">سيبدأ تقييمك معنا من <b>1000</b> نقطة ELO</div>
     </form>
   </div>
 
+  <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script>
+    const authLanguage = document.getElementById("auth-language");
+    authLanguage.value = i18n.current();
+    authLanguage.addEventListener("change", () => i18n.setLanguage(authLanguage.value));
     const tabLogin = document.getElementById("tab-login");
     const tabRegister = document.getElementById("tab-register");
     const formLogin = document.getElementById("form-login");

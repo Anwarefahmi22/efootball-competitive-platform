@@ -21,7 +21,11 @@ class PlayerRating(Base):
     rating: Mapped[int] = mapped_column(Integer, nullable=False, default=1000)
     matches_played: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     wins: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    draws: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     losses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    goals_for: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    goals_against: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    points: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

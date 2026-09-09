@@ -11,17 +11,18 @@
 <body>
   <div class="container">
     <div class="page-heading">
-      <div><span class="eyebrow">ساحة المنافسة</span><h1 class="page-title">📊 التصنيف العام (ELO)</h1><p class="muted">تابع أفضل اللاعبين واكتشف موقعك بين المنافسين.</p></div>
+      <div><span class="eyebrow">ساحة المنافسة</span><h1 class="page-title">📊 التصنيف العام</h1><p class="muted">النقاط أولا، ثم فارق الأهداف والأهداف المسجلة، مع ELO ككاسر تعادل.</p></div>
       <label class="search-field" for="player-search">بحث عن لاعب<input class="field" id="player-search" type="search" placeholder="اكتب اسم اللاعب…" autocomplete="off" /></label>
     </div>
     <div class="card leaderboard-card">
       <table class="table">
         <caption class="sr-only">جدول التصنيف العام للاعبي المنصة</caption>
-        <thead><tr><th>#</th><th>اللاعب</th><th>ELO</th><th>مباريات</th><th>فاز</th><th>خسر</th></tr></thead>
+        <thead><tr><th>#</th><th>اللاعب</th><th>نقاط</th><th>فارق</th><th>له</th><th>عليه</th><th>ELO</th><th>لعب</th><th>فاز</th><th>تعادل</th><th>خسر</th></tr></thead>
         <tbody id="body"></tbody>
       </table>
     </div>
   </div>
+  <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
@@ -33,18 +34,23 @@
           <tr>
             <td class="num">${i + 1}</td>
             <td><a class="player-link" href="/app/profile.html?user=${encodeURIComponent(r.user_id)}">${escapeHtml(r.display_name)}</a></td>
+            <td class="num accent-text">${r.points}</td>
+            <td class="num">${r.goal_difference > 0 ? "+" : ""}${r.goal_difference}</td>
+            <td>${r.goals_for}</td>
+            <td>${r.goals_against}</td>
             <td class="num accent-text">${r.rating}</td>
             <td>${r.matches_played}</td>
             <td class="accent-text">${r.wins}</td>
+            <td>${r.draws}</td>
             <td class="danger-text">${r.losses}</td>
-          </tr>`).join("") || `<tr><td colspan="6" class="empty">لا توجد نتائج مطابقة.</td></tr>`;
+          </tr>`).join("") || `<tr><td colspan="11" class="empty">لا توجد نتائج مطابقة.</td></tr>`;
         render(rows);
         search.addEventListener("input", () => {
           const term = search.value.trim().toLocaleLowerCase();
           render(rows.filter((row) => row.display_name.toLocaleLowerCase().includes(term)));
         });
       } catch (err) {
-        el("body").innerHTML = `<tr><td colspan="6" class="empty" role="alert">${escapeHtml(err.detail || "تعذر التحميل")}</td></tr>`;
+        el("body").innerHTML = `<tr><td colspan="11" class="empty" role="alert">${escapeHtml(err.detail || "تعذر التحميل")}</td></tr>`;
       }
     })();
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));

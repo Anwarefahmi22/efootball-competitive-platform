@@ -46,7 +46,9 @@ async def _get_or_create_rating(db: AsyncSession, user_id: UUID) -> PlayerRating
     return rating
 
 
-async def _apply_elo_win(db: AsyncSession, winner_id: UUID, loser_id: UUID) -> None:
+async def _apply_elo_win(
+    db: AsyncSession, winner_id: UUID, loser_id: UUID, winner_goals: int, loser_goals: int
+) -> None:
     winner = await _get_or_create_rating(db, winner_id)
     loser = await _get_or_create_rating(db, loser_id)
     # CRITICAL: capture BOTH original ratings before mutating either one.
@@ -59,9 +61,15 @@ async def _apply_elo_win(db: AsyncSession, winner_id: UUID, loser_id: UUID) -> N
     loser.matches_played += 1
     winner.wins += 1
     loser.losses += 1
+    winner.goals_for += winner_goals
+    winner.goals_against += loser_goals
+    loser.goals_for += loser_goals
+    loser.goals_against += winner_goals
+    winner.points += 3
 
-
-async def _apply_elo_draw(db: AsyncSession, player_a_id: UUID, player_b_id: UUID) -> None:
+async def _apply_elo_draw(
+    db: AsyncSession, player_a_id: UUID, player_b_id: UUID, goals_a: int, goals_b: int
+) -> None:
     a = await _get_or_create_rating(db, player_a_id)
     b = await _get_or_create_rating(db, player_b_id)
     a_old, b_old = a.rating, b.rating
@@ -69,6 +77,14 @@ async def _apply_elo_draw(db: AsyncSession, player_a_id: UUID, player_b_id: UUID
     b.rating = new_rating_draw(b_old, a_old)
     a.matches_played += 1
     b.matches_played += 1
+    a.draws += 1
+    b.draws += 1
+    a.goals_for += goals_a
+    a.goals_against += goals_b
+    b.goals_for += goals_b
+    b.goals_against += goals_a
+    a.points += 1
+    b.points += 1
 
 
 async def _distribute_knockout_prize(db: AsyncSession, tournament: Tournament, winner_id: UUID) -> None:
@@ -101,12 +117,15 @@ async def _finalize_match(db: AsyncSession, match: Match, tournament: Tournament
 
     if score_a == score_b:
         match.winner_id = None
-        await _apply_elo_draw(db, match.player_a_id, match.player_b_id)
+        await _apply_elo_draw(db, match.player_a_id, match.player_b_id, score_a, score_b)
     else:
         winner_id = match.player_a_id if score_a > score_b else match.player_b_id
         loser_id = match.player_b_id if winner_id == match.player_a_id else match.player_a_id
         match.winner_id = winner_id
-        await _apply_elo_win(db, winner_id, loser_id)
+        winner_goals, loser_goals = (
+            (score_a, score_b) if winner_id == match.player_a_id else (score_b, score_a)
+        )
+        await _apply_elo_win(db, winner_id, loser_id, winner_goals, loser_goals)
 
     if is_league:
         await _distribute_league_prize_if_complete(db, tournament)

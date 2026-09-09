@@ -56,7 +56,7 @@
           <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">◎</span><div class="stat-value" id="stat-elo">غير متاح</div><div class="stat-label">تقييم ELO</div><small class="dashboard-kpi__hint">آخر تقييم مسجل</small></div>
           <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">#</span><div class="stat-value" id="stat-rank">غير متاح</div><div class="stat-label">الترتيب العالمي</div><small class="dashboard-kpi__hint">مقارنة باللاعبين المسجلين</small></div>
           <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">✓</span><div class="stat-value" id="stat-trust">غير متاح</div><div class="stat-label">درجة الثقة</div><div class="progress progress-spaced"><i id="trust-bar" style="width:0%"></i></div></div>
-          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">↗</span><div class="stat-value" id="stat-record">غير متاح</div><div class="stat-label">فوز / خسارة / تعادل</div><small class="dashboard-kpi__hint">التعادلات غير متاحة من الـAPI الحالي</small></div>
+          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">↗</span><div class="stat-value" id="stat-record">غير متاح</div><div class="stat-label">فوز / تعادل / خسارة</div><small class="dashboard-kpi__hint">نقاط الترتيب: <span id="stat-points">غير متاح</span></small></div>
         </div>
         <div class="stats-summary card">
           <div><span>نسبة الفوز</span><strong id="stat-win-rate">غير متاح</strong></div>
@@ -171,7 +171,7 @@
         const matches = (await Promise.all(mine.map((item) => apiFetch("/tournaments/" + item.id + "/matches").catch(() => [])))).flat().filter((match, index, all) => all.findIndex((item) => item.id === match.id) === index);
         const upcoming = matches.filter((match) => match.status !== "completed" && match.status !== "cancelled" && match.player_a_id && match.player_b_id).sort((a, b) => new Date(a.scheduled_at || a.created_at) - new Date(b.scheduled_at || b.created_at))[0];
         setMetric("identity-elo", rating?.rating); setMetric("identity-rank", rank ? `#${rank}` : null); setMetric("identity-trust", trust?.trust_score); setMetric("identity-title-rank", null);
-        setMetric("stat-elo", rating?.rating); setMetric("stat-rank", rank ? `#${rank}` : null); setMetric("stat-trust", trust?.trust_score); setMetric("stat-record", rating ? `${rating.wins} / ${rating.losses} / غير متاح` : null);
+        setMetric("stat-elo", rating?.rating); setMetric("stat-rank", rank ? `#${rank}` : null); setMetric("stat-trust", trust?.trust_score); setMetric("stat-record", rating ? `${rating.wins} / ${rating.draws} / ${rating.losses}` : null); setMetric("stat-points", rating?.points);
         setMetric("stat-win-rate", rating?.matches_played ? `${Math.round(rating.wins * 100 / rating.matches_played)}%` : null); setMetric("stat-rank-title", null);
         if (trust) el("trust-bar").style.width = `${trust.trust_score}%`;
         renderNextMatch(upcoming, mine, board, uid); renderTournaments(mine, uid); renderSeason(seasons, board, uid); renderActivity(matches, mine, uid);

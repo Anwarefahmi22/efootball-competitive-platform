@@ -20,7 +20,12 @@ def _to_public(row: PlayerRating) -> RatingPublic:
         rating=row.rating,
         matches_played=row.matches_played,
         wins=row.wins,
+        draws=row.draws,
         losses=row.losses,
+        goals_for=row.goals_for,
+        goals_against=row.goals_against,
+        goal_difference=row.goals_for - row.goals_against,
+        points=row.points,
     )
 
 
@@ -33,7 +38,13 @@ async def leaderboard(
     result = await db.execute(
         select(PlayerRating)
         .options(selectinload(PlayerRating.user))
-        .order_by(PlayerRating.rating.desc(), PlayerRating.wins.desc())
+        .order_by(
+            PlayerRating.points.desc(),
+            (PlayerRating.goals_for - PlayerRating.goals_against).desc(),
+            PlayerRating.goals_for.desc(),
+            PlayerRating.rating.desc(),
+            PlayerRating.wins.desc(),
+        )
         .limit(limit)
         .offset(offset)
     )

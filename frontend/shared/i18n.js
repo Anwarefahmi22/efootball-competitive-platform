@@ -333,6 +333,23 @@
     "مكتملة": { fr: "Terminée", en: "Completed" },
   };
 
+  Object.assign(translations, {
+    "\u0645\u0631\u0643\u0632 \u0627\u0644\u0628\u0637\u0648\u0644\u0629": { fr: "Centre du tournoi", en: "Tournament hub" },
+    "\u0645\u062c\u0627\u0646\u064a": { fr: "Gratuit", en: "Free" },
+    "\u0627\u0644\u062a\u0643\u0644\u0641\u0629": { fr: "Coût", en: "Cost" },
+    "\u0627\u0644\u0645\u0634\u0627\u0631\u0643\u0648\u0646": { fr: "Participants", en: "Participants" },
+    "\u0627\u0644\u0645\u062d\u0627\u0643\u0627\u0629 \u0627\u0644\u062a\u0646\u0627\u0641\u0633\u064a\u0629": { fr: "Compétition", en: "Competition" },
+    "\u0627\u0646\u0636\u0645 \u0625\u0644\u0649 \u0627\u0644\u0628\u0637\u0648\u0644\u0629": { fr: "Rejoindre le tournoi", en: "Join tournament" },
+    "\u0627\u0644\u0645\u0634\u0627\u0631\u0643\u0648\u0646": { fr: "Participants", en: "Participants" },
+    "\u0627\u0644\u062a\u0631\u062a\u064a\u0628": { fr: "Classement", en: "Standings" },
+    "\u0627\u0644\u0644\u0627\u0639\u0628": { fr: "Joueur", en: "Player" },
+    "\u0644\u0639\u0628": { fr: "Joués", en: "Played" },
+    "\u0641\u0627\u0632": { fr: "Gagné", en: "Won" },
+    "\u0646\u0642\u0627\u0637": { fr: "Points", en: "Points" },
+    "\u0627\u0644\u0645\u0628\u0627\u0631\u064a\u0627\u062a": { fr: "Matchs", en: "Matches" },
+    "\u062d\u0633\u0628 \u0627\u0644\u062c\u0648\u0644\u0629 \u0648\u0627\u0644\u0645\u0643\u0627\u0646": { fr: "Par tour et position", en: "By round and slot" },
+  });
+
   const reverse = {};
   Object.keys(translations).forEach((source) => {
     Object.keys(translations[source]).forEach((language) => {

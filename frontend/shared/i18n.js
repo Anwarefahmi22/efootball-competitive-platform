@@ -214,6 +214,63 @@
       fr: "La connexion a expiré. Réessayez.",
       en: "The connection timed out. Please try again.",
     },
+    "التصنيف العام": { fr: "Classement général", en: "Global leaderboard" },
+    "النقاط أولا، ثم فارق الأهداف والأهداف المسجلة، مع ELO ككاسر تعادل.": {
+      fr: "Les points d'abord, puis la différence de buts et les buts marqués, avec l'ELO comme départage.",
+      en: "Points first, then goal difference and goals scored, with ELO as the tiebreaker.",
+    },
+    "جدول التصنيف العام للاعبي المنصة": { fr: "Classement général des joueurs", en: "Platform player leaderboard" },
+    "اللاعب": { fr: "Joueur", en: "Player" },
+    "نقاط": { fr: "Points", en: "Points" },
+    "فارق": { fr: "Diff.", en: "Diff." },
+    "له": { fr: "Pour", en: "For" },
+    "عليه": { fr: "Contre", en: "Against" },
+    "لعب": { fr: "Joués", en: "Played" },
+    "فاز": { fr: "Gagnés", en: "Won" },
+    "تعادل": { fr: "Nuls", en: "Drawn" },
+    "خسر": { fr: "Perdus", en: "Lost" },
+    "لا توجد نتائج مطابقة.": { fr: "Aucun résultat correspondant.", en: "No matching results." },
+    "النقاط": { fr: "Points", en: "Points" },
+    "الأهداف المسجلة": { fr: "Buts marqués", en: "Goals scored" },
+    "الأهداف المستقبلة": { fr: "Buts encaissés", en: "Goals conceded" },
+    "فوز / تعادل / خسارة": { fr: "Victoires / nuls / défaites", en: "Wins / draws / losses" },
+    "نقاط الترتيب": { fr: "Points du classement", en: "Ranking points" },
+    "تقييم ELO": { fr: "Classement ELO", en: "ELO rating" },
+    "الترتيب العالمي": { fr: "Classement mondial", en: "Global rank" },
+    "فارق الأهداف": { fr: "Différence de buts", en: "Goal difference" },
+    "الأهداف له": { fr: "Buts pour", en: "Goals for" },
+    "الأهداف عليه": { fr: "Buts contre", en: "Goals against" },
+    "تم تأكيد النتيجة.": { fr: "Résultat confirmé.", en: "Result confirmed." },
+    "جارٍ إرسال النتيجة…": { fr: "Envoi du résultat…", en: "Submitting result…" },
+    "تعذر تحميل المباراة.": { fr: "Impossible de charger le match.", en: "Could not load the match." },
+    "تعذر تحميل البطولة.": { fr: "Impossible de charger le tournoi.", en: "Could not load the tournament." },
+    "تم إجراء القرعة.": { fr: "Le tirage a été effectué.", en: "The draw has been completed." },
+    "بدأت المنافسة.": { fr: "La compétition a commencé.", en: "Competition started." },
+    "بدأت الإقصائيات.": { fr: "La phase éliminatoire a commencé.", en: "Knockout stage started." },
+    "إلغاء البطولة": { fr: "Annuler le tournoi", en: "Cancel tournament" },
+    "أنت منظم البطولة": { fr: "Vous êtes l'organisateur", en: "You are the organizer" },
+    "أنت منضم": { fr: "Vous êtes inscrit", en: "You joined" },
+    "قيد المراجعة": { fr: "En attente", en: "Pending review" },
+    "منضم": { fr: "Inscrit", en: "Joined" },
+    "تم التوزيع": { fr: "Réparti", en: "Assigned" },
+    "النظام": { fr: "Format", en: "Format" },
+    "مجموعات وإقصائيات": { fr: "Groupes et élimination", en: "Groups and knockout" },
+    "دوري": { fr: "Championnat", en: "League" },
+    "المنافسة": { fr: "Compétition", en: "Competition" },
+    "نقاط وتصنيف": { fr: "Points et classement", en: "Points and ranking" },
+    "إنجاز": { fr: "Exploit", en: "Achievement" },
+    "مباراة": { fr: "Match", en: "Match" },
+    "بطولة": { fr: "Tournoi", en: "Tournament" },
+    "عام": { fr: "Général", en: "General" },
+    "جارٍ تحميل نبض الساحة…": { fr: "Chargement de l'activité de l'arène…", en: "Loading arena activity…" },
+    "لا توجد منشورات بعد. كن أول لاعب يوثق لحظته ويبدأ الحديث.": {
+      fr: "Aucune publication. Soyez le premier joueur à partager son moment.",
+      en: "No posts yet. Be the first player to share a moment.",
+    },
+    "أنشئ أول منشور": { fr: "Créer la première publication", en: "Create the first post" },
+    "تعذر تحميل التعليقات.": { fr: "Impossible de charger les commentaires.", en: "Could not load comments." },
+    "تعذر تحديث الإعجاب.": { fr: "Impossible de mettre à jour le j'aime.", en: "Could not update like." },
+    "لا توجد تعليقات بعد.": { fr: "Aucun commentaire.", en: "No comments yet." },
   };
 
   const reverse = {};
@@ -281,6 +338,10 @@
     document.dispatchEvent(new CustomEvent("languagechange", { detail: { language } }));
   }
 
+  const observer = new MutationObserver((mutations) => {
+    if (mutations.some((mutation) => mutation.addedNodes.length)) apply();
+  });
+
   window.i18n = {
     languages,
     current: currentLanguage,
@@ -289,5 +350,8 @@
     setLanguage,
   };
 
-  document.addEventListener("DOMContentLoaded", () => apply());
+  document.addEventListener("DOMContentLoaded", () => {
+    apply();
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
 })();

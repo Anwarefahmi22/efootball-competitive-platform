@@ -271,6 +271,66 @@
     "تعذر تحميل التعليقات.": { fr: "Impossible de charger les commentaires.", en: "Could not load comments." },
     "تعذر تحديث الإعجاب.": { fr: "Impossible de mettre à jour le j'aime.", en: "Could not update like." },
     "لا توجد تعليقات بعد.": { fr: "Aucun commentaire.", en: "No comments yet." },
+    "تفاصيل البطولة": { fr: "Détails du tournoi", en: "Tournament details" },
+    "العودة إلى البطولات": { fr: "← Retour aux tournois", en: "← Back to tournaments" },
+    "مركز البطولة": { fr: "Centre du tournoi", en: "Tournament hub" },
+    "لا يوجد وصف لهذه البطولة.": { fr: "Aucune description pour ce tournoi.", en: "No description for this tournament." },
+    "مجاني": { fr: "Gratuit", en: "Free" },
+    "التكلفة": { fr: "Coût", en: "Cost" },
+    "المحاكاة التنافسية": { fr: "Compétition", en: "Competition" },
+    "المشاركون": { fr: "Participants", en: "Participants" },
+    "نسبة امتلاء البطولة": { fr: "Taux de remplissage du tournoi", en: "Tournament fill rate" },
+    "مشارك": { fr: "participant", en: "participant" },
+    "ترتيب لاعبي البطولة": { fr: "Classement des joueurs du tournoi", en: "Tournament player standings" },
+    "حسب الجولة والمكان": { fr: "Par tour et position", en: "By round and slot" },
+    "إدارة البطولة": { fr: "Gestion du tournoi", en: "Tournament management" },
+    "مساحة المنظم": { fr: "Espace organisateur", en: "Organizer space" },
+    "هذه الأدوات تظهر لك لأنك أنشأت البطولة. راجع الطلبات، أغلق التسجيل، ثم أنشئ القرعة وابدأ المنافسة. البطولات الجارية بلا نشاط لمدة 3 أيام تُلغى تلقائيًا.": {
+      fr: "Ces outils sont visibles car vous avez créé le tournoi. Gérez les demandes, fermez les inscriptions, lancez le tirage puis la compétition. Les tournois en cours sans activité pendant 3 jours sont annulés automatiquement.",
+      en: "These tools appear because you created the tournament. Review requests, close registration, run the draw, then start the competition. In-progress tournaments with no activity for 3 days are cancelled automatically.",
+    },
+    "مغادرة البطولة": { fr: "Quitter le tournoi", en: "Leave tournament" },
+    "انضم إلى البطولة": { fr: "Rejoindre le tournoi", en: "Join tournament" },
+    "تم التوزيع": { fr: "Réparti", en: "Assigned" },
+    "تسجيل مغلق": { fr: "Inscriptions fermées", en: "Registration closed" },
+    "الدور الأول": { fr: "Premier tour", en: "Round 1" },
+    "النهائي": { fr: "Finale", en: "Final" },
+    "الدور": { fr: "Tour", en: "Round" },
+    "بانتظار التحديد": { fr: "En attente de sélection", en: "Awaiting selection" },
+    "متأهل من الدور السابق": { fr: "Qualifié du tour précédent", en: "Winner of previous round" },
+    "المشاركون المعتمدون": { fr: "Participants approuvés", en: "Approved participants" },
+    "لا توجد إجراءات مطلوبة في هذه المرحلة.": { fr: "Aucune action requise à ce stade.", en: "No action required at this stage." },
+    "نظام البطولة": { fr: "Format du tournoi", en: "Tournament format" },
+    "حذف البطولة": { fr: "Supprimer le tournoi", en: "Delete tournament" },
+    "تعذر حذف البطولة.": { fr: "Impossible de supprimer le tournoi.", en: "Could not delete tournament." },
+    "تم حذف البطولة.": { fr: "Tournoi supprimé.", en: "Tournament deleted." },
+    "تم الانضمام إلى البطولة!": { fr: "Vous avez rejoint le tournoi !", en: "You joined the tournament!" },
+    "تمت مغادرة البطولة.": { fr: "Vous avez quitté le tournoi.", en: "You left the tournament." },
+    "لم يتم إنشاء مباريات هذه البطولة بعد.": { fr: "Les matchs de ce tournoi n'ont pas encore été créés.", en: "This tournament has no matches yet." },
+    "معرّف البطولة غير موجود.": { fr: "Identifiant du tournoi manquant.", en: "Tournament ID is missing." },
+    "لا توجد بطولات بهذه الحالة": { fr: "Aucun tournoi dans cet état", en: "No tournaments in this status" },
+    "بطولة جديدة": { fr: "Nouveau tournoi", en: "New tournament" },
+    "اسم البطولة": { fr: "Nom du tournoi", en: "Tournament name" },
+    "الوصف (اختياري)": { fr: "Description (facultatif)", en: "Description (optional)" },
+    "عدد المشاركين": { fr: "Nombre de participants", en: "Number of participants" },
+    "موافقة المنظم مطلوبة؟": { fr: "Approbation de l'organisateur requise ?", en: "Organizer approval required?" },
+    "لا — انضمام مباشر": { fr: "Non — inscription directe", en: "No - direct join" },
+    "نعم": { fr: "Oui", en: "Yes" },
+    "إنشاء": { fr: "Créer", en: "Create" },
+    "فشل الإنشاء": { fr: "Échec de la création", en: "Creation failed" },
+    "تم إنشاء البطولة!": { fr: "Tournoi créé !", en: "Tournament created!" },
+    "فشل الانضمام": { fr: "Échec de l'inscription", en: "Could not join tournament" },
+    "التسجيل مفتوح": { fr: "Inscriptions ouvertes", en: "Registration open" },
+    "التسجيل مغلق": { fr: "Inscriptions fermées", en: "Registration closed" },
+    "جارية": { fr: "En cours", en: "In progress" },
+    "منتهية": { fr: "Terminée", en: "Completed" },
+    "ملغاة": { fr: "Annulée", en: "Cancelled" },
+    "بانتظار المباراة": { fr: "En attente du match", en: "Awaiting match" },
+    "جاهزة": { fr: "Prêt", en: "Ready" },
+    "جاري": { fr: "En cours", en: "In progress" },
+    "النتيجة مرسلة": { fr: "Résultat envoyé", en: "Result submitted" },
+    "قيد النزاع": { fr: "En litige", en: "Disputed" },
+    "مكتملة": { fr: "Terminée", en: "Completed" },
   };
 
   const reverse = {};
@@ -302,7 +362,8 @@
   function apply(language = currentLanguage()) {
     document.documentElement.lang = language;
     document.documentElement.dir = languages[language].dir;
-    document.title = translate(document.title, language);
+    if (!document.__efaSourceTitle) document.__efaSourceTitle = document.title;
+    document.title = translate(document.__efaSourceTitle, language);
     document.querySelectorAll("[data-i18n]").forEach((node) => {
       node.textContent = translate(node.dataset.i18n, language);
     });
@@ -320,9 +381,9 @@
     document.querySelectorAll("input, textarea, [title], [aria-label]").forEach((node) => {
       ["placeholder", "title", "aria-label"].forEach((attribute) => {
         if (node.hasAttribute(attribute)) {
-          const value = node.getAttribute(attribute);
-          const translated = translate(value, language);
-          if (translated !== value) node.setAttribute(attribute, translated);
+        node.__efaSourceAttributes ||= {};
+        node.__efaSourceAttributes[attribute] ||= node.getAttribute(attribute);
+        node.setAttribute(attribute, translate(node.__efaSourceAttributes[attribute], language));
         }
       });
     });

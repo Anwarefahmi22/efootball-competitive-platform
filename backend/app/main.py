@@ -1,4 +1,6 @@
+import asyncio
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,10 +8,23 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import api_router
+from app.core.tournament_lifecycle import tournament_maintenance_loop
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+STORAGE_DIR = Path(__file__).resolve().parents[1] / "storage"
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="eFootball Competitive Platform", version="0.1.0")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    maintenance_task = asyncio.create_task(tournament_maintenance_loop())
+    try:
+        yield
+    finally:
+        maintenance_task.cancel()
+        await asyncio.gather(maintenance_task, return_exceptions=True)
+
+
+app = FastAPI(title="eFootball Competitive Platform", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,4 +54,5 @@ async def root() -> RedirectResponse:
 # service (e.g. Render) can host the whole platform with no CORS setup.
 app.mount("/shared", StaticFiles(directory=FRONTEND_DIR / "shared"), name="shared")
 app.mount("/landing", StaticFiles(directory=FRONTEND_DIR / "landing", html=True), name="landing")
+app.mount("/media", StaticFiles(directory=STORAGE_DIR), name="media")
 app.mount("/", StaticFiles(directory=FRONTEND_DIR / "web", html=True), name="web")

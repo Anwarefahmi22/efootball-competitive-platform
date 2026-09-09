@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.v1.auth import get_current_user
 from app.core.media import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES, save_post_image
@@ -17,7 +18,9 @@ router = APIRouter()
 
 
 async def _to_post_read(db: AsyncSession, post: Post) -> PostRead:
-    author_result = await db.execute(select(User).where(User.id == post.author_id))
+    author_result = await db.execute(
+        select(User).options(selectinload(User.profile)).where(User.id == post.author_id)
+    )
     author = author_result.scalar_one_or_none()
     like_count_result = await db.execute(
         select(func.count()).select_from(PostLike).where(PostLike.post_id == post.id)
@@ -29,6 +32,8 @@ async def _to_post_read(db: AsyncSession, post: Post) -> PostRead:
         id=post.id,
         author_id=post.author_id,
         author_name=author.display_name if author else "",
+        author_avatar_url=author.profile.avatar_url if author and author.profile else None,
+        author_country=author.profile.country if author and author.profile else None,
         post_type=post.post_type,
         content=post.content,
         has_image=post.image_path is not None,
@@ -42,6 +47,7 @@ async def _to_post_read(db: AsyncSession, post: Post) -> PostRead:
 @router.post("", response_model=PostRead, status_code=status.HTTP_201_CREATED)
 async def create_post(
     content: str | None = Form(default=None),
+    category: str = Form(default="general"),
     match_id: UUID | None = Form(default=None),
     image: UploadFile | None = File(default=None),
     current_user: User = Depends(get_current_user),
@@ -54,7 +60,13 @@ async def create_post(
         )
 
     image_path = None
-    post_type = PostType.TEXT
+    category_types = {
+        "achievement": PostType.ACHIEVEMENT,
+        "tournament": PostType.TOURNAMENT,
+        "general": PostType.GENERAL,
+        "match": PostType.GENERAL,
+    }
+    post_type = category_types.get(category, PostType.GENERAL)
     if image is not None:
         content_type = image.content_type or mimetypes.guess_type(image.filename or "")[0]
         if content_type not in ALLOWED_CONTENT_TYPES:
@@ -68,7 +80,8 @@ async def create_post(
             )
         extension = ".png" if content_type == "image/png" else ".jpg"
         image_path = save_post_image(file_bytes, extension)
-        post_type = PostType.IMAGE
+        if category == "general":
+            post_type = PostType.IMAGE
     if match_id is not None:
         post_type = PostType.MATCH_RESULT
 

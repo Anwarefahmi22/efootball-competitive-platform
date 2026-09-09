@@ -59,6 +59,7 @@
     </dialog>
   </div>
 
+  <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
@@ -70,6 +71,12 @@
 
     function card(t) {
       const pct = t.max_participants ? Math.round((t.participant_count || 0) * 100 / t.max_participants) : 0;
+      const membership = t.created_by === currentUserId
+        ? `<span class="membership-status is-organizer">◆ أنت المنظم</span>`
+        : t.participants.some((participant) => participant.user_id === currentUserId && participant.status === "approved")
+          ? `<span class="membership-status is-joined">✓ أنت منضم</span>`
+          : t.participants.some((participant) => participant.user_id === currentUserId)
+            ? `<span class="membership-status is-pending">◷ قيد المراجعة</span>` : "";
       return `
       <article class="card hoverable tournament-card">
         <div class="tournament-card__head">
@@ -84,14 +91,15 @@
         </div>
         <div class="tournament-card__prize"><span>المنافسة</span><strong>نقاط وتصنيف</strong></div>
         <div class="progress" role="progressbar" aria-label="نسبة امتلاء البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
-        <div class="tournament-card__footer"><span class="muted">${numberFormat.format(pct)}% ممتلئة</span>
+        <div class="tournament-card__footer"><span class="muted">${numberFormat.format(pct)}% ممتلئة</span>${membership}
           ${t.status === "registration_open" ? `<button class="btn btn-primary" type="button" data-join="${t.id}">انضم الآن</button>` : ""}
-          <a class="btn btn-ghost" href="/app/tournament.html?id=${encodeURIComponent(t.id)}">التفاصيل</a>
+          <a class="btn btn-ghost" href="/app/tournament.html?id=${encodeURIComponent(t.id)}">${t.created_by === currentUserId ? "إدارة البطولة" : "التفاصيل"}</a>
         </div>
       </article>`;
     }
 
     let caches = [];
+    let currentUserId = localStorage.getItem(USER_KEY);
     async function load() {
       el("list").innerHTML = `<div class="spinner"></div>`;
       const status = el("filter-status").value;
@@ -140,18 +148,16 @@
         requires_approval: el("t-approval").value === "true",
       };
       try {
-        await apiFetch("/tournaments", { method: "POST", body: JSON.stringify(body) });
+        const created = await apiFetch("/tournaments", { method: "POST", body: JSON.stringify(body) });
         dlg.close();
         toast("تم إنشاء البطولة! 🏆");
-        el("filter-status").value = "registration_open";
-        load();
+        location.href = `/app/tournament.html?id=${encodeURIComponent(created.id)}`;
       } catch (err) {
         el("t-err").textContent = err.detail || "فشل الإنشاء";
       }
     });
 
-    render; // nav renders on DOMContentLoaded
-    load();
+    apiFetch("/auth/me").then((me) => { currentUserId = me.id; localStorage.setItem(USER_KEY, me.id); }).catch(() => {}).finally(load);
     document.getElementById("form-create").id = "form-create";
   </script>
 </body>

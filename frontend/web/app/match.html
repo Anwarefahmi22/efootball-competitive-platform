@@ -33,8 +33,8 @@
           <div><button class="btn btn-primary" id="confirm-result" type="button">تأكيد النتيجة</button><button class="btn btn-danger" id="dispute-result" type="button">فتح نزاع</button></div>
         </div>
       </section>
-      <section class="card">
-        <div class="section-heading"><h2>الأدلة المرسلة</h2></div>
+      <section class="card evidence-card">
+        <div class="section-heading"><div><span class="eyebrow">سجل التحقق</span><h2>الأدلة المرسلة</h2></div><span class="panel-icon">✓</span></div>
         <div id="evidence-list"></div>
       </section>
     </main>
@@ -48,17 +48,31 @@
       <div class="dialog-actions"><button class="btn btn-ghost" value="cancel" type="submit">إلغاء</button><button class="btn btn-danger" id="submit-dispute" value="default" type="submit">إرسال النزاع</button></div>
     </form>
   </dialog>
+  <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
     const id = new URLSearchParams(location.search).get("id");
     const labels = { waiting: "بانتظار المباراة", ready: "جاهزة", in_progress: "جارية", result_submitted: "النتيجة مرسلة", disputed: "قيد النزاع", completed: "مكتملة", cancelled: "ملغاة" };
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+    const formatDate = (value) => value ? new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "غير محدد";
+    const fallbackPlayer = (id, label) => ({ display_name: id ? `${label} · ${String(id).slice(0, 8)}` : "بانتظار التحديد", avatar_url: null, rating: null });
     let currentMatch;
 
-    function renderMatch(match) {
+    function playerCard(player, side) {
+      const initials = escapeHtml((player.display_name || "؟").slice(0, 2));
+      return `<div class="match-player ${side === "a" ? "is-a" : "is-b"}">
+        <a class="match-player-avatar${player.avatar_url ? " has-image" : ""}" href="${player.id ? `/app/profile.html?user=${encodeURIComponent(player.id)}` : "#"}" aria-label="عرض ملف ${escapeHtml(player.display_name)}">${player.avatar_url ? `<img src="${escapeHtml(player.avatar_url)}" alt="">` : initials}</a>
+        <div class="match-player-info"><span class="muted">${side === "a" ? "اللاعب الأول" : "اللاعب الثاني"}</span><strong>${escapeHtml(player.display_name)}</strong><span class="match-rating">${player.rating !== null && player.rating !== undefined ? `${player.rating} ELO` : "التقييم غير متاح"}</span></div>
+      </div>`;
+    }
+
+    function renderMatch(match, context = {}) {
       currentMatch = match;
-      el("match-summary").innerHTML = `<span class="eyebrow">مركز المباراة</span><span class="badge ${match.status}">${labels[match.status] || match.status}</span><h1>مباراة الجولة ${match.round_number}</h1><div class="match-hero__score"><span>${match.score_a ?? "—"}</span><b>:</b><span>${match.score_b ?? "—"}</span></div><p class="muted">المباراة بين لاعبي البطولة. يتم اعتماد النتيجة بعد مراجعة الطرف الآخر.</p>`;
+      const playerA = context.playerA || fallbackPlayer(match.player_a_id, "لاعب");
+      const playerB = context.playerB || fallbackPlayer(match.player_b_id, "لاعب");
+      const title = context.tournament?.name || "مباراة تنافسية";
+      el("match-summary").innerHTML = `<div class="match-hero-top"><div><span class="eyebrow">غرفة المباراة</span><h1>${escapeHtml(title)}</h1><p class="muted">الجولة ${escapeHtml(match.round_number)} · ${match.scheduled_at ? `موعدها ${formatDate(match.scheduled_at)}` : "الموعد غير محدد"}</p></div><span class="badge ${match.status}">${labels[match.status] || escapeHtml(match.status)}</span></div><div class="match-players">${playerCard(playerA, "a")}<div class="match-versus-mark"><span>VS</span><small>مواجهة</small></div>${playerCard(playerB, "b")}</div><div class="match-hero__score"><span>${match.score_a ?? "—"}</span><b>:</b><span>${match.score_b ?? "—"}</span></div><p class="match-room-note">النتيجة تصبح رسمية بعد مراجعة الطرف الآخر واعتماد الدليل.</p>`;
       const canSubmit = ["ready", "in_progress"].includes(match.status);
       el("result-panel").hidden = !canSubmit && match.status !== "result_submitted";
       el("result-form").hidden = !canSubmit;
@@ -93,7 +107,20 @@
     async function load() {
       if (!id) throw { detail: "معرّف المباراة غير موجود." };
       const match = await apiFetch(`/matches/${id}`);
-      renderMatch(match);
+      const [tournament, playerA, playerB] = await Promise.all([
+        match.tournament_id ? apiFetch(`/tournaments/${match.tournament_id}`).catch(() => null) : null,
+        match.player_a_id ? apiFetch(`/users/${match.player_a_id}`).catch(() => null) : null,
+        match.player_b_id ? apiFetch(`/users/${match.player_b_id}`).catch(() => null) : null
+      ]);
+      const [ratingA, ratingB] = await Promise.all([
+        match.player_a_id ? apiFetch(`/ratings/${match.player_a_id}`).catch(() => null) : null,
+        match.player_b_id ? apiFetch(`/ratings/${match.player_b_id}`).catch(() => null) : null
+      ]);
+      renderMatch(match, {
+        tournament,
+        playerA: { ...fallbackPlayer(match.player_a_id, "اللاعب الأول"), id: match.player_a_id, ...(playerA || {}), rating: ratingA?.rating ?? null },
+        playerB: { ...fallbackPlayer(match.player_b_id, "اللاعب الثاني"), id: match.player_b_id, ...(playerB || {}), rating: ratingB?.rating ?? null }
+      });
       if (match.tournament_id) el("back-link").href = `/app/tournament.html?id=${encodeURIComponent(match.tournament_id)}`;
       await loadEvidence();
     }

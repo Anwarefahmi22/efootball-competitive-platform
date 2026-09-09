@@ -18,6 +18,15 @@ function renderNav() {
     ` : `
       <a class="btn btn-primary" href="/auth.html" style="padding:8px 18px">دخول / تسجيل</a>
     `}
+    <label class="language-picker" title="اللغة">
+      <span aria-hidden="true">文</span>
+      <span class="sr-only">اللغة</span>
+      <select id="nav-language" aria-label="اللغة">
+        <option value="ar">العربية</option>
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+      </select>
+    </label>
     </div>
   `;
   document.body.prepend(nav);
@@ -30,5 +39,9 @@ function renderNav() {
   });
   nav.querySelector("#nav-logout")?.addEventListener("click", () => Auth.logout());
   nav.querySelector("#nav-user")?.addEventListener("click", () => location.href = "/app/dashboard.html");
+  const language = nav.querySelector("#nav-language");
+  language.value = i18n.current();
+  language.addEventListener("change", () => i18n.setLanguage(language.value));
+  i18n.apply();
 }
 document.addEventListener("DOMContentLoaded", renderNav);

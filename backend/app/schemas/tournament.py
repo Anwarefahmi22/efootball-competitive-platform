@@ -40,6 +40,7 @@ class ParticipantPublic(BaseModel):
     user_id: UUID
     display_name: str
     seed: int | None
+    group_id: UUID | None = None
     status: str
 
 

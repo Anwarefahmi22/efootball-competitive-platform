@@ -32,7 +32,8 @@ router = APIRouter()
 def _to_read(tournament: Tournament) -> TournamentRead:
     participants = [
         ParticipantPublic(
-            user_id=p.user_id, display_name=p.user.display_name if p.user else "", seed=p.seed, status=p.status
+            user_id=p.user_id, display_name=p.user.display_name if p.user else "", seed=p.seed,
+            group_id=p.group_id, status=p.status
         )
         for p in tournament.participants
     ]
@@ -168,6 +169,24 @@ async def cancel_tournament(
     loaded = await _load_tournament(db, tournament.id)
     assert loaded is not None
     return _to_read(loaded)
+
+
+@router.delete("/{tournament_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_tournament(
+    tournament_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> None:
+    tournament = await _load_tournament(db, tournament_id)
+    if tournament is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+    if tournament.created_by != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can delete this tournament")
+    if tournament.status not in (TournamentStatus.REGISTRATION_OPEN, TournamentStatus.REGISTRATION_CLOSED, TournamentStatus.CANCELLED):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Started or completed tournaments cannot be deleted",
+        )
+    await db.delete(tournament)
+    await db.commit()
 
 
 @router.get("/{tournament_id}/standings", response_model=list[StandingRow])
@@ -340,6 +359,7 @@ async def start_tournament(
         tournament.status = TournamentStatus.IN_PROGRESS
     else:
         await build_bracket_matches(db, tournament, _approved(tournament))
+        tournament.status = TournamentStatus.IN_PROGRESS
 
     await db.commit()
     loaded = await _load_tournament(db, tournament.id)

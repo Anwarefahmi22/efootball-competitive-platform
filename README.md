@@ -1,12 +1,14 @@
 # eFootball Competitive Platform
 
-A competitive social platform for eFootball players: identity-first profiles, ranked play, tournaments (knockout / league / group+knockout), community, match-result verification with screenshot evidence, a trust & fraud engine, and an in-platform economy — built as a monorepo with a FastAPI backend and a future Android client.
+A free competitive social platform for eFootball players: identity-first profiles, ranked play, tournaments (knockout / league / group+knockout), community, match-result verification with screenshot evidence, and a trust & fraud engine — built as a monorepo with a FastAPI backend and a future Android client.
 
 **Tech stack:** Python 3.11+, FastAPI, PostgreSQL, SQLAlchemy 2.0 (async), Alembic, Pydantic v2, JWT auth (bcrypt) · vanilla HTML/JS web frontend · Android (Kotlin) client later.
 
 ## Status
 
-Backend engines complete (identity, competition, verification, trust/fraud, community, economy, seasons, analytics, group stage + knockout). Web frontend Phase 1: auth, dashboard, tournaments, ratings, profile.
+Backend engines complete (identity, competition, verification, trust/fraud, community, seasons, analytics, group stage + knockout). The public competition model is fully free: no entry fees, deposits, withdrawals, or monetary prizes. The web frontend currently includes authentication, dashboard, tournaments, tournament details, matches and evidence, ratings, profiles, community, and Arabic/French/English language switching.
+
+Competitive incentives are non-monetary: ELO, trust score, rankings, achievements, and competitive records. Legacy economy tables may remain for migration compatibility, but the public API does not expose financial operations.
 
 ## Run locally (Docker)
 

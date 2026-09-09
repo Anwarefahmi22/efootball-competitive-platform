@@ -12,14 +12,23 @@
 <body>
   <div class="container community-layout">
     <main>
-      <div class="page-heading">
-        <div><span class="eyebrow">شبكة اللاعبين</span><h1 class="page-title">المجتمع</h1><p class="muted">شارك لحظاتك وتابع أخبار المنافسين.</p></div>
-      </div>
-      <section class="card composer-card">
-        <div class="section-heading"><h2>ماذا حققت اليوم؟</h2><span class="muted">شارك تحديثًا مع المجتمع</span></div>
+      <header class="page-heading community-heading">
+        <div><span class="eyebrow">ساحة المنافسة</span><h1 class="page-title">مجتمع الـArena</h1><p class="muted">ما الذي يحدث الآن؟ تابع اللاعبين، النتائج الموثقة، والبطولات التي تحرك الساحة.</p></div>
+        <a class="btn btn-ghost" href="/app/ratings.html">التصنيف العام ↗</a>
+      </header>
+
+      <section class="card composer-card" aria-labelledby="composer-title">
+        <div class="section-heading"><div><h2 id="composer-title">ماذا حققت اليوم؟</h2><span class="muted">شارك لحظة تنافسية حقيقية مع المجتمع</span></div><span class="composer-mark" aria-hidden="true">+</span></div>
         <form id="post-form">
           <label class="sr-only" for="post-content">محتوى المنشور</label>
-          <textarea class="field post-composer" id="post-content" maxlength="2000" rows="4" placeholder="اكتب منشورك هنا..." ></textarea>
+          <textarea class="field post-composer" id="post-content" maxlength="2000" rows="4" placeholder="اكتب عن إنجاز، مباراة، أو بطولة..." ></textarea>
+          <div class="post-type-picker" role="group" aria-label="نوع المنشور">
+            <span class="muted">نوع التحديث</span>
+            <label><input type="radio" name="post-type" value="achievement" checked><span>إنجاز</span></label>
+            <label><input type="radio" name="post-type" value="match"><span>مباراة</span></label>
+            <label><input type="radio" name="post-type" value="tournament"><span>بطولة</span></label>
+            <label><input type="radio" name="post-type" value="general"><span>عام</span></label>
+          </div>
           <div class="composer-footer">
             <label class="file-label" for="post-image">إضافة صورة<input id="post-image" type="file" accept="image/jpeg,image/png" /></label>
             <span class="muted" id="image-name">JPG أو PNG، حتى 8MB</span>
@@ -28,107 +37,101 @@
           <div id="post-error" class="form-error" role="alert" hidden></div>
         </form>
       </section>
-      <section class="feed-section">
-        <div class="section-heading"><h2>آخر التحديثات</h2><button class="btn btn-ghost" id="refresh-feed" type="button">تحديث</button></div>
-        <div id="feed" aria-live="polite"><div class="spinner"></div></div>
+
+      <section class="feed-section" aria-labelledby="feed-title">
+        <div class="section-heading"><div><span class="eyebrow">نبض الساحة</span><h2 id="feed-title">آخر التحديثات</h2></div><button class="btn btn-ghost" id="refresh-feed" type="button">تحديث</button></div>
+        <div id="feed" aria-live="polite"><div class="dashboard-loading"><div class="spinner"></div><span>جارٍ تحميل نبض الساحة…</span></div></div>
       </section>
     </main>
     <aside class="community-aside">
       <div class="card community-intro">
         <span class="eyebrow">اللعب. التنافس. الانتماء.</span>
         <h2>المنافسة تبدأ من المجتمع</h2>
-        <p class="muted">اكتشف نتائج اللاعبين، احتفل بالانتصارات، وابنِ سمعتك داخل الساحة.</p>
+        <p class="muted">هنا تظهر النتائج الموثقة، إنجازات اللاعبين، والبطولات التي تستحق المتابعة.</p>
         <a class="btn btn-ghost" href="/app/ratings.html">استكشف التصنيف</a>
       </div>
+      <section class="card discover-card" aria-labelledby="discover-title">
+        <div class="section-heading"><h2 id="discover-title">اكتشف في الـArena</h2><span class="panel-icon">✦</span></div>
+        <div id="discover"><div class="muted">جارٍ تجهيز الاقتراحات…</div></div>
+      </section>
     </aside>
   </div>
+  <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
-    const postTypes = { text: "تحديث", image: "صورة", match_result: "نتيجة مباراة" };
-    const formatDate = (value) => new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+    const postTypes = { text: "تحديث", image: "صورة", match_result: "نتيجة موثقة", achievement: "إنجاز", tournament: "بطولة", general: "عام" };
+    const formatDate = (value) => new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
     const likedPosts = new Set();
+    const avatarMarkup = (post) => post.author_avatar_url ? `<img src="${escapeHtml(post.author_avatar_url)}" alt="">` : "⚽";
 
+    function emptyFeed() {
+      return `<div class="community-empty card"><div class="empty-arena-mark" aria-hidden="true">✦</div><h3>الـArena هادئة الآن</h3><p>لا توجد منشورات بعد. كن أول لاعب يوثق لحظته ويبدأ الحديث.</p><button class="btn btn-primary" type="button" id="empty-create-post">أنشئ أول منشور</button></div>`;
+    }
     function renderFeed(posts) {
       el("feed").innerHTML = posts.length ? posts.map((post) => `
         <article class="card post-card" data-post-id="${post.id}">
           <header class="post-header">
-            <div class="post-avatar" aria-hidden="true">⚽</div>
-            <div><a class="post-author" href="/app/profile.html?user=${encodeURIComponent(post.author_id)}">${escapeHtml(post.author_name || "لاعب eFootball")}</a><div class="muted post-meta">${postTypes[post.post_type] || "تحديث"} · ${formatDate(post.created_at)}</div></div>
+            <div class="post-avatar${post.author_avatar_url ? " has-image" : ""}">${avatarMarkup(post)}</div>
+            <div class="post-author-block"><a class="post-author" href="/app/profile.html?user=${encodeURIComponent(post.author_id)}">${escapeHtml(post.author_name || "لاعب eFootball")}</a><div class="post-meta"><span>${escapeHtml(post.author_country || "لاعب في الـArena")}</span><span>•</span><span>${postTypes[post.post_type] || "تحديث"} · ${formatDate(post.created_at)}</span></div></div>
+            <a class="post-profile-link" href="/app/profile.html?user=${encodeURIComponent(post.author_id)}" aria-label="عرض ملف ${escapeHtml(post.author_name)}">الملف ↗</a>
           </header>
+          ${post.post_type === "match_result" ? `<div class="post-context-badge">✓ نتيجة مباراة موثقة</div>` : post.post_type === "achievement" ? `<div class="post-context-badge">✦ إنجاز تنافسي</div>` : ""}
           ${post.content ? `<p class="post-content">${escapeHtml(post.content)}</p>` : ""}
           ${post.has_image ? `<img class="post-image" src="${API_BASE}/posts/${encodeURIComponent(post.id)}/image" alt="صورة مرفقة بمنشور ${escapeHtml(post.author_name)}" loading="lazy" />` : ""}
           <div class="post-actions">
-            <button class="post-action like-button${likedPosts.has(post.id) ? " is-liked" : ""}" type="button" data-action="like" aria-pressed="${likedPosts.has(post.id)}">♥ <span>${post.like_count}</span> إعجاب</button>
-            <button class="post-action" type="button" data-action="comments">◌ <span>${post.comment_count}</span> تعليقات</button>
+            <button class="post-action like-button${likedPosts.has(post.id) ? " is-liked" : ""}" type="button" data-action="like" aria-pressed="${likedPosts.has(post.id)}" aria-label="إعجاب بالمنشور">♥ <span>${post.like_count}</span> إعجاب</button>
+            <button class="post-action" type="button" data-action="comments" aria-expanded="false">◌ <span>${post.comment_count}</span> تعليقات</button>
           </div>
           <div class="comments-panel" hidden></div>
-        </article>`).join("") : `<div class="empty card">لا توجد تحديثات بعد. كن أول من يشارك إنجازه.</div>`;
+        </article>`).join("") : emptyFeed();
       document.querySelectorAll(".post-card").forEach(bindPost);
+      el("empty-create-post")?.addEventListener("click", () => { el("post-content").focus(); el("post-form").scrollIntoView({ behavior: "smooth", block: "center" }); });
     }
-
     async function loadFeed() {
-      el("feed").innerHTML = '<div class="spinner"></div>';
+      el("feed").innerHTML = '<div class="dashboard-loading"><div class="spinner"></div><span>جارٍ تحميل نبض الساحة…</span></div>';
       try { renderFeed(await apiFetch("/posts?limit=30")); }
-      catch (error) { el("feed").innerHTML = `<div class="empty card" role="alert">${escapeHtml(error.detail || "تعذر تحميل المجتمع.")}</div>`; }
+      catch (error) { el("feed").innerHTML = `<div class="empty card" role="alert"><h3>تعذر تحميل الساحة</h3><p>${escapeHtml(error.detail || "تحقق من اتصالك ثم حاول مرة أخرى.")}</p><button class="btn btn-ghost" type="button" id="retry-feed">إعادة المحاولة</button></div>`; el("retry-feed")?.addEventListener("click", loadFeed); }
     }
-
     function bindPost(card) {
       const postId = card.dataset.postId;
       card.querySelector('[data-action="like"]').addEventListener("click", async (event) => {
-        const button = event.currentTarget;
-        button.disabled = true;
-        try {
-          const liked = likedPosts.has(postId);
-          await apiFetch(`/posts/${postId}/like`, { method: liked ? "DELETE" : "POST" });
-          liked ? likedPosts.delete(postId) : likedPosts.add(postId);
-          const count = button.querySelector("span");
-          count.textContent = String(Number(count.textContent) + (liked ? -1 : 1));
-          button.classList.toggle("is-liked", !liked);
-          button.setAttribute("aria-pressed", String(!liked));
-        } catch (error) { toast(error.detail || "تعذر تحديث الإعجاب.", "error"); }
-        finally { button.disabled = false; }
+        const button = event.currentTarget; button.disabled = true;
+        try { const liked = likedPosts.has(postId); await apiFetch(`/posts/${postId}/like`, { method: liked ? "DELETE" : "POST" }); liked ? likedPosts.delete(postId) : likedPosts.add(postId); button.querySelector("span").textContent = String(Number(button.querySelector("span").textContent) + (liked ? -1 : 1)); button.classList.toggle("is-liked", !liked); button.setAttribute("aria-pressed", String(!liked)); }
+        catch (error) { toast(error.detail || "تعذر تحديث الإعجاب.", "error"); } finally { button.disabled = false; }
       });
       card.querySelector('[data-action="comments"]').addEventListener("click", async (event) => {
-        const panel = card.querySelector(".comments-panel");
-        if (!panel.hidden) { panel.hidden = true; return; }
-        panel.hidden = false;
-        panel.innerHTML = '<div class="muted">جارٍ تحميل التعليقات...</div>';
+        const button = event.currentTarget; const panel = card.querySelector(".comments-panel");
+        if (!panel.hidden) { panel.hidden = true; button.setAttribute("aria-expanded", "false"); return; }
+        panel.hidden = false; button.setAttribute("aria-expanded", "true"); panel.innerHTML = '<div class="muted">جارٍ تحميل التعليقات...</div>';
         try {
           const comments = await apiFetch(`/posts/${postId}/comments`);
           panel.innerHTML = `<div class="comments-list">${comments.length ? comments.map((comment) => `<div class="comment"><strong>${escapeHtml(comment.author_name)}</strong><span>${escapeHtml(comment.content)}</span></div>`).join("") : '<div class="muted">لا توجد تعليقات بعد.</div>'}</div><form class="comment-form"><input class="field" maxlength="1000" required placeholder="اكتب تعليقًا..." aria-label="تعليق جديد" /><button class="btn btn-primary" type="submit">إرسال</button></form>`;
-          panel.querySelector("form").addEventListener("submit", async (submitEvent) => {
-            submitEvent.preventDefault();
-            const input = submitEvent.currentTarget.querySelector("input");
-            const button = submitEvent.currentTarget.querySelector("button");
-            button.disabled = true;
-            try { await apiFetch(`/posts/${postId}/comments`, { method: "POST", body: JSON.stringify({ content: input.value.trim() }) }); input.value = ""; panel.hidden = true; toast("تمت إضافة تعليقك."); }
-            catch (error) { toast(error.detail || "تعذر إضافة التعليق.", "error"); }
-            finally { button.disabled = false; }
-          });
+          panel.querySelector("form").addEventListener("submit", async (submitEvent) => { submitEvent.preventDefault(); const form = submitEvent.currentTarget; const input = form.querySelector("input"); const button = form.querySelector("button"); button.disabled = true; try { await apiFetch(`/posts/${postId}/comments`, { method: "POST", body: JSON.stringify({ content: input.value.trim() }) }); toast("تمت إضافة تعليقك."); panel.hidden = true; } catch (error) { toast(error.detail || "تعذر إضافة التعليق.", "error"); } finally { button.disabled = false; } });
         } catch (error) { panel.innerHTML = `<div class="form-error">${escapeHtml(error.detail || "تعذر تحميل التعليقات.")}</div>`; }
       });
     }
-
+    async function loadDiscover() {
+      try {
+        const [players, tournaments] = await Promise.all([apiFetch("/ratings/leaderboard?limit=3"), apiFetch("/tournaments?limit=3")]);
+        const parts = [];
+        if (players.length) parts.push(`<div class="discover-group"><h3>لاعبون تحت الضوء</h3>${players.map((player, index) => `<a class="discover-row" href="/app/profile.html?user=${encodeURIComponent(player.user_id)}"><span class="discover-rank">#${index + 1}</span><span>${escapeHtml(player.display_name)}</span><strong>${player.rating} ELO</strong></a>`).join("")}</div>`);
+        if (tournaments.length) parts.push(`<div class="discover-group"><h3>بطولات تستحق المتابعة</h3>${tournaments.map((tournament) => `<a class="discover-row" href="/app/tournament.html?id=${encodeURIComponent(tournament.id)}"><span class="discover-dot"></span><span>${escapeHtml(tournament.name)}</span><strong>${tournament.participant_count}/${tournament.max_participants}</strong></a>`).join("")}</div>`);
+        el("discover").innerHTML = parts.join("") || '<div class="state-empty">لا توجد اقتراحات متاحة بعد.</div>';
+      } catch (error) { el("discover").innerHTML = '<div class="state-empty">ستظهر الاقتراحات عند توفر بيانات المنافسة.</div>'; }
+    }
     el("post-image").addEventListener("change", (event) => { el("image-name").textContent = event.target.files[0]?.name || "JPG أو PNG، حتى 8MB"; });
     el("post-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const button = form.querySelector("button[type=submit]");
-      const image = el("post-image").files[0];
+      event.preventDefault(); const form = event.currentTarget; const button = form.querySelector("button[type=submit]"); const image = el("post-image").files[0]; const content = el("post-content").value.trim();
+      if (!content && !image) { el("post-error").textContent = "أضف نصًا أو صورة قبل النشر."; el("post-error").hidden = false; return; }
       if (image && image.size > 8 * 1024 * 1024) { el("post-error").textContent = "حجم الصورة يتجاوز 8MB."; el("post-error").hidden = false; return; }
-      const data = new FormData();
-      if (el("post-content").value.trim()) data.append("content", el("post-content").value.trim());
-      if (image) data.append("image", image);
+      const data = new FormData(); if (content) data.append("content", content); if (image) data.append("image", image); data.append("category", form.querySelector('input[name="post-type"]:checked').value);
       button.disabled = true; el("post-error").hidden = true;
-      try { await apiFetch("/posts", { method: "POST", body: data }); form.reset(); el("image-name").textContent = "JPG أو PNG، حتى 8MB"; toast("تم نشر تحديثك."); await loadFeed(); }
-      catch (error) { el("post-error").textContent = error.detail || "تعذر نشر التحديث."; el("post-error").hidden = false; }
-      finally { button.disabled = false; }
+      try { await apiFetch("/posts", { method: "POST", body: data }); form.reset(); el("image-name").textContent = "JPG أو PNG، حتى 8MB"; toast("تم نشر تحديثك."); await loadFeed(); } catch (error) { el("post-error").textContent = error.detail || "تعذر نشر التحديث."; el("post-error").hidden = false; } finally { button.disabled = false; }
     });
     el("refresh-feed").addEventListener("click", loadFeed);
-    if (!Auth.loggedIn()) location.href = "/auth.html?next=" + encodeURIComponent(location.pathname);
-    else loadFeed();
+    if (!Auth.loggedIn()) location.href = "/auth.html?next=" + encodeURIComponent(location.pathname); else { loadFeed(); loadDiscover(); }
   </script>
 </body>
 </html>

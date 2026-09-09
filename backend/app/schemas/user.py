@@ -17,6 +17,7 @@ class ProfileRead(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
+    display_name: str | None = Field(default=None, min_length=2, max_length=100)
     avatar_url: str | None = None
     bio: str | None = None
     country: str | None = None

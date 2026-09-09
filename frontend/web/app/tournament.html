@@ -15,6 +15,16 @@
     <main id="content" hidden>
       <a class="back-link" href="/app/tournaments.html">← العودة إلى البطولات</a>
       <section class="tournament-hero card" id="tournament-summary"></section>
+      <section class="card organizer-panel" id="organizer-panel" hidden aria-labelledby="organizer-title">
+        <div class="section-heading">
+          <div><span class="eyebrow">مساحة المنظم</span><h2 id="organizer-title">إدارة البطولة</h2></div>
+          <span class="organizer-panel__mark" aria-hidden="true">◆</span>
+        </div>
+        <p class="muted organizer-panel__hint">هذه الأدوات تظهر لك لأنك أنشأت البطولة. راجع الطلبات، أغلق التسجيل، ثم أنشئ القرعة وابدأ المنافسة. البطولات الجارية بلا نشاط لمدة 3 أيام تُلغى تلقائيًا.</p>
+        <div class="organizer-actions" id="organizer-actions"></div>
+        <div class="organizer-requests" id="organizer-requests"></div>
+        <div id="organizer-error" class="form-error" role="alert" hidden></div>
+      </section>
 
       <div class="tournament-layout">
         <section class="card">
@@ -26,6 +36,12 @@
           <div class="table-scroll"><table class="table"><caption class="sr-only">ترتيب لاعبي البطولة</caption><thead><tr><th>#</th><th>اللاعب</th><th>لعب</th><th>فاز</th><th>نقاط</th></tr></thead><tbody id="standings"></tbody></table></div>
         </section>
       </div>
+
+        <section class="card draw-board" id="draw-board" hidden>
+          <div class="section-heading"><div><span class="eyebrow">نتيجة القرعة</span><h2>توزيع المنافسين</h2></div><span class="panel-icon">◇</span></div>
+          <p class="muted" id="draw-board-hint"></p>
+          <div id="draw-board-content"></div>
+        </section>
 
       <section class="card" id="groups-section" hidden>
         <div class="section-heading"><h2>المجموعات</h2></div>
@@ -39,6 +55,7 @@
     </main>
   </div>
 
+  <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
@@ -57,7 +74,7 @@
       result_submitted: "النتيجة مرسلة", disputed: "قيد النزاع", completed: "مكتملة", cancelled: "ملغاة",
     };
 
-    function renderSummary(tournament) {
+    function renderSummary(tournament, me) {
       const pct = tournament.max_participants ? Math.round(tournament.participant_count * 100 / tournament.max_participants) : 0;
       el("tournament-summary").innerHTML = `
         <div class="tournament-hero__top"><span class="eyebrow">مركز البطولة</span><span class="badge ${tournament.status}">${labels[tournament.status] || tournament.status}</span></div>
@@ -70,22 +87,126 @@
           <span><b>${numberFormat.format(tournament.participant_count)}/${numberFormat.format(tournament.max_participants)}</b><small>المشاركون</small></span>
         </div>
         <div class="progress" role="progressbar" aria-label="نسبة امتلاء البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
-        <div class="tournament-hero__actions">${tournament.status === "registration_open" ? `<button class="btn btn-primary" id="join">انضم إلى البطولة</button>` : ""}<a class="btn btn-ghost" href="/app/tournaments.html">استعراض بطولات أخرى</a></div>`;
+        <div class="tournament-hero__actions">${membershipAction(tournament, me)}<a class="btn btn-ghost" href="/app/tournaments.html">استعراض بطولات أخرى</a></div>`;
       el("participant-count").textContent = `${numberFormat.format(tournament.participant_count)} مشارك`;
-      const joined = tournament.participants.some((participant) => participant.user_id === localStorage.getItem(USER_KEY));
-      if (joined && tournament.status === "registration_open") {
-        el("join").textContent = "مغادرة البطولة";
-        el("join").className = "btn btn-danger";
-        el("join").onclick = () => changeParticipation("leave");
-      } else {
-        el("join")?.addEventListener("click", () => changeParticipation("join"));
-      }
+      el("join")?.addEventListener("click", () => changeParticipation("join"));
+      el("leave")?.addEventListener("click", () => changeParticipation("leave"));
     }
 
-    function renderParticipants(participants) {
+    function membershipAction(tournament, me) {
+      const currentUserId = me.id;
+      const participant = tournament.participants.find((item) => item.user_id === currentUserId);
+      if (tournament.created_by === currentUserId) return `<span class="membership-status is-organizer">◆ أنت منظم البطولة</span>`;
+      if (participant?.status === "approved") return `<button class="btn btn-danger" id="leave" type="button">مغادرة البطولة</button><span class="membership-status is-joined">✓ أنت منضم</span>`;
+      if (participant?.status === "pending") return `<span class="membership-status is-pending">◷ طلبك قيد المراجعة</span>`;
+      return tournament.status === "registration_open" ? `<button class="btn btn-primary" id="join" type="button">انضم إلى البطولة</button>` : `<span class="membership-status">التسجيل مغلق</span>`;
+    }
+
+    function renderParticipants(participants, me) {
+      const currentUserId = me.id;
       el("participants").innerHTML = participants.length
-        ? participants.map((participant, index) => `<div class="participant-row"><span class="participant-rank">${index + 1}</span><strong>${escapeHtml(participant.display_name)}</strong><span class="badge">${escapeHtml(participant.status)}</span></div>`).join("")
+        ? participants.map((participant, index) => `<div class="participant-row${participant.user_id === currentUserId ? " is-current-user" : ""}"><span class="participant-rank">${participant.seed || index + 1}</span><strong>${escapeHtml(participant.display_name)}${participant.user_id === currentUserId ? ` <span class="you-label">أنت</span>` : ""}</strong><span class="badge">${participant.group_id ? "تم التوزيع" : participant.status === "approved" ? "منضم" : "قيد المراجعة"}</span></div>`).join("")
         : `<div class="empty">لا يوجد مشاركون بعد.</div>`;
+    }
+
+    function renderDrawBoard(tournament, matches) {
+      const board = el("draw-board");
+      if (!tournament.draw_completed) {
+        board.hidden = true;
+        return;
+      }
+      board.hidden = false;
+      const seeded = tournament.participants.filter((participant) => participant.status === "approved" && participant.seed).sort((a, b) => a.seed - b.seed);
+      const hint = tournament.format === "single_elimination"
+        ? "الترتيب أدناه هو ترتيب القرعة النهائي، وتُبنى عليه مواجهات خروج المغلوب."
+        : tournament.format === "league"
+          ? "تم اعتماد المشاركين. سيُنشأ جدول المواجهات عند بدء الدوري."
+          : "تم توزيع المشاركين على المجموعات. ستظهر جداول المجموعات ثم الإقصائيات.";
+      el("draw-board-hint").textContent = hint;
+      if (tournament.format === "group_knockout") {
+        el("draw-board-content").innerHTML = `<div class="draw-grid">${seeded.map((participant) => `<div class="draw-chip"><span>${participant.seed}</span><strong>${escapeHtml(participant.display_name)}</strong><small>مجموعة مخصصة</small></div>`).join("")}</div>`;
+        return;
+      }
+      if (tournament.format === "single_elimination" && matches.length) {
+        const names = Object.fromEntries(tournament.participants.map((participant) => [participant.user_id, participant.display_name]));
+        const rounds = matches.reduce((map, match) => { (map[match.round_number] ||= []).push(match); return map; }, {});
+        const roundNumbers = Object.keys(rounds).sort((a, b) => a - b);
+        el("draw-board-content").innerHTML = `<div class="bracket-grid">${Object.entries(rounds).sort(([a], [b]) => a - b).map(([round, roundMatches]) => `<div class="bracket-round"><h3>${round == 1 ? "الدور الأول" : round == roundNumbers[roundNumbers.length - 1] ? "النهائي" : `الدور ${round}`}</h3>${roundMatches.map((match) => `<a class="bracket-match" href="/app/match.html?id=${encodeURIComponent(match.id)}"><span>${escapeHtml(names[match.player_a_id] || (round == 1 ? "بانتظار التحديد" : "متأهل من الدور السابق"))}</span><b>${match.score_a ?? "—"} : ${match.score_b ?? "—"}</b><span>${escapeHtml(names[match.player_b_id] || (round == 1 ? "بانتظار التحديد" : "متأهل من الدور السابق"))}</span></a>`).join("")}</div>`).join("")}</div>`;
+        return;
+      }
+      el("draw-board-content").innerHTML = `<div class="draw-grid">${seeded.map((participant) => `<div class="draw-chip"><span>${participant.seed}</span><strong>${escapeHtml(participant.display_name)}</strong></div>`).join("")}</div>`;
+    }
+
+    function renderOrganizer(tournament, me) {
+      const panel = el("organizer-panel");
+      if (tournament.created_by !== me.id) {
+        panel.hidden = true;
+        return;
+      }
+      panel.hidden = false;
+      const pending = tournament.participants.filter((participant) => participant.status === "pending");
+      const approved = tournament.participants.filter((participant) => participant.status === "approved");
+      const actions = [];
+      const formatSteps = {
+        single_elimination: "خروج المغلوب: قرعة → مواجهات إقصائية → النهائي",
+        league: "الدوري: قرعة الترتيب → جدول كامل → ترتيب بالنقاط",
+        group_knockout: `مجموعات وإقصائيات: توزيع ${tournament.num_groups || "المجموعات"} → دور المجموعات → الإقصائيات`
+      };
+      el("organizer-title").textContent = `إدارة البطولة · ${formatLabel[tournament.format] || tournament.format}`;
+      if (tournament.status === "registration_open") {
+        if (pending.length) actions.push(`<button class="btn btn-ghost" type="button" data-organizer-action="approve-all">اعتماد الطلبات (${pending.length})</button>`);
+        if (!tournament.draw_completed) actions.push(`<button class="btn btn-primary" type="button" data-organizer-action="draw">إجراء القرعة</button>`);
+        actions.push(`<button class="btn btn-danger" type="button" data-organizer-action="cancel">إلغاء البطولة</button>`);
+        actions.push(`<button class="btn btn-danger btn-outline-danger" type="button" data-organizer-action="delete">حذف البطولة</button>`);
+      } else if (tournament.status === "registration_closed") {
+        if (tournament.draw_completed) actions.push(`<button class="btn btn-primary" type="button" data-organizer-action="start">بدء المنافسة</button>`);
+        actions.push(`<button class="btn btn-danger btn-outline-danger" type="button" data-organizer-action="delete">حذف البطولة</button>`);
+      } else if (tournament.status === "in_progress") {
+        actions.push(`<span class="organizer-live-state">● المنافسة جارية</span>`);
+        if (tournament.format === "group_knockout") actions.push(`<button class="btn btn-ghost" type="button" data-organizer-action="start-knockout">بدء الإقصائيات</button>`);
+      }
+      el("organizer-actions").innerHTML = `<div class="format-workflow">${escapeHtml(formatSteps[tournament.format] || "نظام البطولة")}</div>${actions.length ? actions.join("") : `<span class="state-empty">لا توجد إجراءات مطلوبة في هذه المرحلة.</span>`}`;
+      el("organizer-requests").innerHTML = pending.length
+        ? `<div class="organizer-subheading"><strong>طلبات الانضمام</strong><span class="muted">${pending.length} بانتظار المراجعة</span></div>${pending.map((participant) => `<div class="organizer-request"><div><strong>${escapeHtml(participant.display_name)}</strong><span class="muted">طلب انضمام</span></div><div class="organizer-request__actions"><button class="btn btn-primary" type="button" data-participant-action="approve" data-user-id="${participant.user_id}">اعتماد</button><button class="btn btn-ghost" type="button" data-participant-action="reject" data-user-id="${participant.user_id}">رفض</button></div></div>`).join("")}`
+        : `<div class="organizer-subheading"><strong>المشاركون المعتمدون</strong><span class="muted">${approved.length}/${tournament.max_participants}</span></div>`;
+      document.querySelectorAll("[data-organizer-action]").forEach((button) => button.addEventListener("click", () => organizerAction(button.dataset.organizerAction)));
+      document.querySelectorAll("[data-participant-action]").forEach((button) => button.addEventListener("click", () => participantAction(button.dataset.participantAction, button.dataset.userId)));
+    }
+
+    async function organizerAction(action) {
+      const endpoint = { draw: "draw", start: "start", "start-knockout": "start-knockout", cancel: "cancel" }[action];
+      if (action === "approve-all") {
+        const pending = currentTournament.participants.filter((participant) => participant.status === "pending");
+        for (const participant of pending) await participantAction("approve", participant.user_id, true);
+        return load();
+      }
+      if (action === "delete") {
+        if (!window.confirm("سيتم حذف البطولة وجميع طلبات الانضمام المرتبطة بها نهائيًا. هل تريد المتابعة؟")) return;
+        try {
+          await apiFetch(`/tournaments/${id}`, { method: "DELETE", noBody: true });
+          toast("تم حذف البطولة.");
+          location.href = "/app/tournaments.html";
+        } catch (error) { showOrganizerError(error.detail || "تعذر حذف البطولة."); }
+        return;
+      }
+      if (!endpoint) return;
+      const messages = { draw: "تم إجراء القرعة.", start: "بدأت المنافسة.", "start-knockout": "بدأت الإقصائيات.", cancel: "تم إلغاء البطولة." };
+      if (action === "cancel" && !window.confirm("هل أنت متأكد من إلغاء هذه البطولة؟")) return;
+      try { await apiFetch(`/tournaments/${id}/${endpoint}`, { method: "POST", noBody: true }); toast(messages[action]); await load(); }
+      catch (error) { showOrganizerError(error.detail || "تعذر تنفيذ الإجراء."); }
+    }
+
+    async function participantAction(action, userId, silent = false) {
+      try {
+        await apiFetch(`/tournaments/${id}/participants/${userId}/${action}`, { method: "POST", noBody: true });
+        if (!silent) toast(action === "approve" ? "تم اعتماد اللاعب." : "تم رفض الطلب.");
+        await load();
+      } catch (error) { showOrganizerError(error.detail || "تعذر تحديث طلب اللاعب."); }
+    }
+
+    function showOrganizerError(message) {
+      el("organizer-error").textContent = message;
+      el("organizer-error").hidden = false;
     }
 
     function renderStandings(rows) {
@@ -116,6 +237,7 @@
       }
     }
 
+    let currentTournament;
     async function load() {
       if (!id) throw { detail: "معرّف البطولة غير موجود." };
       const [tournament, me] = await Promise.all([
@@ -123,13 +245,16 @@
         apiFetch("/auth/me"),
       ]);
       localStorage.setItem(USER_KEY, me.id);
-      renderSummary(tournament);
-      renderParticipants(tournament.participants);
+      currentTournament = tournament;
+      renderSummary(tournament, me);
+      renderOrganizer(tournament, me);
+      renderParticipants(tournament.participants, me);
       const requests = [apiFetch(`/tournaments/${id}/matches`)];
       if (tournament.format === "league") requests.push(apiFetch(`/tournaments/${id}/standings`));
       else if (tournament.format === "group_knockout") requests.push(apiFetch(`/tournaments/${id}/groups`));
       const [matches, extra] = await Promise.all(requests);
       renderMatches(matches);
+      renderDrawBoard(tournament, matches);
       if (tournament.format === "league") renderStandings(extra);
       if (tournament.format === "group_knockout") renderGroups(extra);
     }

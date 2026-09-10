@@ -331,6 +331,19 @@
     "النتيجة مرسلة": { fr: "Résultat envoyé", en: "Result submitted" },
     "قيد النزاع": { fr: "En litige", en: "Disputed" },
     "مكتملة": { fr: "Terminée", en: "Completed" },
+    // Match Room roles and role-gated states (interface labels only)
+    "إرسال النتيجة": { fr: "Envoyer le résultat", en: "Submit the result" },
+    "أنت اللاعب الأول": { fr: "Vous êtes le joueur 1", en: "You are Player A" },
+    "أنت اللاعب الثاني": { fr: "Vous êtes le joueur 2", en: "You are Player B" },
+    "أنت متفرج على هذه المباراة": { fr: "Vous suivez ce match en spectateur", en: "You are spectating this match" },
+    "زائر غير مسجَّل الدخول": { fr: "Visiteur non connecté", en: "Signed-out visitor" },
+    "وضع المشاهدة": { fr: "Mode spectateur", en: "Viewing mode" },
+    "سجّل الدخول لعرض أدوات هذه المباراة والمشاركة فيها.": { fr: "Connectez-vous pour afficher les outils de ce match et y participer.", en: "Sign in to see the tools for this match and take part." },
+    "أنت تشاهد هذه المباراة كمتفرج. إرسال النتيجة وتأكيدها وفتح النزاع متاحة للاعبَين المشاركين فقط.": { fr: "Vous suivez ce match en spectateur. L'envoi du résultat, sa confirmation et l'ouverture d'un litige sont réservés aux deux joueurs.", en: "You are spectating this match. Submitting a result, confirming it and opening a dispute are reserved for the two players." },
+    "نتيجتك مرسلة. بانتظار مراجعة المنافس لها.": { fr: "Votre résultat est envoyé. En attente de la vérification par l'adversaire.", en: "Your result is submitted. Waiting for your opponent to review it." },
+    "الأدلة متاحة للاعبَين المشاركين فقط.": { fr: "Les preuves sont réservées aux deux joueurs du match.", en: "Evidence is available to the two players only." },
+    "تعذر تحميل سجل الأدلة.": { fr: "Impossible de charger le registre des preuves.", en: "Could not load the evidence log." },
+    "لم يتم العثور على هذه المباراة.": { fr: "Match introuvable.", en: "Match not found." },
   };
 
   Object.assign(translations, {

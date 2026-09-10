@@ -14,6 +14,11 @@
   --radius: 14px;
 }
 * { box-sizing: border-box; }
+/* Class rules such as .result-form/.pending-actions declare `display`, which
+   overrides the UA `[hidden] { display: none }`. Without this, elements hidden
+   through the hidden attribute (role-gated Match Room controls included) would
+   stay visible. */
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
 html { color-scheme: dark; }
 body {

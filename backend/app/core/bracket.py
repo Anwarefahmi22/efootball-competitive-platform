@@ -102,6 +102,11 @@ async def matches_in_round(
 
 
 async def advance_winner(db: AsyncSession, match: Match, winner_id: UUID) -> None:
+    if winner_id is None:
+        # Nothing to advance. Writing None into a destination slot would clear
+        # a player who had already legitimately qualified for that match.
+        return
+
     tournament_result = await db.execute(
         select(Tournament)
         .options(selectinload(Tournament.participants))
@@ -115,6 +120,9 @@ async def advance_winner(db: AsyncSession, match: Match, winner_id: UUID) -> Non
         db, match.tournament_id, match.round_number + 1
     )
     if not next_round_matches:
+        if tournament.status == TournamentStatus.CANCELLED:
+            # Never resurrect a tournament that has been called off.
+            return
         tournament.status = TournamentStatus.COMPLETED
         tournament.winner_id = winner_id
         return
@@ -124,10 +132,19 @@ async def advance_winner(db: AsyncSession, match: Match, winner_id: UUID) -> Non
         raise ValueError("No destination match for winner")
 
     dest = next_round_matches[next_slot]
-    if side == "a":
-        dest.player_a_id = winner_id
-    else:
-        dest.player_b_id = winner_id
+    # Advancement must be idempotent and must never displace someone. Each
+    # bracket slot maps to exactly one destination side, so an already-filled
+    # side holding a *different* player means something went wrong upstream —
+    # fail loudly rather than silently rewriting a match that may already be
+    # under way.
+    occupied = dest.player_a_id if side == "a" else dest.player_b_id
+    if occupied is None:
+        if side == "a":
+            dest.player_a_id = winner_id
+        else:
+            dest.player_b_id = winner_id
+    elif occupied != winner_id:
+        raise ValueError("Destination match already holds a different winner")
 
     if dest.player_a_id is not None and dest.player_b_id is not None:
         dest.status = MatchStatus.READY

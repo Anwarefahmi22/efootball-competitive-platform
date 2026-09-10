@@ -108,7 +108,14 @@ async def compute_standings(db: AsyncSession, tournament_id: UUID) -> list[dict]
             **s,
         })
 
-    rows.sort(key=lambda r: (-r["points"], -r["goal_difference"], -r["goals_for"]))
+    # The three keys above are the league ranking policy. Players still level
+    # on all three were previously ordered by whatever order the participant
+    # rows happened to arrive in, which Postgres does not guarantee — so the
+    # same table could reshuffle between two identical requests. This final
+    # key only decides positions the policy itself leaves open.
+    rows.sort(key=lambda r: (
+        -r["points"], -r["goal_difference"], -r["goals_for"], str(r["user_id"])
+    ))
     return rows
 
 

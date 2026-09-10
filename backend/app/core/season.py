@@ -64,5 +64,7 @@ async def compute_season_standings(db: AsyncSession, season_id: UUID) -> list[di
             "points": s["points"],
         })
 
-    rows.sort(key=lambda r: (-r["points"], -r["wins"]))
+    # Trailing key only makes the order of fully-tied rows deterministic; it
+    # does not change the points/wins ranking policy.
+    rows.sort(key=lambda r: (-r["points"], -r["wins"], str(r["user_id"])))
     return rows

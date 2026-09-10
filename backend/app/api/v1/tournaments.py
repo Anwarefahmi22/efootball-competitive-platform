@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -19,7 +19,7 @@ from app.core.groups import (
 from app.core.league import compute_standings, generate_league_schedule
 from app.db.session import get_db
 from app.models.group import Group
-from app.models.match import Match
+from app.models.match import Match, MatchStatus
 from app.models.tournament import Tournament, TournamentFormat, TournamentParticipant, TournamentStatus
 from app.models.user import User
 from app.schemas.group import GroupRead, GroupStandingRow
@@ -49,12 +49,19 @@ def _to_read(tournament: Tournament) -> TournamentRead:
     )
 
 
-async def _load_tournament(db: AsyncSession, tournament_id: UUID) -> Tournament | None:
-    result = await db.execute(
+async def _load_tournament(
+    db: AsyncSession, tournament_id: UUID, for_update: bool = False
+) -> Tournament | None:
+    stmt = (
         select(Tournament)
         .options(selectinload(Tournament.participants).selectinload(TournamentParticipant.user))
         .where(Tournament.id == tournament_id)
     )
+    if for_update:
+        # Row lock, so a check that cannot be expressed as a single-column
+        # compare-and-swap still serialises concurrent callers.
+        stmt = stmt.with_for_update()
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 
@@ -164,6 +171,18 @@ async def cancel_tournament(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can cancel this tournament")
     for participant in list(tournament.participants):
         await _refund_and_remove(db, tournament, participant)
+    # Outstanding matches must stop being playable. Left in READY they would
+    # still accept a result, and confirming it would award ELO/points and flip
+    # this tournament from CANCELLED back to COMPLETED.
+    await db.execute(
+        update(Match)
+        .where(
+            Match.tournament_id == tournament.id,
+            Match.status.notin_([MatchStatus.COMPLETED, MatchStatus.CANCELLED]),
+        )
+        .values(status=MatchStatus.CANCELLED)
+        .execution_options(synchronize_session=False)
+    )
     tournament.status = TournamentStatus.CANCELLED
     await db.commit()
     loaded = await _load_tournament(db, tournament.id)
@@ -331,6 +350,21 @@ async def draw_tournament(
         if count < 2:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Need at least 2 approved participants to draw")
 
+    # Claim the draw atomically. Two concurrent /draw calls both pass the
+    # draw_completed and status checks above; without this compare-and-swap
+    # a group_knockout draw would create two full sets of groups.
+    claimed = await db.execute(
+        update(Tournament)
+        .where(
+            Tournament.id == tournament.id,
+            Tournament.status == TournamentStatus.REGISTRATION_OPEN,
+            Tournament.draw_completed.is_(False),
+        )
+        .values(status=TournamentStatus.REGISTRATION_CLOSED, draw_completed=True)
+        .execution_options(synchronize_session=False)
+    )
+    if claimed.rowcount != 1:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Draw already performed")
     tournament.status = TournamentStatus.REGISTRATION_CLOSED
     tournament.draw_completed = True
     await db.commit()
@@ -353,17 +387,33 @@ async def start_tournament(
     if tournament.status != TournamentStatus.REGISTRATION_CLOSED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tournament cannot be started from the current status")
 
+    # Claim REGISTRATION_CLOSED -> IN_PROGRESS before generating anything.
+    # Two concurrent /start calls both pass the checks above, and each would
+    # otherwise emit a complete second copy of the schedule.
+    claimed = await db.execute(
+        update(Tournament)
+        .where(
+            Tournament.id == tournament.id,
+            Tournament.status == TournamentStatus.REGISTRATION_CLOSED,
+        )
+        .values(status=TournamentStatus.IN_PROGRESS)
+        .execution_options(synchronize_session=False)
+    )
+    if claimed.rowcount != 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tournament cannot be started from the current status",
+        )
+    tournament.status = TournamentStatus.IN_PROGRESS
+
     if tournament.format == TournamentFormat.LEAGUE:
         await generate_league_schedule(db, tournament, _approved(tournament))
-        tournament.status = TournamentStatus.IN_PROGRESS
     elif tournament.format == TournamentFormat.GROUP_KNOCKOUT:
         groups_result = await db.execute(select(Group).where(Group.tournament_id == tournament.id))
         groups = list(groups_result.scalars().all())
         await generate_group_matches(db, tournament, groups)
-        tournament.status = TournamentStatus.IN_PROGRESS
     else:
         await build_bracket_matches(db, tournament, _approved(tournament))
-        tournament.status = TournamentStatus.IN_PROGRESS
 
     await db.commit()
     loaded = await _load_tournament(db, tournament.id)
@@ -375,7 +425,11 @@ async def start_tournament(
 async def start_knockout_stage(
     tournament_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
-    tournament = await _load_tournament(db, tournament_id)
+    # Lock the tournament row: the guard below is "no knockout matches exist
+    # yet", which is not a single-column compare-and-swap. Without the lock two
+    # concurrent calls both see an empty knockout stage and both build a full
+    # bracket, leaving every later round doubled.
+    tournament = await _load_tournament(db, tournament_id, for_update=True)
     if tournament is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
     if tournament.created_by != current_user.id:

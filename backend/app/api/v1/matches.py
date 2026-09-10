@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import get_current_user
@@ -34,6 +34,46 @@ async def _get_tournament(db: AsyncSession, tournament_id: UUID) -> Tournament:
     if tournament is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
     return tournament
+
+
+async def _claim_match_state(
+    db: AsyncSession, match_id: UUID, expected: set[MatchStatus], target: MatchStatus
+) -> bool:
+    """Atomically move a match out of `expected` into `target`.
+
+    Every competitive consequence (ELO, points, goals, trust, bracket
+    advancement) hangs off a match status transition, so the transition itself
+    is the thing that has to happen exactly once. Reading the status in Python
+    and then writing it is a check-then-act race: two concurrent requests both
+    read "result_submitted", both pass the guard, and both apply the full set
+    of consequences.
+
+    A single conditional UPDATE is a compare-and-swap. Under Postgres READ
+    COMMITTED the losing transaction blocks on the row lock, then re-evaluates
+    the WHERE clause against the winner's committed row, finds the status has
+    moved on, and updates zero rows — so exactly one caller ever gets True.
+    """
+    result = await db.execute(
+        update(Match)
+        .where(Match.id == match_id, Match.status.in_(expected))
+        .values(status=target)
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount == 1
+
+
+def _require_live_tournament(tournament: Tournament) -> None:
+    """Results may only be recorded while the tournament is actually running.
+
+    Without this a cancelled tournament keeps absorbing results: its matches
+    stay playable, the confirmation applies ELO/points, and advancing the
+    winner flips the tournament from CANCELLED back to COMPLETED.
+    """
+    if tournament.status != TournamentStatus.IN_PROGRESS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Results can only be recorded while the tournament is in progress",
+        )
 
 
 async def _get_or_create_rating(db: AsyncSession, user_id: UUID) -> PlayerRating:
@@ -167,10 +207,16 @@ async def submit_result(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
     if current_user.id not in {match.player_a_id, match.player_b_id}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only match participants can submit a result")
+    if score_a < 0 or score_b < 0:
+        # ResolveDispute already declares `Field(ge=0)` for the same two
+        # numbers, so non-negative scores are the established domain rule;
+        # a negative score would silently subtract from goals_for.
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Scores cannot be negative")
     if match.status not in {MatchStatus.READY, MatchStatus.IN_PROGRESS}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Match is not accepting a new result submission")
 
     tournament = await _get_tournament(db, match.tournament_id)
+    _require_live_tournament(tournament)
     draws_allowed = tournament.format == TournamentFormat.LEAGUE or match.group_id is not None
     if score_a == score_b and not draws_allowed:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Draws are not allowed")
@@ -182,6 +228,16 @@ async def submit_result(
     if len(file_bytes) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image exceeds 8MB limit")
     extension = ".png" if content_type == "image/png" else ".jpg"
+    # Claim the transition first: two concurrent submissions must not both
+    # attach evidence to the same match, because /confirm acts on the latest
+    # evidence row and the losing claim would silently become the result.
+    if not await _claim_match_state(
+        db, match.id, {MatchStatus.READY, MatchStatus.IN_PROGRESS}, MatchStatus.RESULT_SUBMITTED
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A result has already been submitted for this match",
+        )
     evidence = MatchEvidence(
         match_id=match.id, submitted_by=current_user.id, claimed_score_a=score_a, claimed_score_b=score_b,
         image_path=f"{match_id}_{uuid_module.uuid4().hex}{extension}", image_data=file_bytes,
@@ -227,18 +283,30 @@ async def confirm_result(match_id: UUID, current_user: User = Depends(get_curren
     match = result.scalar_one_or_none()
     if match is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    # Authorization before state: a non-participant must not be able to probe
+    # this match's status or whether it has evidence attached.
+    if current_user.id not in {match.player_a_id, match.player_b_id}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a match participant")
     if match.status != MatchStatus.RESULT_SUBMITTED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No pending result to confirm")
     evidence_result = await db.execute(select(MatchEvidence).where(MatchEvidence.match_id == match_id).order_by(MatchEvidence.created_at.desc()))
     evidence = evidence_result.scalars().first()
     if evidence is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No evidence found")
-    if current_user.id not in {match.player_a_id, match.player_b_id}:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a match participant")
     if current_user.id == evidence.submitted_by:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The submitting player cannot confirm their own result")
 
     tournament = await _get_tournament(db, match.tournament_id)
+    _require_live_tournament(tournament)
+    # One logical event -> one competitive side effect. Whichever request wins
+    # this compare-and-swap is the only one that may apply ELO, points, goals,
+    # trust and bracket advancement.
+    if not await _claim_match_state(
+        db, match.id, {MatchStatus.RESULT_SUBMITTED}, MatchStatus.COMPLETED
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="This result has already been processed"
+        )
     await _finalize_match(db, match, tournament, evidence.claimed_score_a, evidence.claimed_score_b)
     await record_confirmed_match(db, match.player_a_id, match.player_b_id)
     await db.commit()
@@ -252,17 +320,27 @@ async def dispute_result(match_id: UUID, payload: DisputeCreate, current_user: U
     match = result.scalar_one_or_none()
     if match is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    # Authorization before state, same reasoning as /confirm.
+    if current_user.id not in {match.player_a_id, match.player_b_id}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a match participant")
     if match.status != MatchStatus.RESULT_SUBMITTED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No pending result to dispute")
     evidence_result = await db.execute(select(MatchEvidence).where(MatchEvidence.match_id == match_id).order_by(MatchEvidence.created_at.desc()))
     evidence = evidence_result.scalars().first()
     if evidence is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No evidence found")
-    if current_user.id not in {match.player_a_id, match.player_b_id}:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a match participant")
     if current_user.id == evidence.submitted_by:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The submitting player cannot dispute their own result")
 
+    # Also a compare-and-swap: a dispute filed at the same moment as the
+    # opponent's confirmation must not lose the race and then record a trust
+    # penalty for a result that was in fact already confirmed.
+    if not await _claim_match_state(
+        db, match.id, {MatchStatus.RESULT_SUBMITTED}, MatchStatus.DISPUTED
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="This result has already been processed"
+        )
     match.status = MatchStatus.DISPUTED
     match.disputed_by = current_user.id
     await record_dispute_filed(db, current_user.id, evidence.submitted_by)
@@ -284,10 +362,26 @@ async def resolve_dispute(match_id: UUID, payload: ResolveDispute, _admin: User 
     submitter_was_correct = (
         evidence is not None and evidence.claimed_score_a == payload.score_a and evidence.claimed_score_b == payload.score_b
     )
-    if evidence is not None and match.disputed_by is not None:
-        await record_dispute_resolved(db, evidence.submitted_by, match.disputed_by, submitter_was_correct)
 
     tournament = await _get_tournament(db, match.tournament_id)
+    if tournament.status == TournamentStatus.CANCELLED:
+        # The competition is gone, so there is nothing to apply the outcome
+        # to. Close the dispute as cancelled instead of awarding ELO, points,
+        # goals and bracket advancement to a tournament that was called off —
+        # which would otherwise also flip it from CANCELLED back to COMPLETED.
+        match.status = MatchStatus.CANCELLED
+        await db.commit()
+        await db.refresh(match)
+        return match
+    _require_live_tournament(tournament)
+    if not await _claim_match_state(
+        db, match.id, {MatchStatus.DISPUTED}, MatchStatus.COMPLETED
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="This dispute has already been resolved"
+        )
+    if evidence is not None and match.disputed_by is not None:
+        await record_dispute_resolved(db, evidence.submitted_by, match.disputed_by, submitter_was_correct)
     await _finalize_match(db, match, tournament, payload.score_a, payload.score_b)
     await db.commit()
     await db.refresh(match)

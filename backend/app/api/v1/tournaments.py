@@ -265,6 +265,10 @@ async def approve_participant(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
     if tournament.created_by != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can approve participants")
+    if tournament.status != TournamentStatus.REGISTRATION_OPEN:
+        # Same guard reject_participant already applies. Approving after the
+        # draw would add a participant who was never seeded and has no match.
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot approve after registration has closed")
     participant = next((p for p in tournament.participants if p.user_id == user_id), None)
     if participant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Participant not found")

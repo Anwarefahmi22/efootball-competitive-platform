@@ -12,6 +12,15 @@ class MatchRead(BaseModel):
     id: UUID
     tournament_id: UUID
     round_number: int
+    # bracket_slot is the 0-indexed position of the match within its round. It
+    # drives bracket ordering and winner advancement (core/bracket.py) and is
+    # NOT NULL in the DB, so clients need it to render the bracket correctly —
+    # created_at/id ordering is unreliable for same-transaction matches.
+    bracket_slot: int
+    # group_id is NULL for knockout/league matches and set for group-stage
+    # matches. group_knockout reuses round_number 1..N in every group, so this
+    # is the only way a client can tell the two stages apart.
+    group_id: UUID | None = None
     player_a_id: UUID | None
     player_b_id: UUID | None
     status: MatchStatus

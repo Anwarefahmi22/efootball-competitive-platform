@@ -130,6 +130,9 @@
       if (tournament.format === "single_elimination" && matches.length) {
         const names = Object.fromEntries(tournament.participants.map((participant) => [participant.user_id, participant.display_name]));
         const rounds = matches.reduce((map, match) => { (map[match.round_number] ||= []).push(match); return map; }, {});
+        // Order each round by bracket_slot — the field that defines bracket
+        // position and advancement — instead of relying on the response order.
+        Object.values(rounds).forEach((roundMatches) => roundMatches.sort((a, b) => (a.bracket_slot ?? 0) - (b.bracket_slot ?? 0)));
         const roundNumbers = Object.keys(rounds).sort((a, b) => a - b);
         el("draw-board-content").innerHTML = `<div class="bracket-grid">${Object.entries(rounds).sort(([a], [b]) => a - b).map(([round, roundMatches]) => `<div class="bracket-round"><h3>${round == 1 ? "الدور الأول" : round == roundNumbers[roundNumbers.length - 1] ? "النهائي" : `الدور ${round}`}</h3>${roundMatches.map((match) => `<a class="bracket-match" href="/app/match.html?id=${encodeURIComponent(match.id)}"><span>${escapeHtml(names[match.player_a_id] || (round == 1 ? "بانتظار التحديد" : "متأهل من الدور السابق"))}</span><b>${match.score_a ?? "—"} : ${match.score_b ?? "—"}</b><span>${escapeHtml(names[match.player_b_id] || (round == 1 ? "بانتظار التحديد" : "متأهل من الدور السابق"))}</span></a>`).join("")}</div>`).join("")}</div>`;
         return;
@@ -221,9 +224,25 @@
       el("groups").innerHTML = groups.map((group) => `<article class="group-card"><h3>${escapeHtml(group.name)}</h3>${group.standings.map((row, index) => `<div class="participant-row"><span>${index + 1}</span><strong>${escapeHtml(row.display_name)}</strong><span>${row.points} ن</span></div>`).join("")}</article>`).join("");
     }
 
+    // group_knockout reuses round_number 1..N inside every group, so the stage
+    // a match belongs to can only be derived from group_id.
+    let groupNames = new Map();
+    function matchStageLabel(match) {
+      if (match.group_id) {
+        const name = groupNames.get(match.group_id);
+        return name ? `المجموعة ${escapeHtml(name)}` : "مرحلة المجموعات";
+      }
+      return currentTournament?.format === "group_knockout" ? "الإقصائيات" : "";
+    }
+
     function renderMatches(matches) {
       el("matches").innerHTML = matches.length
-        ? matches.map((match) => `<a class="match-row match-link" href="/app/match.html?id=${encodeURIComponent(match.id)}"><div><strong>الجولة ${match.round_number}</strong><span class="muted"> · المباراة ${match.bracket_slot ?? "—"}</span></div><span class="match-score">${match.score_a ?? "—"} : ${match.score_b ?? "—"}</span><span class="badge ${match.status}">${matchLabels[match.status] || match.status}</span></a>`).join("")
+        ? matches.map((match) => {
+            const stage = matchStageLabel(match);
+            // bracket_slot is 0-indexed in the backend; show it 1-based.
+            const slot = Number.isInteger(match.bracket_slot) ? numberFormat.format(match.bracket_slot + 1) : "—";
+            return `<a class="match-row match-link" href="/app/match.html?id=${encodeURIComponent(match.id)}"><div><strong>${stage ? `${stage} · ` : ""}الجولة ${match.round_number}</strong><span class="muted"> · المباراة ${slot}</span></div><span class="match-score">${match.score_a ?? "—"} : ${match.score_b ?? "—"}</span><span class="badge ${match.status}">${matchLabels[match.status] || match.status}</span></a>`;
+          }).join("")
         : `<div class="empty">لم يتم إنشاء مباريات هذه البطولة بعد.</div>`;
     }
 
@@ -253,6 +272,11 @@
       if (tournament.format === "league") requests.push(apiFetch(`/tournaments/${id}/standings`));
       else if (tournament.format === "group_knockout") requests.push(apiFetch(`/tournaments/${id}/groups`));
       const [matches, extra] = await Promise.all(requests);
+      // Map group id -> group name so group-stage matches can be labelled
+      // (they share round_number 1..N across groups).
+      groupNames = tournament.format === "group_knockout" && Array.isArray(extra)
+        ? new Map(extra.map((group) => [group.id, group.name]))
+        : new Map();
       renderMatches(matches);
       renderDrawBoard(tournament, matches);
       if (tournament.format === "league") renderStandings(extra);

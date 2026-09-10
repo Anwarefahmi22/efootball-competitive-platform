@@ -344,6 +344,15 @@
     "الأدلة متاحة للاعبَين المشاركين فقط.": { fr: "Les preuves sont réservées aux deux joueurs du match.", en: "Evidence is available to the two players only." },
     "تعذر تحميل سجل الأدلة.": { fr: "Impossible de charger le registre des preuves.", en: "Could not load the evidence log." },
     "لم يتم العثور على هذه المباراة.": { fr: "Match introuvable.", en: "Match not found." },
+    // Tournament creation + group_knockout stage labels (interface labels only)
+    "عدد المجموعات": { fr: "Nombre de groupes", en: "Number of groups" },
+    "عدد المشاركين يجب أن يكون ضعف عدد المجموعات على الأقل.": { fr: "Le nombre de participants doit être au moins le double du nombre de groupes.", en: "The number of participants must be at least twice the number of groups." },
+    "الجولة": { fr: "Tour", en: "Round" },
+    "المجموعة": { fr: "Groupe", en: "Group" },
+    "مرحلة المجموعات": { fr: "Phase de groupes", en: "Group stage" },
+    "الإقصائيات": { fr: "Phase à élimination directe", en: "Knockout stage" },
+    "بدء الإقصائيات": { fr: "Lancer la phase à élimination directe", en: "Start the knockout stage" },
+    "تم توزيع المشاركين على المجموعات. ستظهر جداول المجموعات ثم الإقصائيات.": { fr: "Les participants ont été répartis dans les groupes. Les classements de groupes puis la phase à élimination directe s'afficheront.", en: "Participants have been distributed into groups. The group tables and then the knockout stage will appear." },
   };
 
   Object.assign(translations, {

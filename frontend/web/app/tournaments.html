@@ -15,8 +15,8 @@
       <div class="toolbar-actions">
         <select class="field" id="filter-status">
           <option value="">كل الحالات</option>
-          <option value="draft">مسودة</option>
           <option value="registration_open" selected>مفتوحة للتسجيل</option>
+          <option value="registration_closed">التسجيل مغلق</option>
           <option value="in_progress">جارية</option>
           <option value="completed">منتهية</option>
           <option value="cancelled">ملغاة</option>
@@ -38,11 +38,17 @@
             <select class="field" id="t-format">
               <option value="single_elimination">خروج المغلوب</option>
               <option value="league">دوري كامل</option>
+              <option value="group_knockout">مجموعات وإقصائيات</option>
             </select>
           </div>
           <div><label class="lbl" for="t-max">عدد المشاركين</label>
             <select class="field" id="t-max">
               <option>4</option><option>8</option><option selected>16</option><option>32</option><option>64</option>
+            </select>
+          </div>
+          <div id="t-groups-wrap" hidden><label class="lbl" for="t-groups">عدد المجموعات</label>
+            <select class="field" id="t-groups">
+              <option>2</option><option selected>4</option><option>8</option>
             </select>
           </div>
         </div>
@@ -128,7 +134,13 @@
     }
 
     const dlg = document.getElementById("dlg-create");
-    function openCreate() { dlg.showModal(); }
+    // num_groups only applies to group_knockout (see POST /tournaments), so the
+    // field is shown only for that format.
+    function syncFormatFields() {
+      el("t-groups-wrap").hidden = el("t-format").value !== "group_knockout";
+    }
+    el("t-format").addEventListener("change", syncFormatFields);
+    function openCreate() { syncFormatFields(); dlg.showModal(); }
     el("btn-new").addEventListener("click", openCreate);
     el("t-cancel").addEventListener("click", () => dlg.close());
     el("filter-status").addEventListener("change", load);
@@ -137,6 +149,7 @@
       e.preventDefault();
       el("t-err").textContent = "";
       const isLeague = el("t-format").value === "league";
+      const isGroupKnockout = el("t-format").value === "group_knockout";
       let maxp = parseInt(el("t-max").value, 10);
       if (isLeague && ![2, 4, 8, 16, 32, 64].includes(maxp)) maxp = 16; // quick fix: choose nearest allowed
       const body = {
@@ -147,6 +160,16 @@
         entry_fee: 0,
         requires_approval: el("t-approval").value === "true",
       };
+      if (isGroupKnockout) {
+        // Mirrors the backend rules: num_groups must be a power of 2 and the
+        // tournament must hold at least 2 players per group.
+        const numGroups = parseInt(el("t-groups").value, 10);
+        if (maxp < numGroups * 2) {
+          el("t-err").textContent = "عدد المشاركين يجب أن يكون ضعف عدد المجموعات على الأقل.";
+          return;
+        }
+        body.num_groups = numGroups;
+      }
       try {
         const created = await apiFetch("/tournaments", { method: "POST", body: JSON.stringify(body) });
         dlg.close();

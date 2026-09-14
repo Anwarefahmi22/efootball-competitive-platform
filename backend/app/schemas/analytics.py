@@ -10,6 +10,8 @@ class PlatformAnalytics(BaseModel):
     total_matches: int
     total_matches_completed: int
     total_disputes: int
+    total_disputes_open: int
+    total_disputes_resolved: int
     total_wallet_balance: int
     total_prize_distributed: int
     total_posts: int

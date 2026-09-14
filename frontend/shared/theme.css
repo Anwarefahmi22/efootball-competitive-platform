@@ -14,6 +14,11 @@
   --radius: 14px;
 }
 * { box-sizing: border-box; }
+/* Class rules such as .result-form/.pending-actions declare `display`, which
+   overrides the UA `[hidden] { display: none }`. Without this, elements hidden
+   through the hidden attribute (role-gated Match Room controls included) would
+   stay visible. */
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
 html { color-scheme: dark; }
 body {
@@ -79,10 +84,11 @@ h1, h2, h3 { margin: 0 0 .5em; }
 .card.hoverable:hover { transform: translateY(-3px); border-color: var(--neon-dim); }
 
 .grid { display: grid; gap: 18px; }
+.grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
 .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
 .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
-@media (max-width: 900px) { .grid.cols-3, .grid.cols-4 { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 600px) { .grid.cols-3, .grid.cols-4 { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .grid.cols-2, .grid.cols-3, .grid.cols-4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .grid.cols-2, .grid.cols-3, .grid.cols-4 { grid-template-columns: 1fr; } }
 
 .stat-value { font-family: "Orbitron", monospace; font-size: 2rem; color: var(--neon); }
 .stat-label { color: var(--muted); font-size: .9rem; }

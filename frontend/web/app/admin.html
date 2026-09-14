@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة الإدارة — eFootball Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/theme.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="page-toolbar">
+      <h1 class="page-title">🛡️ مراجعة النزاعات</h1>
+      <div class="toolbar-actions">
+        <select class="field" id="adm-state">
+          <option value="disputed" selected>النزاعات المفتوحة</option>
+          <option value="resolved">النزاعات المحسومة</option>
+          <option value="all">كل النزاعات</option>
+        </select>
+        <button class="btn btn-ghost" id="adm-refresh" type="button">تحديث القائمة</button>
+      </div>
+    </div>
+
+    <!-- Shown when the caller is not a platform admin. The page never decides
+         this itself: every request below is authorized by the backend, and a
+         403 is simply rendered as this notice. -->
+    <div id="adm-forbidden" class="card empty" hidden>هذه الصفحة مخصّصة لمشرفي المنصة فقط.</div>
+
+    <div id="adm-loading" class="spinner"></div>
+    <div id="adm-list" class="grid cols-2 page-list" hidden></div>
+    <div id="adm-empty" class="card empty" hidden>لا توجد نزاعات في هذه الحالة حاليًا.</div>
+    <!-- Distinct from #adm-empty: a failed request must never read as "no disputes". -->
+    <div id="adm-error" class="card empty" role="alert" hidden>
+      <span>تعذر تحميل قائمة النزاعات.</span> <span class="muted" id="adm-error-msg"></span>
+    </div>
+
+    <section class="card" id="adm-review" hidden>
+      <div class="section-heading"><h2>تفاصيل النزاع</h2><span class="muted" id="adm-review-sub"></span></div>
+      <div id="adm-review-body"></div>
+      <div class="form-grid">
+        <div><label class="lbl" for="adm-score-a">النتيجة الحقيقية — اللاعب الأول</label>
+          <input class="field" id="adm-score-a" type="number" min="0" step="1" value="0" /></div>
+        <div><label class="lbl" for="adm-score-b">النتيجة الحقيقية — اللاعب الثاني</label>
+          <input class="field" id="adm-score-b" type="number" min="0" step="1" value="0" /></div>
+      </div>
+      <p class="muted" id="adm-hint">اعتماد النتيجة يحدّث التقييم والنقاط ويقفل النزاع نهائيًا، ولا يمكن التراجع عنه من هذه الصفحة.</p>
+      <div class="form-error" id="adm-err" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button class="btn btn-ghost" id="adm-cancel" type="button">إغلاق</button>
+        <button class="btn btn-primary" id="adm-decide" type="button">اعتماد النتيجة وإنهاء النزاع</button>
+      </div>
+    </section>
+
+    <!-- Its own section, so the queue's trust-history buttons work whether or
+         not a dispute review is currently open. -->
+    <section class="card" id="adm-history-panel" hidden>
+      <div id="adm-history"></div>
+    </section>
+  </div>
+
+  <script src="/shared/i18n.js"></script>
+  <script src="/shared/api.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script>
+    const STATUS_LABELS = {
+      disputed: "قيد النزاع", resolved: "نزاع محسوم", completed: "مكتملة",
+      cancelled: "ملغاة", ready: "جاهزة", result_submitted: "النتيجة مرسلة",
+      waiting: "بانتظار المباراة", in_progress: "جارية",
+    };
+    const EVENT_LABELS = {
+      match_confirmed: "مباراة موثّقة", dispute_filed: "نزاع مُقام", dispute_resolved: "قرار إداري",
+    };
+    /* Backend enums are never shown raw: same wording the tournament pages use. */
+    const FORMAT_LABELS = {
+      single_elimination: "خروج المغلوب", league: "دوري", group_knockout: "مجموعات وإقصائيات",
+    };
+    const REASON_LABELS = {
+      false_report: "نتيجة مُقدَّمة غير صحيحة", submitter_correct: "اعتراض غير مبرَّر",
+    };
+    const formatText = (f) => FORMAT_LABELS[f] || f;
+    const reasonText = (r) => (r ? REASON_LABELS[r] || r : "—");
+    const state = { rows: [], current: null, historyFor: null };
+
+    const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
+    const fmt = (n) => new Intl.NumberFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current()).format(n ?? 0);
+    const when = (value) => value ? new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "غير محدد";
+    const statusText = (s) => STATUS_LABELS[s] || s;
+
+    function show(id, on) { el(id).hidden = !on; }
+
+    function renderQueue() {
+      const list = el("adm-list");
+      show("adm-empty", state.rows.length === 0);
+      show("adm-list", state.rows.length > 0);
+      list.innerHTML = state.rows.map((row) => `
+        <article class="card">
+          <div class="section-heading">
+            <h2>${esc(row.tournament_name)}</h2>
+            <span class="badge ${esc(row.status)}">${esc(statusText(row.status))}</span>
+          </div>
+          <p class="muted">${esc(formatText(row.tournament_format))} · الجولة ${fmt(row.round_number)} · ${esc(when(row.disputed_at))}</p>
+          <div class="participant-row"><strong>${esc(row.player_a_name)}</strong><span class="muted">الثقة ${fmt(row.player_a_trust)}</span></div>
+          <div class="participant-row"><strong>${esc(row.player_b_name)}</strong><span class="muted">الثقة ${fmt(row.player_b_trust)}</span></div>
+          <p class="muted"><span>النتيجة المقدَّمة</span>
+            <strong>${fmt(row.claimed_score_a)} : ${fmt(row.claimed_score_b)}</strong></p>
+          <p class="muted"><span>أرسلها</span> <bdi>${esc(row.submitted_by_name)}</bdi></p>
+          <p class="muted"><span>اعترض عليها</span> <bdi>${esc(row.disputed_by_name || "—")}</bdi></p>
+          <p class="muted"><span>مرفقات الدليل</span> ${fmt(row.evidence_count)}</p>
+          <div class="dialog-actions">
+            <button class="btn btn-ghost" type="button" data-history="${esc(row.player_a_id)}"><span>سجل الثقة</span> <bdi>${esc(row.player_a_name)}</bdi></button>
+            <button class="btn btn-ghost" type="button" data-history="${esc(row.player_b_id)}"><span>سجل الثقة</span> <bdi>${esc(row.player_b_name)}</bdi></button>
+            ${row.status === "disputed"
+              ? `<button class="btn btn-primary" type="button" data-review="${esc(row.match_id)}">مراجعة وحسم</button>`
+              : `<span class="badge">لا إجراء متاح</span>`}
+          </div>
+        </article>`).join("");
+
+      list.querySelectorAll("[data-review]").forEach((b) => b.addEventListener("click", () => openReview(b.dataset.review)));
+      list.querySelectorAll("[data-history]").forEach((b) => b.addEventListener("click", () => loadHistory(b.dataset.history)));
+    }
+
+    async function loadQueue() {
+      show("adm-loading", true); show("adm-list", false); show("adm-empty", false);
+      show("adm-forbidden", false); show("adm-error", false);
+      try {
+        state.rows = await apiFetch("/admin/disputes?status=" + encodeURIComponent(el("adm-state").value));
+        show("adm-error", false);
+        show("adm-forbidden", false);
+        renderQueue();
+      } catch (err) {
+        state.rows = [];
+        el("adm-list").innerHTML = "";
+        show("adm-list", false);
+        // Never fall through to the empty state: "no disputes" and "the request
+        // failed" are different facts and must not look the same.
+        show("adm-empty", false);
+        const denied = err?.status === 403 || err?.status === 401;
+        show("adm-forbidden", denied);
+        show("adm-error", !denied);
+        if (!denied) {
+          el("adm-error-msg").textContent = err?.detail || "";
+          toast(err?.detail || "تعذر تحميل قائمة النزاعات.", "error");
+        }
+      } finally {
+        show("adm-loading", false);
+      }
+    }
+
+    async function openReview(matchId) {
+      try {
+        const detail = await apiFetch("/admin/disputes/" + encodeURIComponent(matchId));
+        state.current = detail;
+        el("adm-score-a").value = detail.claimed_score_a;
+        el("adm-score-b").value = detail.claimed_score_b;
+        el("adm-review-sub").textContent = `${detail.tournament_name} · الجولة ${fmt(detail.round_number)}`;
+        el("adm-review-body").innerHTML = `
+          <div class="match-players">
+            <div class="match-player is-a"><div class="match-player-info"><span class="muted">اللاعب الأول</span>
+              <strong>${esc(detail.player_a_name)}</strong>
+              <span class="match-rating">الثقة ${fmt(detail.player_a_trust)}</span></div></div>
+            <div class="match-versus-mark"><span>VS</span><small>مواجهة</small></div>
+            <div class="match-player is-b"><div class="match-player-info"><span class="muted">اللاعب الثاني</span>
+              <strong>${esc(detail.player_b_name)}</strong>
+              <span class="match-rating">الثقة ${fmt(detail.player_b_trust)}</span></div></div>
+          </div>
+          <p class="muted"><span>النتيجة المقدَّمة</span> <bdi>${esc(detail.submitted_by_name)}</bdi>
+            <strong>${fmt(detail.claimed_score_a)} : ${fmt(detail.claimed_score_b)}</strong></p>
+          <p class="muted"><span>عدد اللقاءات السابقة بين اللاعبَين في مباريات مكتملة</span>
+            ${fmt(detail.collusion_matches_together)}</p>
+          <p class="muted">هذه إشارة مراجعة فقط وليست إدانة.</p>
+          <div class="section-heading"><h2>الأدلة المرفوعة</h2><span class="muted">${fmt(detail.evidence.length)}</span></div>
+          ${detail.evidence.map((e) => `
+            <div class="draw-chip">
+              <strong>${fmt(e.claimed_score_a)} : ${fmt(e.claimed_score_b)}</strong>
+              <span>${esc(when(e.created_at))}</span>
+              ${e.has_image
+                ? `<button class="btn btn-ghost" type="button" data-evid="${esc(e.id)}">عرض الصورة</button>`
+                : `<span class="badge">لا توجد صورة</span>`}
+            </div>`).join("")}`;
+        el("adm-review-body").querySelectorAll("[data-evid]").forEach((b) =>
+          b.addEventListener("click", () => showEvidenceImage(detail.match_id, b.dataset.evid, b)));
+        show("adm-review", true);
+        el("adm-err").hidden = true;
+        el("adm-review").scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (err) {
+        toast(err?.detail || "تعذر فتح تفاصيل النزاع.", "error");
+      }
+    }
+
+    /* The evidence endpoint is authenticated, so the image has to be fetched
+       with the bearer token and shown from a blob URL. A plain link would
+       navigate without the header and the API would answer 403. */
+    async function showEvidenceImage(matchId, evidenceId, btn) {
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "جارٍ التحميل…";
+      try {
+        const res = await fetchWithTimeout(
+          `${API_BASE}/matches/${encodeURIComponent(matchId)}/evidence/${encodeURIComponent(evidenceId)}/image`,
+          { headers: { Authorization: "Bearer " + Auth.token() } });
+        if (!res.ok) {
+          const body = await readResponseBody(res);
+          throw apiError(res.status, (body && body.detail) || "تعذر تحميل الصورة.");
+        }
+        const img = document.createElement("img");
+        img.className = "grid-span";
+        img.alt = "صورة دليل النتيجة";
+        img.style.cssText = "max-width:100%;border-radius:10px;margin-top:6px";
+        img.src = URL.createObjectURL(await res.blob());
+        const chip = btn.closest(".draw-chip") || btn.parentElement;
+        chip.appendChild(img);
+        btn.remove();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = label;
+        toast(err?.detail || "تعذر تحميل الصورة.", "error");
+      }
+    }
+
+    async function loadHistory(userId) {
+      try {
+        const events = await apiFetch("/admin/trust/" + encodeURIComponent(userId) + "/events");
+        state.historyFor = userId;
+        el("adm-history").innerHTML = `
+          <div class="section-heading"><h2>سجل الثقة</h2><span class="muted">${fmt(events.length)}</span></div>
+          ${events.length === 0 ? `<p class="muted">لا توجد أحداث مسجّلة بعد.</p>` : events.map((e) => `
+            <div class="draw-chip">
+              <strong>${esc(EVENT_LABELS[e.event_type] || e.event_type)}</strong>
+              <span>${e.delta > 0 ? "+" : ""}${fmt(e.delta)} → ${fmt(e.trust_after)}</span>
+              <span>${esc(reasonText(e.reason))}</span>
+              <span>${esc(when(e.created_at))}</span>
+            </div>`).join("")}`;
+        show("adm-history-panel", true);
+      } catch (err) {
+        toast(err?.detail || "تعذر تحميل سجل الثقة.", "error");
+      }
+    }
+
+    async function decide() {
+      if (!state.current) return;
+      const scoreA = parseInt(el("adm-score-a").value, 10);
+      const scoreB = parseInt(el("adm-score-b").value, 10);
+      if (!Number.isInteger(scoreA) || !Number.isInteger(scoreB) || scoreA < 0 || scoreB < 0) {
+        el("adm-err").textContent = "أدخل نتيجة صحيحة بأرقام غير سالبة.";
+        el("adm-err").hidden = false;
+        return;
+      }
+      el("adm-decide").disabled = true;
+      try {
+        const updated = await apiFetch("/matches/" + encodeURIComponent(state.current.match_id) + "/resolve-dispute", {
+          method: "POST", body: JSON.stringify({ score_a: scoreA, score_b: scoreB }),
+        });
+        toast("تم اعتماد النتيجة وإنهاء النزاع.");
+        show("adm-review", false);
+        state.current = null;
+        await loadQueue();
+        if (updated) el("adm-review-sub").textContent = statusText(updated.status);
+      } catch (err) {
+        // A 409 means another admin already resolved it — reload to show the truth.
+        el("adm-err").textContent = err?.detail || "تعذر اعتماد النتيجة.";
+        el("adm-err").hidden = false;
+        if (err?.status === 409) await loadQueue();
+      } finally {
+        el("adm-decide").disabled = false;
+      }
+    }
+
+    el("adm-refresh").addEventListener("click", loadQueue);
+    el("adm-state").addEventListener("change", loadQueue);
+    el("adm-decide").addEventListener("click", decide);
+    el("adm-cancel").addEventListener("click", () => { show("adm-review", false); state.current = null; });
+
+    requireAuthOrRedirect().then((ok) => { if (ok) loadQueue(); });
+  </script>
+</body>
+</html>

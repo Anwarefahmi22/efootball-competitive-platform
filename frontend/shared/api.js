@@ -189,3 +189,35 @@ async function requireAuthOrRedirect() {
   }
   return true;
 }
+
+/* Post-authentication return target.
+   `?next=` is produced by requireAuthOrRedirect() above and by the in-page
+   sign-in links (Match Room, tournament page, community page). Only a
+   same-origin, path-only target is ever honoured, so the parameter cannot be
+   used as an open redirect. Anything else falls back to the dashboard. */
+const DEFAULT_POST_AUTH_PATH = "/app/dashboard.html";
+
+function safeReturnPath(raw, fallback = DEFAULT_POST_AUTH_PATH) {
+  const candidate = typeof raw === "string" ? raw.trim() : "";
+  if (!candidate) return fallback;
+  // Reject protocol-relative ("//host"), backslash ("\/host") and scheme-like
+  // ("javascript:", "http:") targets before any parsing happens.
+  if (!candidate.startsWith("/")) return fallback;
+  if (candidate.startsWith("//")) return fallback;
+  if (candidate.includes("\\")) return fallback;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(candidate)) return fallback;
+  try {
+    const parsed = new URL(candidate, location.origin);
+    // Final guarantee: the resolved target must stay on this origin.
+    if (parsed.origin !== location.origin) return fallback;
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return fallback;
+    return parsed.pathname + parsed.search + parsed.hash;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+// The validated `?next=` value of the current URL (never an external URL).
+function authReturnPath(fallback = DEFAULT_POST_AUTH_PATH) {
+  return safeReturnPath(new URLSearchParams(location.search).get("next"), fallback);
+}

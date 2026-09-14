@@ -16,7 +16,8 @@
       <a class="back-link" id="back-link" href="/app/tournaments.html">← العودة إلى البطولة</a>
       <section class="card match-hero" id="match-summary"></section>
       <section class="card" id="result-panel">
-        <div class="section-heading"><h2>إرسال النتيجة</h2><span class="muted">أرفق لقطة واضحة من المباراة</span></div>
+        <div class="section-heading"><h2 id="result-heading">إرسال النتيجة</h2><span class="muted" id="result-subheading">أرفق لقطة واضحة من المباراة</span></div>
+        <div id="role-note" class="pending-actions" hidden></div>
         <form id="result-form" class="result-form">
           <div class="score-inputs">
             <label class="lbl" for="score-a">نتيجة اللاعب الأول<input class="field" id="score-a" name="score_a" type="number" min="0" max="99" required /></label>
@@ -59,6 +60,48 @@
     const fallbackPlayer = (id, label) => ({ display_name: id ? `${label} · ${String(id).slice(0, 8)}` : "بانتظار التحديد", avatar_url: null, rating: null });
     let currentMatch;
 
+    /* --- Match Room role model -------------------------------------------------
+       The role is derived ONLY from the identity returned by GET /api/v1/auth/me
+       combined with match.player_a_id / match.player_b_id — never from UI state
+       and never from a localStorage identifier. The backend stays the authority
+       for every action; this model only drives the UX and prevents the room from
+       firing participant-only requests for users who cannot use them. */
+    const ROLE = { VISITOR: "visitor", PLAYER_A: "player_a", PLAYER_B: "player_b", SPECTATOR: "spectator" };
+    const ROLE_LABELS = {
+      [ROLE.PLAYER_A]: "أنت اللاعب الأول",
+      [ROLE.PLAYER_B]: "أنت اللاعب الثاني",
+      [ROLE.SPECTATOR]: "أنت متفرج على هذه المباراة",
+      [ROLE.VISITOR]: "زائر غير مسجَّل الدخول",
+    };
+    // Mirrors the status guard in backend/app/api/v1/matches.py::submit_result.
+    const SUBMITTABLE_STATUSES = ["ready", "in_progress"];
+    const state = { me: null, match: null, role: ROLE.VISITOR, evidence: [], evidenceError: null };
+
+    const isParticipant = (role) => role === ROLE.PLAYER_A || role === ROLE.PLAYER_B;
+    // The backend acts on the newest evidence row (order_by created_at desc, .first()).
+    const latestEvidence = () => state.evidence[0] || null;
+
+    function resolveRole(match, me) {
+      const userId = me?.id;
+      if (!userId) return ROLE.VISITOR;
+      if (match.player_a_id === userId) return ROLE.PLAYER_A;
+      if (match.player_b_id === userId) return ROLE.PLAYER_B;
+      return ROLE.SPECTATOR;
+    }
+
+    // participant + a status accepted by submit_result
+    const canSubmitResult = () => isParticipant(state.role) && SUBMITTABLE_STATUSES.includes(state.match?.status);
+    // participant + result_submitted + evidence exists + not the submitter
+    // (mirrors confirm_result / dispute_result, which reject the submitting player)
+    const canReviewResult = () => {
+      const evidence = latestEvidence();
+      return isParticipant(state.role) && state.match?.status === "result_submitted"
+        && !!evidence && evidence.submitted_by !== state.me?.id;
+    };
+    // participant already submitted and is waiting for the opponent to review
+    const awaitingOpponent = () => isParticipant(state.role) && state.match?.status === "result_submitted"
+      && !!latestEvidence() && !canReviewResult();
+
     function playerCard(player, side) {
       const initials = escapeHtml((player.display_name || "؟").slice(0, 2));
       return `<div class="match-player ${side === "a" ? "is-a" : "is-b"}">
@@ -69,20 +112,55 @@
 
     function renderMatch(match, context = {}) {
       currentMatch = match;
+      state.match = match;
       const playerA = context.playerA || fallbackPlayer(match.player_a_id, "لاعب");
       const playerB = context.playerB || fallbackPlayer(match.player_b_id, "لاعب");
       const title = context.tournament?.name || "مباراة تنافسية";
-      el("match-summary").innerHTML = `<div class="match-hero-top"><div><span class="eyebrow">غرفة المباراة</span><h1>${escapeHtml(title)}</h1><p class="muted">الجولة ${escapeHtml(match.round_number)} · ${match.scheduled_at ? `موعدها ${formatDate(match.scheduled_at)}` : "الموعد غير محدد"}</p></div><span class="badge ${match.status}">${labels[match.status] || escapeHtml(match.status)}</span></div><div class="match-players">${playerCard(playerA, "a")}<div class="match-versus-mark"><span>VS</span><small>مواجهة</small></div>${playerCard(playerB, "b")}</div><div class="match-hero__score"><span>${match.score_a ?? "—"}</span><b>:</b><span>${match.score_b ?? "—"}</span></div><p class="match-room-note">النتيجة تصبح رسمية بعد مراجعة الطرف الآخر واعتماد الدليل.</p>`;
-      const canSubmit = ["ready", "in_progress"].includes(match.status);
-      el("result-panel").hidden = !canSubmit && match.status !== "result_submitted";
-      el("result-form").hidden = !canSubmit;
-      el("pending-actions").hidden = match.status !== "result_submitted";
+      el("match-summary").innerHTML = `<div class="match-hero-top"><div><span class="eyebrow">غرفة المباراة</span><h1>${escapeHtml(title)}</h1><p class="muted">الجولة ${escapeHtml(match.round_number)} · ${match.scheduled_at ? `موعدها ${formatDate(match.scheduled_at)}` : "الموعد غير محدد"}</p></div><span><span class="badge ${match.status}">${labels[match.status] || escapeHtml(match.status)}</span> <span class="badge">${ROLE_LABELS[state.role]}</span></span></div><div class="match-players">${playerCard(playerA, "a")}<div class="match-versus-mark"><span>VS</span><small>مواجهة</small></div>${playerCard(playerB, "b")}</div><div class="match-hero__score"><span>${match.score_a ?? "—"}</span><b>:</b><span>${match.score_b ?? "—"}</span></div><p class="match-room-note">النتيجة تصبح رسمية بعد مراجعة الطرف الآخر واعتماد الدليل.</p>`;
     }
 
-    async function loadEvidence() {
-      const evidence = await apiFetch(`/matches/${id}/evidence`);
-      el("evidence-list").innerHTML = evidence.length
-        ? evidence.map((item) => `<div class="evidence-row"><span>${item.claimed_score_a} : ${item.claimed_score_b}</span><span class="muted">${new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.created_at))}</span><button class="btn btn-ghost evidence-view" type="button" data-evidence-id="${encodeURIComponent(item.id)}">عرض الدليل</button></div>`).join("")
+    // Role-aware visibility for the result / confirmation / dispute controls.
+    function renderActions() {
+      const participant = isParticipant(state.role);
+      const submitting = canSubmitResult();
+      const reviewable = canReviewResult();
+      const waiting = awaitingOpponent();
+
+      el("result-heading").textContent = participant ? "إرسال النتيجة" : "وضع المشاهدة";
+      el("result-subheading").hidden = !submitting;
+      el("result-panel").hidden = participant && !(submitting || reviewable || waiting);
+      el("result-form").hidden = !submitting;
+      el("pending-actions").hidden = !reviewable;
+
+      const note = el("role-note");
+      if (state.role === ROLE.VISITOR) {
+        const next = encodeURIComponent(location.pathname + location.search);
+        note.innerHTML = `<p>سجّل الدخول لعرض أدوات هذه المباراة والمشاركة فيها.</p><div><a class="btn btn-primary" href="/auth.html?next=${next}">دخول / تسجيل</a></div>`;
+        note.hidden = false;
+      } else if (state.role === ROLE.SPECTATOR) {
+        note.innerHTML = `<p>أنت تشاهد هذه المباراة كمتفرج. إرسال النتيجة وتأكيدها وفتح النزاع متاحة للاعبَين المشاركين فقط.</p>`;
+        note.hidden = false;
+      } else if (waiting) {
+        note.innerHTML = `<p>نتيجتك مرسلة. بانتظار مراجعة المنافس لها.</p>`;
+        note.hidden = false;
+      } else {
+        note.innerHTML = "";
+        note.hidden = true;
+      }
+    }
+
+    function renderEvidence() {
+      const list = el("evidence-list");
+      if (!isParticipant(state.role)) {
+        list.innerHTML = `<div class="empty">الأدلة متاحة للاعبَين المشاركين فقط.</div>`;
+        return;
+      }
+      if (state.evidenceError) {
+        list.innerHTML = `<div class="form-error" role="alert">${escapeHtml(state.evidenceError)}</div>`;
+        return;
+      }
+      list.innerHTML = state.evidence.length
+        ? state.evidence.map((item) => `<div class="evidence-row"><span>${item.claimed_score_a} : ${item.claimed_score_b}</span><span class="muted">${new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.created_at))}</span><button class="btn btn-ghost evidence-view" type="button" data-evidence-id="${encodeURIComponent(item.id)}">عرض الدليل</button></div>`).join("")
         : `<div class="empty">لم يتم إرسال أدلة بعد.</div>`;
       document.querySelectorAll(".evidence-view").forEach((button) => {
         button.addEventListener("click", async () => {
@@ -104,9 +182,31 @@
       });
     }
 
+    // GET /matches/{id}/evidence is participant-only on the backend, so it is
+    // requested only for participants. Any failure is handled locally so a
+    // legitimate 403/404 can never put the whole Match Room in an error state.
+    async function loadEvidence() {
+      if (!isParticipant(state.role)) {
+        state.evidence = [];
+        state.evidenceError = null;
+        renderEvidence();
+        return;
+      }
+      try {
+        state.evidence = (await apiFetch(`/matches/${id}/evidence`)) || [];
+        state.evidenceError = null;
+      } catch (error) {
+        state.evidence = [];
+        state.evidenceError = error.detail || "تعذر تحميل سجل الأدلة.";
+      }
+      renderEvidence();
+    }
+
     async function load() {
       if (!id) throw { detail: "معرّف المباراة غير موجود." };
       const match = await apiFetch(`/matches/${id}`);
+      state.match = match;
+      state.role = resolveRole(match, state.me);
       const [tournament, playerA, playerB] = await Promise.all([
         match.tournament_id ? apiFetch(`/tournaments/${match.tournament_id}`).catch(() => null) : null,
         match.player_a_id ? apiFetch(`/users/${match.player_a_id}`).catch(() => null) : null,
@@ -123,10 +223,30 @@
       });
       if (match.tournament_id) el("back-link").href = `/app/tournament.html?id=${encodeURIComponent(match.tournament_id)}`;
       await loadEvidence();
+      renderActions();
+    }
+
+    // GET /api/v1/auth/me is the single source of truth for the current identity.
+    // No token -> visitor (no request at all). An expired or invalid session is
+    // treated as a visitor instead of breaking the room.
+    async function loadCurrentUser() {
+      if (!Auth.token()) return null;
+      try {
+        return await apiFetch("/auth/me");
+      } catch (error) {
+        if (error?.status === 401 || error?.status === 403) return null;
+        throw error;
+      }
+    }
+
+    function pageErrorMessage(error) {
+      if (error?.status === 404) return "لم يتم العثور على هذه المباراة.";
+      return error?.detail || "تعذر تحميل المباراة.";
     }
 
     el("result-form").addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (!canSubmitResult()) return;
       const button = event.currentTarget.querySelector("button[type=submit]");
       const formData = new FormData(event.currentTarget);
       button.disabled = true; button.textContent = "جارٍ إرسال النتيجة…";
@@ -143,16 +263,19 @@
       }
     });
     el("confirm-result").addEventListener("click", async () => {
+      if (!canReviewResult()) return;
       try { await apiFetch(`/matches/${id}/confirm`, { method: "POST" }); toast("تم تأكيد النتيجة."); await load(); }
       catch (error) { toast(error.detail || "تعذر تأكيد النتيجة.", "error"); }
     });
     el("dispute-result").addEventListener("click", async () => {
+      if (!canReviewResult()) return;
       el("dispute-reason").value = "";
       el("dispute-dialog").showModal();
     });
     el("dispute-form").addEventListener("submit", async (event) => {
       if (event.submitter?.value !== "default") return;
       event.preventDefault();
+      if (!canReviewResult()) return;
       const button = el("submit-dispute");
       button.disabled = true;
       try {
@@ -167,10 +290,16 @@
       }
     });
 
-    if (!Auth.loggedIn()) location.href = "/auth.html?next=" + encodeURIComponent(location.pathname + location.search);
-    else load().then(() => { el("loading").hidden = true; el("content").hidden = false; }).catch((error) => {
-      el("loading").outerHTML = `<div class="empty card" role="alert">${escapeHtml(error.detail || "تعذر تحميل المباراة.")}</div>`;
-    });
+    (async () => {
+      try {
+        state.me = await loadCurrentUser();
+        await load();
+        el("loading").hidden = true;
+        el("content").hidden = false;
+      } catch (error) {
+        el("loading").outerHTML = `<div class="empty card" role="alert">${escapeHtml(pageErrorMessage(error))}</div>`;
+      }
+    })();
   </script>
 </body>
 </html>

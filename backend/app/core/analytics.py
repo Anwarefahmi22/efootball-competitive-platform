@@ -24,8 +24,28 @@ async def get_platform_analytics(db: AsyncSession) -> dict:
     total_matches_completed = (
         await db.execute(select(func.count()).select_from(Match).where(Match.status == MatchStatus.COMPLETED))
     ).scalar_one()
+    # Lifetime disputes, and how they currently stand. `disputed_by` is never
+    # cleared, so the lifetime count alone cannot tell a moderator what is
+    # still waiting for a decision.
     total_disputes = (
         await db.execute(select(func.count()).select_from(Match).where(Match.disputed_by.isnot(None)))
+    ).scalar_one()
+    total_disputes_open = (
+        await db.execute(
+            select(func.count())
+            .select_from(Match)
+            .where(Match.disputed_by.isnot(None), Match.status == MatchStatus.DISPUTED)
+        )
+    ).scalar_one()
+    total_disputes_resolved = (
+        await db.execute(
+            select(func.count())
+            .select_from(Match)
+            .where(
+                Match.disputed_by.isnot(None),
+                Match.status.in_([MatchStatus.COMPLETED, MatchStatus.CANCELLED]),
+            )
+        )
     ).scalar_one()
     total_wallet_balance = (await db.execute(select(func.coalesce(func.sum(Wallet.balance), 0)))).scalar_one()
     total_prize_distributed = (
@@ -44,6 +64,8 @@ async def get_platform_analytics(db: AsyncSession) -> dict:
         "total_matches": total_matches,
         "total_matches_completed": total_matches_completed,
         "total_disputes": total_disputes,
+        "total_disputes_open": total_disputes_open,
+        "total_disputes_resolved": total_disputes_resolved,
         "total_wallet_balance": total_wallet_balance,
         "total_prize_distributed": total_prize_distributed,
         "total_posts": total_posts,

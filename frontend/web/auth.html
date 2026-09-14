@@ -251,7 +251,7 @@
         });
         Auth.save(pair);
         toast("مرحبًا بعودتك! جارٍ فتح لوحتك...", "ok");
-        setTimeout(() => { location.href = "/app/dashboard.html"; }, 700);
+        setTimeout(() => { location.href = authReturnPath(); }, 700);
       } catch (err) {
         showErr("login-err", err.detail || "فشل الدخول");
         btn.disabled = false; btn.textContent = "دخول الملعب ⚽";
@@ -273,7 +273,7 @@
         });
         Auth.save(pair);
         toast("تم إنشاء حسابك! أهلًا بك في الساحة 🏟️", "ok");
-        setTimeout(() => { location.href = "/app/dashboard.html"; }, 700);
+        setTimeout(() => { location.href = authReturnPath(); }, 700);
       } catch (err) {
         let msg = err.detail || "فشل التسجيل";
         if (err.status === 409) msg = "هذا البريد مسجَّل مسبقًا — جرّب الدخول";

@@ -38,7 +38,11 @@ async def player_analytics(
 
 
 @router.get("/tournaments/{tournament_id}", response_model=TournamentAnalytics)
-async def tournament_analytics(tournament_id: UUID, db: AsyncSession = Depends(get_db)) -> TournamentAnalytics:
+async def tournament_analytics(
+    tournament_id: UUID,
+    _user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> TournamentAnalytics:
     data = await get_tournament_analytics(db, tournament_id)
     if data is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")

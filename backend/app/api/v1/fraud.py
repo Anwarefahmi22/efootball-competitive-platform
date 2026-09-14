@@ -1,9 +1,12 @@
+from collections import Counter
+
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.permissions import get_current_admin
 from app.db.session import get_db
+from app.models.match import Match, MatchStatus
 from app.models.user import User
 from app.schemas.trust import CollusionCandidate
 
@@ -18,41 +21,41 @@ async def collusion_candidates(
 ) -> list[CollusionCandidate]:
     """Rule-based signal only: flags player pairs who have faced each other
     an unusually high number of times. This is NOT proof of collusion — it
-    is a starting point for manual review."""
-    query = text(
-        """
-        SELECT
-            LEAST(m.player_a_id, m.player_b_id) AS pa,
-            GREATEST(m.player_a_id, m.player_b_id) AS pb,
-            COUNT(*) AS matches_together
-        FROM matches m
-        WHERE m.player_a_id IS NOT NULL AND m.player_b_id IS NOT NULL
-          AND m.status = 'completed'
-        GROUP BY pa, pb
-        HAVING COUNT(*) >= :min_matches
-        ORDER BY matches_together DESC
-        """
+    is a starting point for manual review.
+
+    Nothing here writes state, penalises anyone, or feeds trust: a signal
+    stays a signal until an admin makes a decision.
+    """
+    rows = await db.execute(
+        select(Match.player_a_id, Match.player_b_id).where(
+            Match.status == MatchStatus.COMPLETED,
+            Match.player_a_id.isnot(None),
+            Match.player_b_id.isnot(None),
+        )
     )
-    result = await db.execute(query, {"min_matches": min_matches})
-    rows = result.all()
+    # Canonicalise each pair so (A,B) and (B,A) count as the same fixture.
+    counts: Counter = Counter()
+    for a, b in rows.all():
+        counts[(a, b) if a <= b else (b, a)] += 1
 
-    if not rows:
+    flagged = [(pair, n) for pair, n in counts.items() if n >= min_matches]
+    if not flagged:
         return []
+    flagged.sort(key=lambda item: (-item[1], str(item[0][0]), str(item[0][1])))
 
-    user_ids = {row.pa for row in rows} | {row.pb for row in rows}
+    user_ids = {uid for pair, _ in flagged for uid in pair}
     names_result = await db.execute(
-        text("SELECT id, display_name FROM users WHERE id = ANY(:ids)"),
-        {"ids": list(user_ids)},
+        select(User.id, User.display_name).where(User.id.in_(user_ids))
     )
     names = {row.id: row.display_name for row in names_result.all()}
 
     return [
         CollusionCandidate(
-            player_a_id=row.pa,
-            player_a_name=names.get(row.pa, ""),
-            player_b_id=row.pb,
-            player_b_name=names.get(row.pb, ""),
-            matches_together=row.matches_together,
+            player_a_id=pair[0],
+            player_a_name=names.get(pair[0], ""),
+            player_b_id=pair[1],
+            player_b_name=names.get(pair[1], ""),
+            matches_together=n,
         )
-        for row in rows
+        for pair, n in flagged
     ]

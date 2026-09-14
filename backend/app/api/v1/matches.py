@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.auth import get_current_user
 from app.core.bracket import advance_winner
 from app.core.league import compute_standings, is_league_complete
-from app.core.permissions import get_current_admin
+from app.core.permissions import get_current_admin, is_admin
 from app.core.rating import new_rating, new_rating_draw
 from app.core.storage import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES
 from app.core.trust import record_confirmed_match, record_dispute_filed, record_dispute_resolved
@@ -74,6 +74,15 @@ def _require_live_tournament(tournament: Tournament) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Results can only be recorded while the tournament is in progress",
         )
+
+
+async def _can_view_evidence(db: AsyncSession, match: Match, current_user: User) -> bool:
+    """Participants always may; a platform admin may too, because resolving a
+    dispute is impossible without seeing the screenshot that was filed. This
+    widens access for admins only — participant access is unchanged."""
+    if current_user.id in {match.player_a_id, match.player_b_id}:
+        return True
+    return await is_admin(db, current_user.id)
 
 
 async def _get_or_create_rating(db: AsyncSession, user_id: UUID) -> PlayerRating:
@@ -255,7 +264,7 @@ async def list_evidence(match_id: UUID, current_user: User = Depends(get_current
     match = match_result.scalar_one_or_none()
     if match is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
-    if current_user.id not in {match.player_a_id, match.player_b_id}:
+    if not await _can_view_evidence(db, match, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only match participants can view evidence")
     result = await db.execute(select(MatchEvidence).where(MatchEvidence.match_id == match_id).order_by(MatchEvidence.created_at.desc()))
     return list(result.scalars().all())
@@ -267,7 +276,7 @@ async def get_evidence_image(match_id: UUID, evidence_id: UUID, current_user: Us
     match = match_result.scalar_one_or_none()
     if match is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
-    if current_user.id not in {match.player_a_id, match.player_b_id}:
+    if not await _can_view_evidence(db, match, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only match participants can view evidence")
     result = await db.execute(select(MatchEvidence).where(MatchEvidence.id == evidence_id, MatchEvidence.match_id == match_id))
     evidence = result.scalar_one_or_none()
@@ -308,7 +317,7 @@ async def confirm_result(match_id: UUID, current_user: User = Depends(get_curren
             status_code=status.HTTP_409_CONFLICT, detail="This result has already been processed"
         )
     await _finalize_match(db, match, tournament, evidence.claimed_score_a, evidence.claimed_score_b)
-    await record_confirmed_match(db, match.player_a_id, match.player_b_id)
+    await record_confirmed_match(db, match.player_a_id, match.player_b_id, match.id)
     await db.commit()
     await db.refresh(match)
     return match
@@ -343,7 +352,7 @@ async def dispute_result(match_id: UUID, payload: DisputeCreate, current_user: U
         )
     match.status = MatchStatus.DISPUTED
     match.disputed_by = current_user.id
-    await record_dispute_filed(db, current_user.id, evidence.submitted_by)
+    await record_dispute_filed(db, current_user.id, evidence.submitted_by, match.id)
     await db.commit()
     await db.refresh(match)
     return match
@@ -381,7 +390,10 @@ async def resolve_dispute(match_id: UUID, payload: ResolveDispute, _admin: User 
             status_code=status.HTTP_409_CONFLICT, detail="This dispute has already been resolved"
         )
     if evidence is not None and match.disputed_by is not None:
-        await record_dispute_resolved(db, evidence.submitted_by, match.disputed_by, submitter_was_correct)
+        await record_dispute_resolved(
+            db, evidence.submitted_by, match.disputed_by, submitter_was_correct,
+            match_id=match.id, admin_id=_admin.id,
+        )
     await _finalize_match(db, match, tournament, payload.score_a, payload.score_b)
     await db.commit()
     await db.refresh(match)

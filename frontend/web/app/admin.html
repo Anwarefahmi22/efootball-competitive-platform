@@ -30,6 +30,10 @@
     <div id="adm-loading" class="spinner"></div>
     <div id="adm-list" class="grid cols-2 page-list" hidden></div>
     <div id="adm-empty" class="card empty" hidden>لا توجد نزاعات في هذه الحالة حاليًا.</div>
+    <!-- Distinct from #adm-empty: a failed request must never read as "no disputes". -->
+    <div id="adm-error" class="card empty" role="alert" hidden>
+      <span>تعذر تحميل قائمة النزاعات.</span> <span class="muted" id="adm-error-msg"></span>
+    </div>
 
     <section class="card" id="adm-review" hidden>
       <div class="section-heading"><h2>تفاصيل النزاع</h2><span class="muted" id="adm-review-sub"></span></div>
@@ -47,6 +51,12 @@
         <button class="btn btn-primary" id="adm-decide" type="button">اعتماد النتيجة وإنهاء النزاع</button>
       </div>
     </section>
+
+    <!-- Its own section, so the queue's trust-history buttons work whether or
+         not a dispute review is currently open. -->
+    <section class="card" id="adm-history-panel" hidden>
+      <div id="adm-history"></div>
+    </section>
   </div>
 
   <script src="/shared/i18n.js"></script>
@@ -61,6 +71,15 @@
     const EVENT_LABELS = {
       match_confirmed: "مباراة موثّقة", dispute_filed: "نزاع مُقام", dispute_resolved: "قرار إداري",
     };
+    /* Backend enums are never shown raw: same wording the tournament pages use. */
+    const FORMAT_LABELS = {
+      single_elimination: "خروج المغلوب", league: "دوري", group_knockout: "مجموعات وإقصائيات",
+    };
+    const REASON_LABELS = {
+      false_report: "نتيجة مُقدَّمة غير صحيحة", submitter_correct: "اعتراض غير مبرَّر",
+    };
+    const formatText = (f) => FORMAT_LABELS[f] || f;
+    const reasonText = (r) => (r ? REASON_LABELS[r] || r : "—");
     const state = { rows: [], current: null, historyFor: null };
 
     const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
@@ -80,9 +99,9 @@
             <h2>${esc(row.tournament_name)}</h2>
             <span class="badge ${esc(row.status)}">${esc(statusText(row.status))}</span>
           </div>
-          <p class="muted">${esc(row.tournament_format)} · الجولة ${fmt(row.round_number)} · ${esc(when(row.disputed_at))}</p>
-          <div class="draw-chip"><strong>${esc(row.player_a_name)}</strong><span>الثقة ${fmt(row.player_a_trust)}</span></div>
-          <div class="draw-chip"><strong>${esc(row.player_b_name)}</strong><span>الثقة ${fmt(row.player_b_trust)}</span></div>
+          <p class="muted">${esc(formatText(row.tournament_format))} · الجولة ${fmt(row.round_number)} · ${esc(when(row.disputed_at))}</p>
+          <div class="participant-row"><strong>${esc(row.player_a_name)}</strong><span class="muted">الثقة ${fmt(row.player_a_trust)}</span></div>
+          <div class="participant-row"><strong>${esc(row.player_b_name)}</strong><span class="muted">الثقة ${fmt(row.player_b_trust)}</span></div>
           <p class="muted"><span>النتيجة المقدَّمة</span>
             <strong>${fmt(row.claimed_score_a)} : ${fmt(row.claimed_score_b)}</strong></p>
           <p class="muted"><span>أرسلها</span> <bdi>${esc(row.submitted_by_name)}</bdi></p>
@@ -102,16 +121,27 @@
     }
 
     async function loadQueue() {
-      show("adm-loading", true); show("adm-list", false); show("adm-empty", false); show("adm-forbidden", false);
+      show("adm-loading", true); show("adm-list", false); show("adm-empty", false);
+      show("adm-forbidden", false); show("adm-error", false);
       try {
         state.rows = await apiFetch("/admin/disputes?status=" + encodeURIComponent(el("adm-state").value));
+        show("adm-error", false);
+        show("adm-forbidden", false);
         renderQueue();
       } catch (err) {
         state.rows = [];
-        renderQueue();
-        // 403 means the backend refused: this is not a platform admin.
-        show("adm-forbidden", err?.status === 403 || err?.status === 401);
-        if (err?.status !== 403 && err?.status !== 401) toast(err?.detail || "تعذر تحميل قائمة النزاعات.", "error");
+        el("adm-list").innerHTML = "";
+        show("adm-list", false);
+        // Never fall through to the empty state: "no disputes" and "the request
+        // failed" are different facts and must not look the same.
+        show("adm-empty", false);
+        const denied = err?.status === 403 || err?.status === 401;
+        show("adm-forbidden", denied);
+        show("adm-error", !denied);
+        if (!denied) {
+          el("adm-error-msg").textContent = err?.detail || "";
+          toast(err?.detail || "تعذر تحميل قائمة النزاعات.", "error");
+        }
       } finally {
         show("adm-loading", false);
       }
@@ -145,11 +175,11 @@
               <strong>${fmt(e.claimed_score_a)} : ${fmt(e.claimed_score_b)}</strong>
               <span>${esc(when(e.created_at))}</span>
               ${e.has_image
-                ? `<a class="btn btn-ghost" target="_blank" rel="noopener"
-                     href="/api/v1/matches/${encodeURIComponent(detail.match_id)}/evidence/${encodeURIComponent(e.id)}/image">عرض الصورة</a>`
+                ? `<button class="btn btn-ghost" type="button" data-evid="${esc(e.id)}">عرض الصورة</button>`
                 : `<span class="badge">لا توجد صورة</span>`}
-            </div>`).join("")}
-          <div id="adm-history"></div>`;
+            </div>`).join("")}`;
+        el("adm-review-body").querySelectorAll("[data-evid]").forEach((b) =>
+          b.addEventListener("click", () => showEvidenceImage(detail.match_id, b.dataset.evid, b)));
         show("adm-review", true);
         el("adm-err").hidden = true;
         el("adm-review").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -158,21 +188,50 @@
       }
     }
 
+    /* The evidence endpoint is authenticated, so the image has to be fetched
+       with the bearer token and shown from a blob URL. A plain link would
+       navigate without the header and the API would answer 403. */
+    async function showEvidenceImage(matchId, evidenceId, btn) {
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "جارٍ التحميل…";
+      try {
+        const res = await fetchWithTimeout(
+          `${API_BASE}/matches/${encodeURIComponent(matchId)}/evidence/${encodeURIComponent(evidenceId)}/image`,
+          { headers: { Authorization: "Bearer " + Auth.token() } });
+        if (!res.ok) {
+          const body = await readResponseBody(res);
+          throw apiError(res.status, (body && body.detail) || "تعذر تحميل الصورة.");
+        }
+        const img = document.createElement("img");
+        img.className = "grid-span";
+        img.alt = "صورة دليل النتيجة";
+        img.style.cssText = "max-width:100%;border-radius:10px;margin-top:6px";
+        img.src = URL.createObjectURL(await res.blob());
+        const chip = btn.closest(".draw-chip") || btn.parentElement;
+        chip.appendChild(img);
+        btn.remove();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = label;
+        toast(err?.detail || "تعذر تحميل الصورة.", "error");
+      }
+    }
+
     async function loadHistory(userId) {
       try {
         const events = await apiFetch("/admin/trust/" + encodeURIComponent(userId) + "/events");
         state.historyFor = userId;
-        const target = el("adm-history");
-        if (!target) { toast("افتح مراجعة نزاع أولًا لعرض سجل الثقة.", "info"); return; }
-        target.innerHTML = `
+        el("adm-history").innerHTML = `
           <div class="section-heading"><h2>سجل الثقة</h2><span class="muted">${fmt(events.length)}</span></div>
           ${events.length === 0 ? `<p class="muted">لا توجد أحداث مسجّلة بعد.</p>` : events.map((e) => `
             <div class="draw-chip">
               <strong>${esc(EVENT_LABELS[e.event_type] || e.event_type)}</strong>
               <span>${e.delta > 0 ? "+" : ""}${fmt(e.delta)} → ${fmt(e.trust_after)}</span>
-              <span>${esc(e.reason || "—")}</span>
+              <span>${esc(reasonText(e.reason))}</span>
               <span>${esc(when(e.created_at))}</span>
             </div>`).join("")}`;
+        show("adm-history-panel", true);
       } catch (err) {
         toast(err?.detail || "تعذر تحميل سجل الثقة.", "error");
       }

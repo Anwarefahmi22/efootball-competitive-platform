@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.api.v1.auth import get_current_user
 from app.core.media import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES, save_post_image
 from app.db.session import get_db
+from app.models.match import Match
 from app.models.social import Comment, Post, PostLike, PostType
 from app.models.user import User
 from app.schemas.social import CommentCreate, CommentRead, PostRead
@@ -46,13 +47,18 @@ async def _to_post_read(db: AsyncSession, post: Post) -> PostRead:
 
 @router.post("", response_model=PostRead, status_code=status.HTTP_201_CREATED)
 async def create_post(
-    content: str | None = Form(default=None),
+    content: str | None = Form(default=None, max_length=5000),
     category: str = Form(default="general"),
     match_id: UUID | None = Form(default=None),
     image: UploadFile | None = File(default=None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PostRead:
+    if content is not None and not content.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Post content cannot be empty",
+        )
     if not content and not image and not match_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -83,6 +89,9 @@ async def create_post(
         if category == "general":
             post_type = PostType.IMAGE
     if match_id is not None:
+        match_result = await db.execute(select(Match).where(Match.id == match_id))
+        if match_result.scalar_one_or_none() is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
         post_type = PostType.MATCH_RESULT
 
     post = Post(
@@ -105,7 +114,7 @@ async def list_feed(
     author_id: UUID | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> list[PostRead]:
-    stmt = select(Post).order_by(Post.created_at.desc()).limit(limit).offset(offset)
+    stmt = select(Post).order_by(Post.created_at.desc(), Post.id.desc()).limit(limit).offset(offset)
     if author_id is not None:
         stmt = stmt.where(Post.author_id == author_id)
     result = await db.execute(stmt)
@@ -193,7 +202,7 @@ async def add_comment(
 @router.get("/{post_id}/comments", response_model=list[CommentRead])
 async def list_comments(post_id: UUID, db: AsyncSession = Depends(get_db)) -> list[CommentRead]:
     result = await db.execute(
-        select(Comment).where(Comment.post_id == post_id).order_by(Comment.created_at)
+        select(Comment).where(Comment.post_id == post_id).order_by(Comment.created_at, Comment.id)
     )
     comments = result.scalars().all()
     out = []

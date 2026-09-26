@@ -7,6 +7,14 @@
     en: { label: "English", dir: "ltr" },
   };
   const translations = {
+    "عرض المباراة ↗": { fr: "Voir le match ↗", en: "View match ↗" },
+    "عرض الملف": { fr: "Voir le profil", en: "View profile" },
+    "تحميل المزيد": { fr: "Charger plus", en: "Load more" },
+    "آخر منشورات اللاعب": { fr: "Dernières publications", en: "Latest posts" },
+    "فتح الساحة": { fr: "Ouvrir l’arène", en: "Open arena" },
+    "جارٍ تحميل المنشورات…": { fr: "Chargement des publications…", en: "Loading posts…" },
+    "لا توجد منشورات لهذا اللاعب بعد.": { fr: "Aucune publication pour ce joueur pour le moment.", en: "No posts from this player yet." },
+    "تعذر تحميل المنشورات.": { fr: "Impossible de charger les publications.", en: "Could not load posts." },
     "البطولات": { fr: "Tournois", en: "Tournaments" },
     "بطولات": { fr: "Tournois", en: "Tournaments" },
     "مفتوحة للتسجيل": { fr: "ouvertes aux inscriptions", en: "open for registration" },
@@ -453,7 +461,7 @@
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let node;
     while ((node = walker.nextNode())) {
-      if (!node.parentElement.closest("script, style, noscript, [data-i18n]") && node.nodeValue.trim()) {
+      if (!node.parentElement.closest("script, style, noscript, [data-i18n], [data-i18n-skip]") && node.nodeValue.trim()) {
         if (!node.__efaSource) node.__efaSource = node.nodeValue;
         const leading = node.__efaSource.match(/^\s*/)[0];
         const trailing = node.__efaSource.match(/\s*$/)[0];
@@ -462,6 +470,7 @@
       }
     }
     document.querySelectorAll("input, textarea, [title], [aria-label]").forEach((node) => {
+      if (node.closest("[data-i18n-skip]")) return;
       ["placeholder", "title", "aria-label"].forEach((attribute) => {
         if (node.hasAttribute(attribute)) {
         node.__efaSourceAttributes ||= {};

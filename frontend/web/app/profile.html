@@ -46,12 +46,12 @@
             <div class="profile-cover__glow"></div>
             <div class="profile-hero">
               <div class="profile-avatar${p.avatar_url ? " has-image" : ""}" aria-label="الصورة الشخصية">
-                ${p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="صورة ${escapeHtml(p.display_name)}">` : `<span>${initials}</span>`}
+                ${p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="صورة ${escapeHtml(p.display_name)}">` : `<span data-i18n-skip>${initials}</span>`}
               </div>
               <div class="profile-identity">
                 <div class="profile-status"><i></i> لاعب نشط</div>
-                <h1>${escapeHtml(p.display_name)}</h1>
-                <div class="muted">${escapeHtml(p.country || "🌍 دولة غير محددة")} <span class="profile-dot">•</span> IGN: ${escapeHtml(p.efootball_ign || "—")}</div>
+                <h1 data-i18n-skip>${escapeHtml(p.display_name)}</h1>
+                <div class="muted" data-i18n-skip>${escapeHtml(p.country || "🌍 دولة غير محددة")} <span class="profile-dot">•</span> IGN: ${escapeHtml(p.efootball_ign || "—")}</div>
               </div>
               <div class="profile-rating">
                 <span class="profile-rating__label">التقييم الحالي</span>
@@ -64,7 +64,7 @@
           <div class="profile-intro">
             <div>
               <h2>هوية اللاعب</h2>
-              <p class="profile-bio">${escapeHtml(p.bio || "هذا اللاعب لم يضف نبذة تعريفية بعد.")}</p>
+              <p class="profile-bio" data-i18n-skip>${escapeHtml(p.bio || "هذا اللاعب لم يضف نبذة تعريفية بعد.")}</p>
             </div>
             <div class="profile-badge">⚡ تنافسي<br><small>جاهز للمواجهة</small></div>
           </div>
@@ -88,15 +88,46 @@
               <div class="record-line"><span>التقييم</span><strong>${rating ? rating.rating : "—"} ELO</strong></div>
               <p class="muted">واصل اللعب لرفع ترتيبك في الساحة.</p>
             </section>
+            <section class="profile-panel profile-community grid-span" aria-labelledby="pc-posts-title">
+              <div class="section-heading"><h2 id="pc-posts-title">آخر منشورات اللاعب</h2><a class="panel-icon" href="/app/community.html" aria-label="فتح الساحة">↗</a></div>
+              <div id="pc-posts"><div class="muted">جارٍ تحميل المنشورات…</div></div>
+            </section>
           </div>
           <div class="profile-footer">
             <span class="muted">ملف عام للاعب في eFootball Arena</span>
             <a class="btn btn-ghost" href="/app/tournaments.html">استكشف البطولات</a>
           </div>`;
+        loadPlayerPosts(uid);
       } catch (err) {
         el("pcard").innerHTML = `<div class="empty" role="alert">${escapeHtml(err.detail || "تعذر تحميل الملف")}</div>`;
       }
     })();
+    async function loadPlayerPosts(uid) {
+      const box = el("pc-posts");
+      if (!box) return;
+      try {
+        const posts = await apiFetch(`/posts?author_id=${encodeURIComponent(uid)}&limit=5`);
+        if (!posts.length) {
+          box.innerHTML = '<p class="muted">لا توجد منشورات لهذا اللاعب بعد.</p>';
+          return;
+        }
+        const postTypes = {
+          match_result: "نتيجة موثقة",
+          achievement: "إنجاز",
+          tournament: "بطولة",
+          image: "صورة",
+          text: "تحديث",
+          general: "عام",
+        };
+        box.innerHTML = `<ul class="record-list" data-i18n-skip>${posts.map((post) => {
+          const text = (post.content || "").trim().slice(0, 90) || "منشور";
+          return `<li class="record-line"><span>${escapeHtml(text)}</span><strong>${postTypes[post.post_type] || "تحديث"}</strong></li>`;
+        }).join("")}</ul>`;
+      } catch (err) {
+        box.innerHTML = '<p class="muted">تعذر تحميل المنشورات.</p>';
+      }
+    }
+
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
   </script>
 </body>

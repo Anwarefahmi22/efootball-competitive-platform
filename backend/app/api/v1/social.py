@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import get_current_user
+from app.core.permissions import get_current_user_optional
 from app.db.session import get_db
 from app.models.social import Follow
 from app.models.user import User
@@ -52,9 +53,12 @@ async def unfollow_user(
 @router.get("/{user_id}/follow-stats", response_model=FollowStats)
 async def follow_stats(
     user_id: UUID,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ) -> FollowStats:
+    target = await db.execute(select(User).where(User.id == user_id))
+    if target.scalar_one_or_none() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     followers_count = await db.execute(
         select(func.count()).select_from(Follow).where(Follow.followed_id == user_id)
     )

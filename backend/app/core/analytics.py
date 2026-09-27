@@ -3,7 +3,6 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.economy import Transaction, TransactionType, Wallet
 from app.models.match import Match, MatchStatus
 from app.models.rating import PlayerRating
 from app.models.social import Post
@@ -47,14 +46,9 @@ async def get_platform_analytics(db: AsyncSession) -> dict:
             )
         )
     ).scalar_one()
-    total_wallet_balance = (await db.execute(select(func.coalesce(func.sum(Wallet.balance), 0)))).scalar_one()
-    total_prize_distributed = (
-        await db.execute(
-            select(func.coalesce(func.sum(Transaction.amount), 0)).where(
-                Transaction.type == TransactionType.PRIZE_PAYOUT
-            )
-        )
-    ).scalar_one()
+    # HF-1: platform analytics are competitive/integrity metrics only.
+    # Aggregate financial totals are no longer computed or exposed here;
+    # the financial ledger tables are not part of the mounted API.
     total_posts = (await db.execute(select(func.count()).select_from(Post))).scalar_one()
 
     return {
@@ -66,8 +60,6 @@ async def get_platform_analytics(db: AsyncSession) -> dict:
         "total_disputes": total_disputes,
         "total_disputes_open": total_disputes_open,
         "total_disputes_resolved": total_disputes_resolved,
-        "total_wallet_balance": total_wallet_balance,
-        "total_prize_distributed": total_prize_distributed,
         "total_posts": total_posts,
     }
 
@@ -83,9 +75,6 @@ async def get_player_analytics(db: AsyncSession, user_id: UUID) -> dict | None:
 
     trust_result = await db.execute(select(PlayerTrust).where(PlayerTrust.user_id == user_id))
     trust = trust_result.scalar_one_or_none()
-
-    wallet_result = await db.execute(select(Wallet).where(Wallet.user_id == user_id))
-    wallet = wallet_result.scalar_one_or_none()
 
     matches_result = await db.execute(
         select(Match).where(
@@ -130,7 +119,6 @@ async def get_player_analytics(db: AsyncSession, user_id: UUID) -> dict | None:
         "avg_goals_scored": round(total_scored / played, 2) if played > 0 else 0.0,
         "avg_goals_conceded": round(total_conceded / played, 2) if played > 0 else 0.0,
         "trust_score": trust.trust_score if trust else 100,
-        "wallet_balance": wallet.balance if wallet else 0,
         "tournaments_won": tournaments_won,
     }
 
@@ -165,7 +153,4 @@ async def get_tournament_analytics(db: AsyncSession, tournament_id: UUID) -> dic
         "matches_total": matches_total,
         "matches_completed": matches_completed,
         "avg_goals_per_match": avg_goals,
-        "entry_fee": tournament.entry_fee,
-        "prize_pool": tournament.prize_pool,
-        "prize_distributed": tournament.prize_distributed,
     }

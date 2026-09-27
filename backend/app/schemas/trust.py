@@ -10,8 +10,7 @@ class TrustPublic(BaseModel):
     trust_score: int
     verified_matches: int
     # Moderation data, not a public reputation signal: null for anyone who is
-    # neither the player themself nor a platform admin (same pattern the
-    # analytics endpoint already uses for wallet_balance).
+    # neither the player themself nor a platform admin.
     disputes_involved: int | None
 
 

@@ -25,8 +25,7 @@ async def get_trust(
     page and shows the trust score to visitors. `disputes_involved` is the one
     field here that is moderation data rather than a reputation signal, and no
     page renders it, so it is returned only to the player themself or to a
-    platform admin (the same owner-or-admin rule the analytics endpoint
-    already applies to wallet_balance).
+    platform admin (owner-or-admin rule).
     """
     result = await db.execute(select(PlayerTrust).where(PlayerTrust.user_id == user_id))
     trust = result.scalar_one_or_none()

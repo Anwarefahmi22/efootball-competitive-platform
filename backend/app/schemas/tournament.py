@@ -53,8 +53,8 @@ class TournamentRead(BaseModel):
     format: TournamentFormat
     status: TournamentStatus
     max_participants: int
-    entry_fee: int
-    prize_pool: int
+    # HF-1: tournaments are free — the public read model exposes no
+    # entry_fee or prize_pool. TournamentCreate still validates entry_fee == 0.
     draw_completed: bool
     requires_approval: bool
     num_groups: int | None

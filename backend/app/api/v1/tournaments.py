@@ -40,7 +40,6 @@ def _to_read(tournament: Tournament) -> TournamentRead:
     return TournamentRead(
         id=tournament.id, name=tournament.name, description=tournament.description,
         format=tournament.format, status=tournament.status, max_participants=tournament.max_participants,
-        entry_fee=tournament.entry_fee, prize_pool=tournament.prize_pool,
         draw_completed=tournament.draw_completed, requires_approval=tournament.requires_approval,
         num_groups=tournament.num_groups, season_id=tournament.season_id, winner_id=tournament.winner_id,
         created_by=tournament.created_by,

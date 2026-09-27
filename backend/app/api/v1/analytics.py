@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.analytics import get_platform_analytics, get_player_analytics, get_tournament_analytics
 from app.api.v1.auth import get_current_user
-from app.core.permissions import get_current_admin, is_admin
+from app.core.permissions import get_current_admin
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.analytics import PlatformAnalytics, PlayerAnalytics, TournamentAnalytics
@@ -30,10 +30,9 @@ async def player_analytics(
     data = await get_player_analytics(db, user_id)
     if data is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    # SECURITY: wallet_balance is financial data — only the account owner or
-    # a platform admin may see it. Everyone else gets it hidden (None).
-    if current_user.id != user_id and not await is_admin(db, current_user.id):
-        data["wallet_balance"] = None
+    # HF-1: player analytics carry no financial fields at all, so there is
+    # nothing to mask — the response is identical for the owner, other
+    # players, and admins.
     return PlayerAnalytics(**data)
 
 

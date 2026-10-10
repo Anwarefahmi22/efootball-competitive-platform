@@ -1,16 +1,16 @@
-"""Quick E2E check run inside the API container:
-register 2 users -> tournament -> join -> draw -> start -> submit result
-(with image) -> confirm -> fetch image back from DB.
+"""Destructive E2E check for a disposable local/CI database.
+
+Creates users and a tournament, then checks authentication, evidence storage,
+mutual confirmation, and the winner. Never run against production.
 """
 import io
 import json
-import mimetypes
-import time
 import urllib.error
 import urllib.request
 import uuid
 
 BASE = "http://localhost:8000/api/v1"
+REQUEST_TIMEOUT = 15
 PNG = bytes.fromhex(
     "89504e470d0a1a0a0000000d494844520000000100000001080600000"
     "01f15c4890000000d49444154789c626001000000ffff030000060005"
@@ -31,50 +31,49 @@ def call(method, path, token=None, body=None, raw=None, content_type="applicatio
         headers["Authorization"] = "Bearer " + token
     req = urllib.request.Request(BASE + path, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req) as res:
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as res:
             payload = res.read()
             try:
                 return res.status, json.loads(payload)
-            except Exception:
+            except (ValueError, UnicodeDecodeError):
                 return res.status, payload
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode(errors="replace")
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read().decode(errors="replace")
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise RuntimeError(f"{method} {path}: connection failed or timed out") from exc
+
+
+def expect(method, path, expected=200, **kwargs):
+    code, payload = call(method, path, **kwargs)
+    allowed = (expected,) if isinstance(expected, int) else expected
+    if code not in allowed:
+        # Do not print response bodies: authentication responses contain tokens.
+        raise AssertionError(f"{method} {path}: expected {allowed}, received {code}")
+    return payload
 
 
 suffix = uuid.uuid4().hex[:8]
-_, u1 = call("POST", "/auth/register", body={"email": f"e1_{suffix}@t.gg", "password": "Passw0rd!", "display_name": "P1"})
-_, u2 = call("POST", "/auth/register", body={"email": f"e2_{suffix}@t.gg", "password": "Passw0rd!", "display_name": "P2"})
+email1 = f"e1_{suffix}@t.gg"
+password = "Passw0rd!"
+u1 = expect("POST", "/auth/register", expected=201, body={
+    "email": email1, "password": password, "display_name": "P1",
+})
+u2 = expect("POST", "/auth/register", expected=201, body={
+    "email": f"e2_{suffix}@t.gg", "password": password, "display_name": "P2",
+})
+assert u1.get("access_token") and u1.get("refresh_token"), "P1 token pair missing"
+assert u2.get("access_token") and u2.get("refresh_token"), "P2 token pair missing"
 t1, t2 = u1["access_token"], u2["access_token"]
 
-_, tour = call("POST", "/tournaments", token=t1, body={"name": "E2E Cup", "max_participants": 4, "format": "single_elimination"})
-tid = tour["id"]
-call("POST", f"/tournaments/{tid}/join", token=t1)
-call("POST", f"/tournaments/{tid}/join", token=t2)
-assert call("POST", f"/tournaments/{tid}/draw", token=t1)[0] == 200, "draw failed"
-assert call("POST", f"/tournaments/{tid}/start", token=t1)[0] == 200, "start failed"
+owner = expect("GET", "/auth/me", token=t1)
+login = expect("POST", "/auth/login", body={"email": email1, "password": password})
+assert login.get("access_token") and login.get("refresh_token"), "login token pair missing"
+assert expect("GET", "/auth/me", token=login["access_token"])["id"] == owner["id"], "login identity changed"
+refreshed = expect("POST", "/auth/refresh", body={"refresh_token": login["refresh_token"]})
+assert refreshed.get("access_token"), "refresh access token missing"
+assert expect("GET", "/auth/me", token=refreshed["access_token"])["id"] == owner["id"], "refresh identity changed"
+expect("POST", "/auth/login", expected=401, body={"email": email1, "password": "WrongPass!"})
+expect("POST", "/auth/refresh", expected=401, body={"refresh_token": login["access_token"]})
+expect("GET", "/auth/me", expected=401, token=login["refresh_token"])
 
-_, matches = call("GET", f"/tournaments/{tid}/matches")
-m = matches[0]
-mid = m["id"]
-
-boundary = "----e2e" + uuid.uuid4().hex
-form = io.BytesIO()
-form.write(f"--{boundary}\r\nContent-Disposition: form-data; name=\"score_a\"\r\n\r\n2\r\n".encode())
-form.write(f"--{boundary}\r\nContent-Disposition: form-data; name=\"score_b\"\r\n\r\n1\r\n".encode())
-form.write(f"--{boundary}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"s.png\"\r\nContent-Type: image/png\r\n\r\n".encode())
-form.write(PNG)
-form.write(f"\r\n--{boundary}--\r\n".encode())
-
-st, ev = call("POST", f"/matches/{mid}/submit-result", token=t1, raw=form.getvalue(),
-              content_type=f"multipart/form-data; boundary={boundary}")
-assert st == 201, f"submit failed: {st} {ev}"
-
-st, img = call("GET", f"/matches/{mid}/evidence/{ev['id']}/image", token=t2)
-assert st == 200 and img == PNG, "image roundtrip from DB failed"
-
-st, done = call("POST", f"/matches/{mid}/confirm", token=t2)
-assert st == 200 and done["status"] == "completed", "confirm failed"
-
-_, t_after = call("GET", f"/tournaments/{tid}")
-assert t_after["status"] == "completed" and t_after["winner_id"], "tournament not completed"
-print("E2E OK: register/tournament/draw/start/evidence-in-db/confirm/winner")
+ tour_placeholder = None

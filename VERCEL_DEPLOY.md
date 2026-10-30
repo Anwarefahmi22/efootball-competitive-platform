@@ -56,13 +56,24 @@ env-gated, so with the flags unset the application behaves exactly as on
 | `CRON_SECRET` | strong random secret; Vercel Cron sends it as Bearer automatically |
 | `ENABLE_BACKGROUND_LOOP` | `0` |
 | `MEDIA_BACKEND` | `db` |
+| `MIGRATION_SECRET` | **temporary** — strong random secret, only until `/internal/migrate` has run once; delete it right after |
 
 Secrets live only in the Vercel project settings — never in this repo.
 
 ## Migrations are a separate step
 
-Functions never migrate. Before the first deploy (and after any new
-migration is merged), run once from a trusted machine:
+Functions never migrate on import or per request. Two ways to run the
+upgrade, both idempotent (at head it is a no-op):
+
+**A. Guarded in-app endpoint (used for the first Vercel deploy):**
+set `MIGRATION_SECRET` in the project environment, deploy, then call
+`POST /internal/migrate` with header `Authorization: Bearer
+<MIGRATION_SECRET>` once. Remove `MIGRATION_SECRET` afterwards — with
+the variable unset the endpoint answers 503 (disabled). Secret unset
+also means the endpoint can never run, so leaving the code in place is
+safe on every track.
+
+**B. CLI from a trusted machine** (equivalent):
 
 ```bash
 cd backend

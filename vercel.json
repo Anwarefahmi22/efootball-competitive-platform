@@ -1,1 +1,1 @@
-{"crons":[{"path":"/internal/maintenance","schedule":"17 3 * * *"}],"functions":{"api/index.py":{"includeFiles":["frontend/**","backend/alembic/**"],"maxDuration":60,"regions":["fra1"]}},"rewrites":[{"destination":"/api/index.py","source":"/(.*)"}]}
+{"crons":[{"path":"/internal/maintenance","schedule":"17 3 * * *"}],"functions":{"api/index.py":{"includeFiles":"{frontend/**,backend/alembic/**}","maxDuration":60,"regions":["fra1"]}},"rewrites":[{"destination":"/api/index.py","source":"/(.*)"}]}

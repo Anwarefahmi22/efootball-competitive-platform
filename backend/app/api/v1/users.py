@@ -10,7 +10,12 @@ from sqlalchemy.orm import selectinload
 from app.api.v1.auth import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.core.media import ALLOWED_CONTENT_TYPES, save_avatar_image
+from app.core.media import (
+    ALLOWED_CONTENT_TYPES,
+    media_backend,
+    save_avatar_image,
+    save_avatar_image_db,
+)
 from app.schemas.user import ProfileUpdate, PublicProfileRead
 
 router = APIRouter()
@@ -79,11 +84,17 @@ async def upload_avatar(
     if len(file_bytes) > MAX_AVATAR_BYTES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Avatar image exceeds 5MB limit")
     extension = ".png" if content_type == "image/png" else ".jpg"
-    save_avatar_image(str(current_user.id), file_bytes, extension)
+    if media_backend() == "db":
+        media_id = await save_avatar_image_db(db, file_bytes, content_type)
+    else:
+        save_avatar_image(str(current_user.id), file_bytes, extension)
     profile = current_user.profile
     if profile is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
-    profile.avatar_url = f"/media/avatars/{current_user.id}{extension}?v={uuid.uuid4().hex}"
+    if media_backend() == "db":
+        profile.avatar_url = f"/media/{media_id}?v={uuid.uuid4().hex}"
+    else:
+        profile.avatar_url = f"/media/avatars/{current_user.id}{extension}?v={uuid.uuid4().hex}"
     await db.commit()
     await db.refresh(profile)
     return PublicProfileRead(

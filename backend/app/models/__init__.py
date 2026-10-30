@@ -1,6 +1,7 @@
 from app.models.evidence import MatchEvidence
 from app.models.group import Group
 from app.models.match import Match
+from app.models.media_file import MediaFile
 from app.models.rating import PlayerRating
 from app.models.season import Season
 from app.models.social import Comment, Follow, Post, PostLike
@@ -16,4 +17,5 @@ __all__ = [
     "MatchEvidence", "PlayerTrust", "Post", "Comment", "PostLike", "Follow",
     "Season", "Group",
     "TrustEvent", "TrustEventType",
+    "MediaFile",
 ]

@@ -2,6 +2,7 @@ from app.db.session import Base
 from app.models.evidence import MatchEvidence
 from app.models.group import Group
 from app.models.match import Match
+from app.models.media_file import MediaFile
 from app.models.rating import PlayerRating
 from app.models.season import Season
 from app.models.social import Comment, Follow, Post, PostLike
@@ -12,5 +13,5 @@ from app.models.user import Profile, User
 __all__ = [
     "Base", "User", "Profile", "Tournament", "TournamentParticipant", "Match", "PlayerRating",
     "MatchEvidence", "PlayerTrust", "Post", "Comment", "PostLike", "Follow",
-    "Season", "Group",
+    "Season", "Group", "MediaFile",
 ]

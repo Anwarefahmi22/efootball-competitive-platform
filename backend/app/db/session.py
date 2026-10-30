@@ -27,6 +27,14 @@ def create_db_engine(database_url: str, **engine_kwargs):
             engine_kwargs.setdefault("connect_args", {})["ssl"] = create_default_context()
         else:  # prefer / require
             engine_kwargs.setdefault("connect_args", {})["ssl"] = True
+    if url.host and "-pooler" in url.host:
+        # Pooled endpoints (e.g. Neon's *-pooler hosts) front PgBouncer in
+        # transaction mode, where a connection is multiplexed between
+        # clients between transactions. asyncpg's prepared-statement cache
+        # is per-connection and breaks there ("prepared statement does not
+        # exist"), so it must be disabled for pooled URLs. Direct (non-
+        # pooler) connections keep the default caching behaviour.
+        engine_kwargs.setdefault("connect_args", {})["statement_cache_size"] = 0
     return create_async_engine(url, **engine_kwargs)
 
 

@@ -2,13 +2,23 @@ import mimetypes
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.v1.auth import get_current_user
-from app.core.media import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES, save_post_image
+from app.core.media import (
+    ALLOWED_CONTENT_TYPES,
+    MAX_UPLOAD_BYTES,
+    get_media_file,
+    is_media_ref,
+    media_backend,
+    media_ref,
+    parse_media_ref,
+    save_post_image,
+    save_post_image_db,
+)
 from app.db.session import get_db
 from app.models.match import Match
 from app.models.social import Comment, Post, PostLike, PostType
@@ -85,7 +95,11 @@ async def create_post(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Image exceeds 8MB limit"
             )
         extension = ".png" if content_type == "image/png" else ".jpg"
-        image_path = save_post_image(file_bytes, extension)
+        if media_backend() == "db":
+            media_id = await save_post_image_db(db, file_bytes, content_type)
+            image_path = media_ref(media_id)
+        else:
+            image_path = save_post_image(file_bytes, extension)
         if category == "general":
             post_type = PostType.IMAGE
     if match_id is not None:
@@ -132,11 +146,16 @@ async def get_post(post_id: UUID, db: AsyncSession = Depends(get_db)) -> PostRea
 
 
 @router.get("/{post_id}/image")
-async def get_post_image(post_id: UUID, db: AsyncSession = Depends(get_db)) -> FileResponse:
+async def get_post_image(post_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
     if post is None or post.image_path is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    if is_media_ref(post.image_path):
+        media = await get_media_file(db, parse_media_ref(post.image_path))
+        if media is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+        return Response(content=media.data, media_type=media.content_type)
     return FileResponse(post.image_path)
 
 

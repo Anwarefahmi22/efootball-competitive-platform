@@ -15,8 +15,29 @@ from app.core.tournament_lifecycle import tournament_maintenance_loop
 from app.db.session import get_db
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
-STORAGE_DIR = Path(__file__).resolve().parents[1] / "storage"
-STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _resolve_storage_dir() -> Path:
+    """Local media storage directory, created at import.
+
+    Long-running tracks use ``backend/storage``. Serverless filesystems
+    (Vercel) are read-only outside ``/tmp``, where the plain mkdir used
+    to crash the whole import — fall back to ``/tmp/storage`` there.
+    With MEDIA_BACKEND=db the directory is not used at runtime anyway;
+    this only keeps the app importable (and fs mode functional in a
+    degraded, ephemeral way) on read-only filesystems.
+    """
+    primary = Path(__file__).resolve().parents[1] / "storage"
+    try:
+        primary.mkdir(parents=True, exist_ok=True)
+        return primary
+    except OSError:
+        fallback = Path("/tmp/storage")
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
+STORAGE_DIR = _resolve_storage_dir()
 
 
 def _background_loop_enabled() -> bool:

@@ -451,6 +451,14 @@
   }
 
   function apply(language = currentLanguage()) {
+    // Disconnect the observer while applying: apply() itself replaces
+    // text nodes (childList mutations WITH addedNodes), which retrigger
+    // the observer below and call apply() again forever — an infinite
+    // mutation loop that pegs the main thread and freezes the page
+    // after the first dynamic DOM change (button label, error text,
+    // toast). takeRecords() drops the self-inflicted mutation batch.
+    observer.disconnect();
+    try {
     document.documentElement.lang = language;
     document.documentElement.dir = languages[language].dir;
     if (!document.__efaSourceTitle) document.__efaSourceTitle = document.title;
@@ -482,6 +490,12 @@
     document.querySelectorAll("[data-language-label]").forEach((node) => {
       node.textContent = languages[language].label;
     });
+    } finally {
+      observer.takeRecords();
+      if (document.body) {
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
+    }
   }
 
   function setLanguage(language) {

@@ -99,7 +99,9 @@
       if (tournament.created_by === currentUserId) return `<span class="membership-status is-organizer">◆ أنت منظم البطولة</span>`;
       if (participant?.status === "approved") return `<button class="btn btn-danger" id="leave" type="button">مغادرة البطولة</button><span class="membership-status is-joined">✓ أنت منضم</span>`;
       if (participant?.status === "pending") return `<span class="membership-status is-pending">◷ طلبك قيد المراجعة</span>`;
-      return tournament.status === "registration_open" ? `<button class="btn btn-primary" id="join" type="button">انضم إلى البطولة</button>` : `<span class="membership-status">التسجيل مغلق</span>`;
+      if (tournament.status !== "registration_open") return `<span class="membership-status">التسجيل مغلق</span>`;
+      if ((tournament.participant_count || 0) >= tournament.max_participants) return `<span class="membership-status">البطولة ممتلئة</span>`;
+      return `<button class="btn btn-primary" id="join" type="button">انضم إلى البطولة</button>`;
     }
 
     function renderParticipants(participants, me) {

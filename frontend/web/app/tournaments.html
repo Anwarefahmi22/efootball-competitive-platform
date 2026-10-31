@@ -77,6 +77,10 @@
 
     function card(t) {
       const pct = t.max_participants ? Math.round((t.participant_count || 0) * 100 / t.max_participants) : 0;
+      // A full tournament is not joinable even while its status is still
+      // registration_open: show the full state and drop the join CTA
+      // (QA audit 2026-10-31: full cups invited joins the server rejects).
+      const isFull = (t.participant_count || 0) >= t.max_participants;
       const membership = t.created_by === currentUserId
         ? `<span class="membership-status is-organizer">◆ أنت المنظم</span>`
         : t.participants.some((participant) => participant.user_id === currentUserId && participant.status === "approved")
@@ -87,7 +91,7 @@
       <article class="card hoverable tournament-card">
         <div class="tournament-card__head">
           <h2>${escapeHtml(t.name)}</h2>
-          <span class="badge ${t.status}">${statusLabel(t.status)}</span>
+          ${t.status === "registration_open" && isFull ? `<span class="badge full">ممتلئة</span>` : `<span class="badge ${t.status}">${statusLabel(t.status)}</span>`}
         </div>
         <p class="tournament-card__description">${escapeHtml((t.description || "بطولة جديدة بانتظار المنافسين.").slice(0, 110))}</p>
         <div class="tournament-card__meta">
@@ -98,7 +102,7 @@
         <div class="tournament-card__prize"><span>المنافسة</span><strong>نقاط وتصنيف</strong></div>
         <div class="progress" role="progressbar" aria-label="نسبة امتلاء البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
         <div class="tournament-card__footer"><span class="muted">${numberFormat.format(pct)}% ممتلئة</span>${membership}
-          ${t.status === "registration_open" ? `<button class="btn btn-primary" type="button" data-join="${t.id}">انضم الآن</button>` : ""}
+          ${t.status === "registration_open" && !isFull ? `<button class="btn btn-primary" type="button" data-join="${t.id}">انضم الآن</button>` : ""}
           <a class="btn btn-ghost" href="/app/tournament.html?id=${encodeURIComponent(t.id)}">${t.created_by === currentUserId ? "إدارة البطولة" : "التفاصيل"}</a>
         </div>
       </article>`;

@@ -365,6 +365,7 @@ label.lbl { display: block; margin: 0 0 6px; color: var(--muted); font-weight: 6
 .badge.registration_closed { color: var(--muted); }
 .badge.completed { color: var(--muted); }
 .badge.cancelled { color: var(--danger); }
+.badge.full { color: var(--warn); border-color: var(--warn); }
 
 .progress { height: 10px; border-radius: 999px; background: #0a1a11; overflow: hidden; border: 1px solid var(--line); }
 .progress > i { display: block; height: 100%; background: linear-gradient(90deg, var(--neon-dim), var(--neon)); }

@@ -106,6 +106,10 @@
       animation: cardIn .4s ease;
     }
     @keyframes cardIn { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+    /* The shared theme positions .auth-language absolutely at the card's
+       top corner, where it overlaps the centered logo on narrow cards.
+       On this page it sits in flow, end-aligned above the logo instead. */
+    .auth-card .auth-language { position: static; display: flex; width: fit-content; margin-inline-start: auto; margin-bottom: 12px; }
     .logo { text-align: center; margin-bottom: 22px; }
     .logo .mark {
       font-family: "Orbitron", monospace; font-size: 1.5rem; color: #a3ff12;
@@ -220,6 +224,20 @@
     const authLanguage = document.getElementById("auth-language");
     authLanguage.value = i18n.current();
     authLanguage.addEventListener("change", () => i18n.setLanguage(authLanguage.value));
+
+    // A visitor with a live session who lands here (e.g. via the brand
+    // logo) belongs on their dashboard, not on a login form. Verify the
+    // token first: a dead token is cleared and the form stays usable,
+    // and a transient failure leaves the form alone.
+    if (Auth.loggedIn()) {
+      apiFetch("/auth/me").then(() => { location.href = authReturnPath(); }).catch((err) => {
+        if (err.status === 401) {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(REFRESH_KEY);
+          localStorage.removeItem(USER_KEY);
+        }
+      });
+    }
     const tabLogin = document.getElementById("tab-login");
     const tabRegister = document.getElementById("tab-register");
     const formLogin = document.getElementById("form-login");

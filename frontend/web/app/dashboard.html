@@ -118,7 +118,7 @@
     }
     function setMetric(id, value) { el(id).textContent = value === null || value === undefined || value === "" ? "غير متاح" : value; }
     function getRank(board, uid) { const index = board.findIndex((row) => row.user_id === uid); return index < 0 ? null : index + 1; }
-    function renderNextMatch(match, tournaments, board, uid) {
+    function renderNextMatch(match, tournaments, board, uid, myRating) {
       const target = el("next-match-content");
       if (!match) { target.innerHTML = stateEmpty("لا توجد مباراة قادمة مجدولة حاليًا. ستظهر هنا عند إنشاء جدول مبارياتك."); return; }
       const tournament = tournaments.find((item) => item.id === match.tournament_id);
@@ -127,7 +127,7 @@
       const opponentRating = board.find((row) => row.user_id === opponentId);
       target.innerHTML = `<div class="next-match-grid">
         <div class="match-context"><span class="badge">${escapeHtml(tournament?.name || "بطولة")}</span><h3>${match.round_number ? `الجولة ${match.round_number}` : "مباراة مجدولة"}</h3><p class="muted">${formatDate(match.scheduled_at)}</p></div>
-        <div class="match-versus"><div><strong>أنت</strong><span>${board.find((row) => row.user_id === uid)?.rating ?? "غير متاح"} ELO</span></div><b>VS</b><div><strong>${escapeHtml(opponent?.display_name || "المنافس غير محدد")}</strong><span>${opponentRating?.rating ?? "غير متاح"} ELO</span></div></div>
+        <div class="match-versus"><div><strong>أنت</strong><span>${myRating?.rating ?? board.find((row) => row.user_id === uid)?.rating ?? "غير متاح"} ELO</span></div><b>VS</b><div><strong>${escapeHtml(opponent?.display_name || "المنافس غير محدد")}</strong><span>${opponentRating?.rating ?? "غير متاح"} ELO</span></div></div>
         <a class="btn btn-primary" href="/app/match.html?id=${encodeURIComponent(match.id)}">فتح المباراة</a>
       </div>`;
     }
@@ -137,7 +137,7 @@
       target.innerHTML = list.map((tournament) => {
         const participant = tournament.participants.find((item) => item.user_id === uid);
         const pct = tournament.max_participants ? Math.round(tournament.participant_count * 100 / tournament.max_participants) : 0;
-        return `<article class="tournament-hub-item card"><div class="tournament-card__head"><div><span class="badge ${tournament.status}">${statusText[tournament.status] || tournament.status}</span><h3>${escapeHtml(tournament.name)}</h3></div><span class="tournament-stage">${participant?.seed ? `بذرة #${participant.seed}` : "المرحلة غير متاحة"}</span></div><div class="tournament-card__meta"><span>${numberFormat.format(tournament.participant_count)}/${numberFormat.format(tournament.max_participants)} مشارك</span><span>${participant?.status === "approved" ? "مشارك مؤكد" : "حالة المشاركة غير محسومة"}</span></div><div class="progress" role="progressbar" aria-label="نسبة اكتمال البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div><a class="btn btn-ghost" href="/app/tournament.html?id=${encodeURIComponent(tournament.id)}">فتح البطولة</a></article>`;
+        return `<article class="tournament-hub-item card"><div class="tournament-card__head"><div><span class="badge ${tournament.status}">${statusText[tournament.status] || tournament.status}</span><h3>${escapeHtml(tournament.name)}</h3></div><span class="tournament-stage">${participant?.seed ? `بذرة #${participant.seed}` : tournament.created_by === uid ? "منظم البطولة" : "المرحلة غير متاحة"}</span></div><div class="tournament-card__meta"><span>${numberFormat.format(tournament.participant_count)}/${numberFormat.format(tournament.max_participants)} مشارك</span><span>${participant?.status === "approved" ? "مشارك مؤكد" : tournament.created_by === uid ? "أنت منظم البطولة" : "حالة المشاركة غير محسومة"}</span></div><div class="progress" role="progressbar" aria-label="نسبة اكتمال البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div><a class="btn btn-ghost" href="/app/tournament.html?id=${encodeURIComponent(tournament.id)}">فتح البطولة</a></article>`;
       }).join("");
     }
     function renderSeason(seasons, board, uid) {
@@ -150,7 +150,7 @@
       }).catch(() => {});
     }
     function renderActivity(matches, tournaments, uid) {
-      const items = matches.filter((match) => match.status === "completed").sort((a, b) => new Date(b.completed_at || b.updated_at) - new Date(a.completed_at || a.updated_at)).slice(0, 5);
+      const items = matches.filter((match) => match.status === "completed" && (match.player_a_id === uid || match.player_b_id === uid)).sort((a, b) => new Date(b.completed_at || b.updated_at) - new Date(a.completed_at || a.updated_at)).slice(0, 5);
       el("recent-activity").innerHTML = items.length ? items.map((match) => { const tournament = tournaments.find((item) => item.id === match.tournament_id); const won = match.winner_id === uid; const draw = !match.winner_id; return `<div class="activity-row"><span class="activity-mark ${won ? "is-win" : draw ? "" : "is-loss"}">${won ? "W" : draw ? "D" : "L"}</span><div><strong>${won ? "فوز موثق" : draw ? "تعادل موثق" : "خسارة موثقة"}</strong><small>${escapeHtml(tournament?.name || "مباراة تنافسية")} · ${formatDate(match.completed_at || match.updated_at)}</small></div><span class="activity-score">${match.score_a ?? "—"} : ${match.score_b ?? "—"}</span></div>`; }).join("") : stateEmpty("لا يوجد نشاط موثق لعرضه بعد.");
     }
     async function load() {
@@ -164,17 +164,25 @@
         el("profile-link").href = "/app/profile.html?user=" + encodeURIComponent(uid);
         el("edit-display-name").value = me.display_name || "";
         renderPreview(me.display_name, me.profile?.avatar_url);
-        const [board, tournaments, seasons, trust] = await Promise.all([apiFetch("/ratings/leaderboard"), apiFetch("/tournaments"), apiFetch("/seasons").catch(() => []), apiFetch("/trust/" + uid).catch(() => null)]);
-        const rating = board.find((row) => row.user_id === uid);
+        const [board, tournaments, seasons, trust, myRating] = await Promise.all([apiFetch("/ratings/leaderboard"), apiFetch("/tournaments"), apiFetch("/seasons").catch(() => []), apiFetch("/trust/" + uid).catch(() => null), apiFetch("/ratings/" + uid).catch(() => null)]);
+        // The leaderboard only lists players who already have a rating row
+        // (created on the first match). A brand-new player's own rating
+        // comes from /ratings/{id}, which reports the initial 1000 —
+        // without it the hub showed "غير متاح" while the profile page
+        // showed 1000 (QA audit 2026-10-31).
+        const rating = myRating || board.find((row) => row.user_id === uid);
         const rank = getRank(board, uid);
-        const mine = tournaments.filter((item) => item.participants.some((participant) => participant.user_id === uid));
+        // "My tournaments" covers tournaments the user organizes as well
+        // as ones they play in: the organizer is not auto-enrolled as a
+        // participant, so a participants-only filter hid their own cups.
+        const mine = tournaments.filter((item) => item.created_by === uid || item.participants.some((participant) => participant.user_id === uid));
         const matches = (await Promise.all(mine.map((item) => apiFetch("/tournaments/" + item.id + "/matches").catch(() => [])))).flat().filter((match, index, all) => all.findIndex((item) => item.id === match.id) === index);
-        const upcoming = matches.filter((match) => match.status !== "completed" && match.status !== "cancelled" && match.player_a_id && match.player_b_id).sort((a, b) => new Date(a.scheduled_at || a.created_at) - new Date(b.scheduled_at || b.created_at))[0];
+        const upcoming = matches.filter((match) => match.status !== "completed" && match.status !== "cancelled" && match.player_a_id && match.player_b_id && (match.player_a_id === uid || match.player_b_id === uid)).sort((a, b) => new Date(a.scheduled_at || a.created_at) - new Date(b.scheduled_at || b.created_at))[0];
         setMetric("identity-elo", rating?.rating); setMetric("identity-rank", rank ? `#${rank}` : null); setMetric("identity-trust", trust?.trust_score); setMetric("identity-title-rank", null);
         setMetric("stat-elo", rating?.rating); setMetric("stat-rank", rank ? `#${rank}` : null); setMetric("stat-trust", trust?.trust_score); setMetric("stat-record", rating ? `${rating.wins} / ${rating.draws} / ${rating.losses}` : null); setMetric("stat-points", rating?.points);
         setMetric("stat-win-rate", rating?.matches_played ? `${Math.round(rating.wins * 100 / rating.matches_played)}%` : null); setMetric("stat-rank-title", null);
         if (trust) el("trust-bar").style.width = `${trust.trust_score}%`;
-        renderNextMatch(upcoming, mine, board, uid); renderTournaments(mine, uid); renderSeason(seasons, board, uid); renderActivity(matches, mine, uid);
+        renderNextMatch(upcoming, mine, board, uid, rating); renderTournaments(mine, uid); renderSeason(seasons, board, uid); renderActivity(matches, mine, uid);
         el("loading").hidden = true; el("content").hidden = false;
       } catch (error) { el("loading").innerHTML = `<div class="empty card" role="alert">تعذر تجهيز مركز اللاعب: ${escapeHtml(error.detail || "حاول تحديث الصفحة.")}</div>`; }
     }
@@ -183,7 +191,7 @@
     el("cancel-profile").addEventListener("click", () => el("profile-editor").close());
     el("edit-display-name").addEventListener("input", (event) => renderPreview(event.target.value, ""));
     el("edit-avatar-file").addEventListener("change", (event) => { const file = event.target.files[0]; if (file) renderPreview(el("edit-display-name").value, URL.createObjectURL(file)); });
-    el("profile-form").addEventListener("submit", async (event) => { event.preventDefault(); const error = el("profile-form-error"); const save = el("save-profile"); error.hidden = true; save.disabled = true; try { await apiFetch("/users/me/profile", { method: "PATCH", body: JSON.stringify({ display_name: el("edit-display-name").value.trim() }) }); const file = el("edit-avatar-file").files[0]; if (file) { const form = new FormData(); form.append("image", file); await apiFetch("/users/me/avatar", { method: "POST", body: form }); } el("profile-editor").close(); toast("تم تحديث الهوية بنجاح.", "success"); setTimeout(() => location.reload(), 350); } catch (err) { error.textContent = err.detail || "تعذر حفظ التغييرات."; error.hidden = false; } finally { save.disabled = false; } });
+    el("profile-form").addEventListener("submit", async (event) => { event.preventDefault(); const error = el("profile-form-error"); const save = el("save-profile"); error.hidden = true; save.disabled = true; try { await apiFetch("/users/me/profile", { method: "PATCH", body: JSON.stringify({ display_name: el("edit-display-name").value.trim() }) }); const file = el("edit-avatar-file").files[0]; if (file) { const form = new FormData(); form.append("image", file); await apiFetch("/users/me/avatar", { method: "POST", body: form }); } el("profile-editor").close(); toast("تم تحديث الهوية بنجاح.", "success"); setTimeout(() => location.reload(), 1400); } catch (err) { error.textContent = err.detail || "تعذر حفظ التغييرات."; error.hidden = false; } finally { save.disabled = false; } });
     load();
   </script>
 </body>

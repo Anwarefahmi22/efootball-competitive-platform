@@ -405,6 +405,32 @@
     "تعذر اعتماد النتيجة.": { fr: "Impossible de valider le score.", en: "Could not approve the score." },
     "افتح مراجعة نزاع أولًا لعرض سجل الثقة.": { fr: "Ouvrez d'abord l'examen d'un litige pour afficher l'historique de confiance.", en: "Open a dispute review first to see the trust history." },
     "عدد اللقاءات السابقة بين اللاعبَين في مباريات مكتملة": { fr: "Rencontres précédentes entre les deux joueurs en matchs terminés", en: "Previous meetings between the two players in completed matches" },
+    // QA audit fixes (2026-10-31): dynamic strings that had no entry and
+    // therefore stayed Arabic in French/English, plus reverse entries so
+    // English server error details localize through the same mechanism.
+    "مفتوح للتسجيل": { fr: "Inscriptions ouvertes", en: "Registration open" },
+    "مغلق": { fr: "Fermé", en: "Closed" },
+    "ممتلئة": { fr: "complet", en: "full" },
+    "البطولة ممتلئة": { fr: "Tournoi complet", en: "Tournament full" },
+    "انضم الآن": { fr: "Rejoindre", en: "Join now" },
+    "كل الحالات": { fr: "Tous les statuts", en: "All statuses" },
+    "بطولة جديدة بانتظار المنافسين.": { fr: "Nouveau tournoi en attente de concurrents.", en: "A new tournament awaiting competitors." },
+    "أنت المنظم": { fr: "Vous êtes l'organisateur", en: "You are the organizer" },
+    "إدارة البطولة": { fr: "Gérer le tournoi", en: "Manage tournament" },
+    "منظم البطولة": { fr: "Organisateur", en: "Organizer" },
+    "تم الانضمام!": { fr: "Inscription confirmée !", en: "You joined!" },
+    "متابعة": { fr: "Suivre", en: "Follow" },
+    "إلغاء المتابعة": { fr: "Ne plus suivre", en: "Unfollow" },
+    "المتابعون": { fr: "Abonnés", en: "Followers" },
+    "أتابع": { fr: "Abonnements", en: "Following" },
+    "تعذر تحديث المتابعة.": { fr: "Impossible de mettre à jour l'abonnement.", en: "Could not update follow." },
+    "بيانات الدخول غير صحيحة": { fr: "Identifiants invalides", en: "Invalid credentials" },
+    "هذا البريد مسجّل مسبقًا": { fr: "Cet e-mail est déjà enregistré", en: "Email already registered" },
+    "هذا البريد مسجَّل مسبقًا — جرّب الدخول": { fr: "Cet e-mail est déjà enregistré — essayez de vous connecter", en: "This email is already registered — try logging in" },
+    "أنت منضم إلى هذه البطولة مسبقًا": { fr: "Vous avez déjà rejoint ce tournoi", en: "Already joined this tournament" },
+    "لا يمكنك متابعة نفسك": { fr: "Vous ne pouvez pas vous suivre vous-même", en: "Cannot follow yourself" },
+    "البطولة ممتلئة بالكامل": { fr: "Le tournoi est complet", en: "Tournament is full" },
+    "التسجيل غير مفتوح في هذه البطولة": { fr: "Les inscriptions sont fermées pour ce tournoi", en: "Tournament is not open for registration" },
   };
 
   Object.assign(translations, {

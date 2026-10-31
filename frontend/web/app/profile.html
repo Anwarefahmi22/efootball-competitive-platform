@@ -27,11 +27,13 @@
         return;
       }
       try {
-        const [p, trust, rating, leaderboard] = await Promise.all([
+        const [p, trust, rating, leaderboard, fstats, me] = await Promise.all([
           apiFetch("/users/" + uid),
           apiFetch("/trust/" + uid).catch(() => null),
           apiFetch("/ratings/" + uid).catch(() => null),
           apiFetch("/ratings/leaderboard").catch(() => []),
+          apiFetch("/users/" + uid + "/follow-stats").catch(() => null),
+          apiFetch("/auth/me").catch(() => null),
         ]);
         const rank = rating ? leaderboard.findIndex((row) => row.user_id === uid) + 1 : 0;
         const matches = rating?.matches_played || 0;
@@ -52,7 +54,9 @@
                 <div class="profile-status"><i></i> لاعب نشط</div>
                 <h1 data-i18n-skip>${escapeHtml(p.display_name)}</h1>
                 <div class="muted" data-i18n-skip>${escapeHtml(p.country || "🌍 دولة غير محددة")} <span class="profile-dot">•</span> IGN: ${escapeHtml(p.efootball_ign || "—")}</div>
+                ${me && me.id === uid ? `<div class="muted" data-i18n-skip>✉ ${escapeHtml(me.email || "")}</div>` : ""}
               </div>
+              ${me && me.id !== uid ? `<div class="profile-follow"><button class="btn btn-primary" id="follow-btn" type="button">متابعة</button></div>` : ""}
               <div class="profile-rating">
                 <span class="profile-rating__label">التقييم الحالي</span>
                 <strong class="num">${rating ? rating.rating : "—"}</strong>
@@ -73,6 +77,8 @@
             <div><span>الانتصارات</span><strong class="accent-text">${wins}</strong></div>
             <div><span>الخسائر</span><strong class="danger-text">${losses}</strong></div>
             <div><span>نسبة الفوز</span><strong>${winRate}%</strong></div>
+            <div><span>المتابعون</span><strong id="followers-count">${fstats?.followers_count ?? 0}</strong></div>
+            <div><span>أتابع</span><strong id="following-count">${fstats?.following_count ?? 0}</strong></div>
           </div>
           <div class="profile-panels">
             <section class="profile-panel">
@@ -98,6 +104,30 @@
             <a class="btn btn-ghost" href="/app/tournaments.html">استكشف البطولات</a>
           </div>`;
         loadPlayerPosts(uid);
+        // Follow/unfollow wiring (QA audit 2026-10-31: the social API
+        // existed but no UI surface reached it). Stats are re-fetched
+        // after each toggle so the counters never drift from the server.
+        const followBtn = el("follow-btn");
+        if (followBtn && fstats) {
+          let current = fstats;
+          const paint = () => {
+            followBtn.textContent = current.is_following ? "إلغاء المتابعة" : "متابعة";
+            followBtn.classList.toggle("btn-primary", !current.is_following);
+            followBtn.classList.toggle("btn-ghost", current.is_following);
+          };
+          paint();
+          followBtn.addEventListener("click", async () => {
+            followBtn.disabled = true;
+            try {
+              await apiFetch("/users/" + uid + "/follow", { method: current.is_following ? "DELETE" : "POST", noBody: true });
+              current = await apiFetch("/users/" + uid + "/follow-stats");
+              el("followers-count").textContent = current.followers_count;
+              el("following-count").textContent = current.following_count;
+              paint();
+            } catch (e) { toast(e.detail || "تعذر تحديث المتابعة.", "error"); }
+            finally { followBtn.disabled = false; }
+          });
+        }
       } catch (err) {
         el("pcard").innerHTML = `<div class="empty" role="alert">${escapeHtml(err.detail || "تعذر تحميل الملف")}</div>`;
       }

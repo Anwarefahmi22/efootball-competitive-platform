@@ -4,7 +4,10 @@
 // localhost:8000 explicitly.
 const API_BASE =
   location.port === "8080" ? "http://localhost:8000/api/v1" : location.origin + "/api/v1";
-const API_TIMEOUT_MS = 12000;
+// 30s: the serverless function cold start plus the Neon compute wake
+// (measured ~4s) plus mobile-network latency can exceed a 12s budget on
+// a first hit, aborting requests that the server actually completes.
+const API_TIMEOUT_MS = 30000;
 
 const TOKEN_KEY = "efa_access_token";
 const REFRESH_KEY = "efa_refresh_token";

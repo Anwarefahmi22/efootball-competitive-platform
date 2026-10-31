@@ -275,6 +275,24 @@
         toast("تم إنشاء حسابك! أهلًا بك في الساحة 🏟️", "ok");
         setTimeout(() => { location.href = authReturnPath(); }, 700);
       } catch (err) {
+        // A timeout can mean the server created the account but the
+        // response was too slow (cold start + DB wake). Before reporting
+        // failure, try logging in with the same credentials: if that
+        // succeeds, the registration actually went through.
+        if (err.code === "timeout" || err.status === 408) {
+          try {
+            const pair2 = await apiFetch("/auth/login", {
+              noAuth: true, method: "POST",
+              body: JSON.stringify({
+                email: el("reg-email").value.trim(),
+                password: el("reg-password").value              }),
+            });
+            Auth.save(pair2);
+            toast("تم إنشاء حسابك! أهلًا بك في الساحة 🏟️", "ok");
+            setTimeout(() => { location.href = authReturnPath(); }, 700);
+            return;
+          } catch (_) { /* fall through to the error message */ }
+        }
         let msg = err.detail || "فشل التسجيل";
         if (err.status === 409) msg = "هذا البريد مسجَّل مسبقًا — جرّب الدخول";
         showErr("reg-err", msg);

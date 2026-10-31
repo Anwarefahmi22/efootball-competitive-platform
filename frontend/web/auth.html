@@ -202,7 +202,7 @@
     <form id="form-register" role="tabpanel" aria-labelledby="tab-register" hidden>
       <div class="field-row">
         <label class="lbl" for="reg-name">اسم اللاعب (الظاهر للجميع)</label>
-        <input class="field" id="reg-name" name="display_name" type="text" autocomplete="nickname" required minlength="2" maxlength="100" placeholder="مثال: أبو تريكة 7" />
+        <input class="field" id="reg-name" name="display_name" type="text" autocomplete="nickname" required minlength="2" maxlength="100" placeholder="Falcon_7" />
       </div>
       <div class="field-row">
         <label class="lbl" for="reg-email">البريد الإلكتروني</label>
@@ -276,6 +276,16 @@
       }
     });
 
+    const regBtn = el("btn-register");
+    const syncRegValidity = () => {
+      const ok = el("reg-name").value.trim().length >= 2
+        && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el("reg-email").value.trim())
+        && el("reg-password").value.length >= 8;
+      regBtn.disabled = !ok;
+      regBtn.style.opacity = ok ? "" : ".55";
+    };
+    ["reg-name", "reg-email", "reg-password"].forEach((id) => el(id).addEventListener("input", syncRegValidity));
+    syncRegValidity();
     formRegister.addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = el("btn-register"); btn.disabled = true; btn.textContent = "جارٍ إنشاء الحساب...";

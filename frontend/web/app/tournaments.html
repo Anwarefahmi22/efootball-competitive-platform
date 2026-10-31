@@ -14,8 +14,8 @@
       <h1 class="page-title">🏟️ البطولات</h1>
       <div class="toolbar-actions">
         <select class="field" id="filter-status">
-          <option value="">كل الحالات</option>
-          <option value="registration_open" selected>مفتوحة للتسجيل</option>
+          <option value="" selected>كل الحالات</option>
+          <option value="registration_open">مفتوحة للتسجيل</option>
           <option value="registration_closed">التسجيل مغلق</option>
           <option value="in_progress">جارية</option>
           <option value="completed">منتهية</option>
@@ -25,7 +25,7 @@
       </div>
     </div>
 
-    <div id="list" class="grid cols-3 page-list"></div>
+    <div id="list" class="grid cols-3 page-list"><div class="empty card grid-span">جارٍ تحميل البطولات…</div></div>
 
     <!-- Create modal -->
     <dialog id="dlg-create" aria-labelledby="create-title" style="background:transparent; border:none; padding:0">
@@ -102,7 +102,7 @@
         <div class="tournament-card__prize"><span>المنافسة</span><strong>نقاط وتصنيف</strong></div>
         <div class="progress" role="progressbar" aria-label="نسبة امتلاء البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
         <div class="tournament-card__footer"><span class="muted">${numberFormat.format(pct)}% ممتلئة</span>${membership}
-          ${t.status === "registration_open" && !isFull ? `<button class="btn btn-primary" type="button" data-join="${t.id}">انضم الآن</button>` : ""}
+          ${t.status === "registration_open" && !isFull && t.created_by !== currentUserId ? `<button class="btn btn-primary" type="button" data-join="${t.id}">انضم الآن</button>` : ""}
           <a class="btn btn-ghost" href="/app/tournament.html?id=${encodeURIComponent(t.id)}">${t.created_by === currentUserId ? "إدارة البطولة" : "التفاصيل"}</a>
         </div>
       </article>`;

@@ -38,10 +38,10 @@
           <p class="muted">كل مباراة موثقة تضيف سياقًا جديدًا لمسيرتك داخل الساحة.</p>
         </div>
         <div class="identity-facts">
-          <div><span>التقييم</span><strong class="num" id="identity-elo">غير متاح</strong></div>
-          <div><span>الترتيب العالمي</span><strong class="num" id="identity-rank">غير متاح</strong></div>
-          <div><span>الثقة</span><strong class="num" id="identity-trust">غير متاح</strong></div>
-          <div><span>اللقب التنافسي</span><strong id="identity-title-rank">غير متاح</strong></div>
+          <div><span>التقييم</span><strong class="num" id="identity-elo">—</strong></div>
+          <div><span>الترتيب العالمي</span><strong class="num" id="identity-rank">—</strong></div>
+          <div><span>الثقة</span><strong class="num" id="identity-trust">—</strong></div>
+          <div><span>اللقب التنافسي</span><strong id="identity-title-rank">—</strong></div>
         </div>
       </section>
 
@@ -53,18 +53,19 @@
       <section aria-labelledby="stats-title">
         <div class="section-title" id="stats-title">إحصائياتك التنافسية</div>
         <div class="competitive-stats grid cols-4">
-          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">◎</span><div class="stat-value" id="stat-elo">غير متاح</div><div class="stat-label">تقييم ELO</div><small class="dashboard-kpi__hint">آخر تقييم مسجل</small></div>
-          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">#</span><div class="stat-value" id="stat-rank">غير متاح</div><div class="stat-label">الترتيب العالمي</div><small class="dashboard-kpi__hint">مقارنة باللاعبين المسجلين</small></div>
-          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">✓</span><div class="stat-value" id="stat-trust">غير متاح</div><div class="stat-label">درجة الثقة</div><div class="progress progress-spaced"><i id="trust-bar" style="width:0%"></i></div></div>
-          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">↗</span><div class="stat-value" id="stat-record">غير متاح</div><div class="stat-label">فوز / تعادل / خسارة</div><small class="dashboard-kpi__hint">نقاط الترتيب: <span id="stat-points">غير متاح</span></small></div>
+          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">◎</span><div class="stat-value" id="stat-elo">—</div><div class="stat-label">تقييم ELO</div><small class="dashboard-kpi__hint">آخر تقييم مسجل</small></div>
+          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">#</span><div class="stat-value" id="stat-rank">—</div><div class="stat-label">الترتيب العالمي</div><small class="dashboard-kpi__hint">مقارنة باللاعبين المسجلين</small></div>
+          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">✓</span><div class="stat-value" id="stat-trust">—</div><div class="stat-label">درجة الثقة</div><div class="progress progress-spaced"><i id="trust-bar" style="width:0%"></i></div></div>
+          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">↗</span><div class="stat-value" id="stat-record">—</div><div class="stat-label">فوز / تعادل / خسارة</div><small class="dashboard-kpi__hint">نقاط الترتيب: <span id="stat-points">—</span></small></div>
         </div>
         <div class="stats-summary card">
-          <div><span>نسبة الفوز</span><strong id="stat-win-rate">غير متاح</strong></div>
-          <div><span>اللقب التنافسي</span><strong id="stat-rank-title">غير متاح</strong></div>
-          <div><span>تغيير التقييم</span><strong>غير متاح</strong><small>لا يوجد سجل تغييرات متاح بعد</small></div>
+          <div><span>نسبة الفوز</span><strong id="stat-win-rate">—</strong></div>
+          <div><span>اللقب التنافسي</span><strong id="stat-rank-title">—</strong></div>
+          <div><span>تغيير التقييم</span><strong>—</strong><small>لا يوجد سجل تغييرات متاح بعد</small></div>
         </div>
       </section>
 
+      <div id="firstrun-hint" class="card state-empty" hidden>العب أول مباراة موثقة لفتح ترتيبك العالمي ونسبة فوزك ولقبك التنافسي. <a href="/app/tournaments.html">استكشف البطولات</a></div>
       <section class="season-card card" aria-labelledby="season-title">
         <div class="section-heading"><div><span class="eyebrow">الموسم</span><h2 id="season-title">تقدم الموسم</h2></div><span class="panel-icon">✦</span></div>
         <div id="season-content" class="state-empty">لا يوجد موسم نشط مرتبط بحسابك حاليًا.</div>
@@ -116,7 +117,7 @@
     function renderPreview(name, url) {
       el("avatar-preview").innerHTML = url ? `<img src="${escapeHtml(url)}" alt="">` : escapeHtml((name || "EA").trim().slice(0, 2).toUpperCase());
     }
-    function setMetric(id, value) { el(id).textContent = value === null || value === undefined || value === "" ? "غير متاح" : value; }
+    function setMetric(id, value) { el(id).textContent = value === null || value === undefined || value === "" ? "—" : value; }
     function getRank(board, uid) { const index = board.findIndex((row) => row.user_id === uid); return index < 0 ? null : index + 1; }
     function renderNextMatch(match, tournaments, board, uid, myRating) {
       const target = el("next-match-content");
@@ -142,8 +143,8 @@
     }
     function renderSeason(seasons, board, uid) {
       const season = seasons.find((item) => item.status === "active");
-      if (!season) { el("season-content").innerHTML = stateEmpty("لا يوجد موسم نشط مرتبط بحسابك حاليًا."); return; }
-      el("season-content").innerHTML = `<div class="season-overview"><div><strong>${escapeHtml(season.name)}</strong><span>الموسم النشط</span></div><div><strong id="season-points">غير متاح</strong><span>النقاط والترتيب غير متاحين</span></div><div><span>ينتهي في</span><strong>${formatDate(season.ends_at)}</strong></div></div>`;
+      if (!season) { document.querySelector(".season-card")?.remove(); return; }
+      el("season-content").innerHTML = `<div class="season-overview"><div><strong>${escapeHtml(season.name)}</strong><span>الموسم النشط</span></div><div><strong id="season-points">—</strong><span>النقاط والترتيب غير متاحين</span></div><div><span>ينتهي في</span><strong>${formatDate(season.ends_at)}</strong></div></div>`;
       apiFetch("/seasons/" + season.id + "/standings").then((rows) => {
         const row = rows.find((item) => item.user_id === uid);
         if (row) { const node = el("season-points"); node.textContent = `${row.points} نقطة · #${rows.indexOf(row) + 1}`; node.nextElementSibling.textContent = `${row.tournaments_played} بطولة · ${row.matches_played} مباراة`; }
@@ -181,6 +182,7 @@
         setMetric("identity-elo", rating?.rating); setMetric("identity-rank", rank ? `#${rank}` : null); setMetric("identity-trust", trust?.trust_score); setMetric("identity-title-rank", null);
         setMetric("stat-elo", rating?.rating); setMetric("stat-rank", rank ? `#${rank}` : null); setMetric("stat-trust", trust?.trust_score); setMetric("stat-record", rating ? `${rating.wins} / ${rating.draws} / ${rating.losses}` : null); setMetric("stat-points", rating?.points);
         setMetric("stat-win-rate", rating?.matches_played ? `${Math.round(rating.wins * 100 / rating.matches_played)}%` : null); setMetric("stat-rank-title", null);
+        if (!rating?.matches_played) { const hint = el("firstrun-hint"); if (hint) hint.hidden = false; }
         if (trust) el("trust-bar").style.width = `${trust.trust_score}%`;
         renderNextMatch(upcoming, mine, board, uid, rating); renderTournaments(mine, uid); renderSeason(seasons, board, uid); renderActivity(matches, mine, uid);
         el("loading").hidden = true; el("content").hidden = false;

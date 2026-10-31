@@ -43,7 +43,9 @@
             <td class="accent-text">${r.wins}</td>
             <td>${r.draws}</td>
             <td class="danger-text">${r.losses}</td>
-          </tr>`).join("") || `<tr><td colspan="11" class="empty">لا توجد نتائج مطابقة.</td></tr>`;
+          </tr>`).join("") || (rows.length
+            ? `<tr><td colspan="11" class="empty">لا توجد نتائج مطابقة.</td></tr>`
+            : `<tr><td colspan="11" class="empty"><strong>🏆 لا توجد مباريات موثقة بعد</strong><br />العب مباراة موثقة وستظهر هنا في التصنيف العالمي.<br /><a class="btn btn-primary" href="/app/tournaments.html" style="margin-top:10px">استكشف البطولات</a></td></tr>`);
         render(rows);
         search.addEventListener("input", () => {
           const term = search.value.trim().toLocaleLowerCase();

@@ -3,13 +3,15 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1 import api_router, internal
+from app.core.config import settings
 from app.core.media import get_media_file, media_backend
 from app.core.tournament_lifecycle import tournament_maintenance_loop
 from app.db.session import get_db
@@ -65,7 +67,34 @@ async def lifespan(_app: FastAPI):
             await asyncio.gather(maintenance_task, return_exceptions=True)
 
 
-app = FastAPI(title="eFootball Competitive Platform", version="0.1.0", lifespan=lifespan)
+# The interactive docs expose the full API surface; keep them off in
+# production (audit 2026-11-01) and available on dev tracks via APP_ENV.
+_docs_enabled = settings.APP_ENV != "production"
+app = FastAPI(
+    title="eFootball Competitive Platform",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
+)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """422s without the submitted values.
+
+    FastAPI's default handler echoes the offending ``input`` (which for
+    the register form is the user's password) and a ``ctx`` that can
+    hold non-serializable objects. The frontend only needs type/loc/msg.
+    """
+    errors = [
+        {key: value for key, value in error.items() if key not in ("input", "ctx")}
+        for error in exc.errors()
+    ]
+    return JSONResponse(status_code=422, content={"detail": errors})
 
 app.add_middleware(
     CORSMiddleware,
@@ -91,7 +120,7 @@ async def health() -> dict[str, str]:
 
 @app.get("/", include_in_schema=False)
 async def root() -> RedirectResponse:
-    return RedirectResponse(url="/auth.html")
+    return RedirectResponse(url="/landing/")
 
 
 # The API container serves the web frontend too, so a single free-tier

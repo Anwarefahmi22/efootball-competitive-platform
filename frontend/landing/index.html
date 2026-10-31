@@ -262,10 +262,10 @@ a:focus-visible,.btn:focus-visible{outline:3px solid var(--neon);outline-offset:
   </div>
 
   <div class="stats reveal">
-    <div class="stat"><div class="num" data-count="1240">0</div><div class="lbl">لاعب مسجل</div></div>
-    <div class="stat"><div class="num" data-count="86">0</div><div class="lbl">بطولة مكتملة</div></div>
-    <div class="stat"><div class="num" data-count="5300">0</div><div class="lbl">مباراة موثقة</div></div>
-    <div class="stat"><div class="num" data-count="98">0</div><div class="lbl">نسبة عدالة النتائج %</div></div>
+    <div class="stat"><div class="num" id="stat-players" data-count="0">0</div><div class="lbl">لاعب في التصنيف</div></div>
+    <div class="stat"><div class="num" id="stat-tournaments-done" data-count="0">0</div><div class="lbl">بطولة مكتملة</div></div>
+    <div class="stat"><div class="num" id="stat-matches" data-count="0">0</div><div class="lbl">مباراة موثقة</div></div>
+    <div class="stat"><div class="num" id="stat-open" data-count="0">0</div><div class="lbl">بطولة مفتوحة للتسجيل</div></div>
   </div>
 </header>
 
@@ -316,28 +316,8 @@ a:focus-visible,.btn:focus-visible{outline:3px solid var(--neon);outline-offset:
     <h2>بطولات <b>مفتوحة للتسجيل</b> الآن</h2>
     <p>اختر بطولتك المجانية، انضم، وانتظر القرعة — الطريق إلى اللقب يبدأ من هنا.</p>
   </div>
-  <div class="grid-3">
-    <div class="card tour-card reveal">
-      <span class="badge badge-live">🔴 جارية الآن — دور المجموعات</span>
-      <h3>كأس الأبطال — موسم 1</h3>
-      <div class="tour-meta"><span>👥 32 لاعبًا</span><span>📅 مجموعات + إقصائي</span></div>
-      <div class="tour-meta"><span>🆓 مجانية</span><span class="tour-prize">مكافأة: ELO</span></div>
-      <a class="btn btn-ghost" style="justify-content:center" href="#cta">تفاصيل البطولة</a>
-    </div>
-    <div class="card tour-card reveal">
-      <span class="badge badge-open">🟢 التسجيل مفتوح</span>
-      <h3>دوري الأسبوع السريع</h3>
-      <div class="tour-meta"><span>👥 16 لاعبًا</span><span>📅 دوري من دور واحد</span></div>
-      <div class="tour-meta"><span>🆓 مجانية</span><span class="tour-prize">مكافأة: ELO</span></div>
-      <a class="btn btn-neon" style="justify-content:center" href="#cta">سجّل الآن</a>
-    </div>
-    <div class="card tour-card reveal">
-      <span class="badge badge-open">🟢 التسجيل مفتوح</span>
-      <h3>تحدي الخروج المفرد</h3>
-      <div class="tour-meta"><span>👥 64 لاعبًا</span><span>📅 خروج المغلوب</span></div>
-      <div class="tour-meta"><span>🆓 مجانية</span><span class="tour-prize">مكافأة: ELO</span></div>
-      <a class="btn btn-ghost" style="justify-content:center" href="#cta">سجّل الآن</a>
-    </div>
+  <div class="grid-3" id="landing-tournaments">
+    <div class="card tour-card reveal"><h3>جارٍ تحميل البطولات…</h3></div>
   </div>
 </section>
 
@@ -398,6 +378,60 @@ document.addEventListener('languagechange', () => {
     el.textContent = Number(el.dataset.count).toLocaleString(locale);
   });
 });
+</script>
+<script>
+  // Live platform data: the stats and tournament cards on this page are
+  // rendered from the public API — never hardcode adoption numbers here.
+  (function () {
+    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const fmtLabel = { single_elimination: "خروج المغلوب", league: "دوري كامل", group_knockout: "مجموعات وإقصائيات" };
+    const setStat = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.dataset.count = String(value);
+      const locale = window.i18n && i18n.current() === "ar" ? "ar-EG" : window.i18n && i18n.current() === "fr" ? "fr-FR" : "en-US";
+      el.textContent = Number(value).toLocaleString(locale);
+    };
+    async function loadBoard() {
+      let rows = [];
+      for (let offset = 0; offset < 500; offset += 50) {
+        const page = await fetch(`/api/v1/ratings/leaderboard?limit=50&offset=${offset}`).then((r) => r.json()).catch(() => []);
+        if (!Array.isArray(page) || !page.length) break;
+        rows = rows.concat(page);
+        if (page.length < 50) break;
+      }
+      return rows;
+    }
+    Promise.all([
+      fetch("/api/v1/tournaments").then((r) => r.json()).catch(() => []),
+      loadBoard(),
+    ]).then(([tournaments, board]) => {
+      const list = Array.isArray(tournaments) ? tournaments : [];
+      setStat("stat-players", board.length);
+      setStat("stat-tournaments-done", list.filter((t) => t.status === "completed").length);
+      setStat("stat-matches", Math.floor(board.reduce((sum, r) => sum + (r.matches_played || 0), 0) / 2));
+      const open = list.filter((t) => t.status === "registration_open");
+      setStat("stat-open", open.length);
+      const box = document.getElementById("landing-tournaments");
+      if (!box) return;
+      const shown = (open.length ? open : list).slice(0, 3);
+      box.innerHTML = shown.length ? shown.map((t) => `
+        <div class="card tour-card reveal in">
+          <span class="badge ${t.status === "registration_open" ? "badge-open" : "badge-live"}">${t.status === "registration_open" ? "🟢 التسجيل مفتوح" : "🔴 جارية الآن"}</span>
+          <h3 data-i18n-skip>${esc(t.name)}</h3>
+          <div class="tour-meta"><span>👥 ${t.participant_count || 0}/${t.max_participants}</span><span>📅 ${fmtLabel[t.format] || ""}</span></div>
+          <div class="tour-meta"><span>🆓 مجانية</span><span class="tour-prize">مكافأة: ELO</span></div>
+          <a class="btn btn-neon" style="justify-content:center" href="/auth.html">سجّل الآن</a>
+        </div>`).join("") : `
+        <div class="card tour-card reveal in">
+          <span class="badge badge-open">🟢 التسجيل مفتوح</span>
+          <h3>لا بطولات مفتوحة للتسجيل حاليًا</h3>
+          <p>أنشئ حسابك وكن أول من ينظّم بطولة في الساحة.</p>
+          <a class="btn btn-neon" style="justify-content:center" href="/auth.html">إنشاء حساب</a>
+        </div>`;
+      if (window.i18n) i18n.apply();
+    }).catch(() => {});
+  })();
 </script>
 </body>
 </html>

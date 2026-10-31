@@ -1,3 +1,4 @@
+from app.models.auth_throttle import AuthThrottle
 from app.models.evidence import MatchEvidence
 from app.models.group import Group
 from app.models.match import Match
@@ -18,4 +19,5 @@ __all__ = [
     "Season", "Group",
     "TrustEvent", "TrustEventType",
     "MediaFile",
+    "AuthThrottle",
 ]

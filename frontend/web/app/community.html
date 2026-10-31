@@ -79,7 +79,7 @@
         <article class="card post-card" data-post-id="${post.id}">
           <header class="post-header">
             <div class="post-avatar${post.author_avatar_url ? " has-image" : ""}">${avatarMarkup(post)}</div>
-            <div class="post-author-block"><a class="post-author" href="/app/profile.html?user=${encodeURIComponent(post.author_id)}" data-i18n-skip>${escapeHtml(post.author_name || "لاعب eFootball")}</a><div class="post-meta"><span data-i18n-skip>${escapeHtml(post.author_country || "لاعب في الـArena")}</span><span>•</span><span>${postTypes[post.post_type] || "تحديث"} · ${formatDate(post.created_at)}</span></div></div>
+            <div class="post-author-block"><a class="post-author" href="/app/profile.html?user=${encodeURIComponent(post.author_id)}" data-i18n-skip>${escapeHtml(post.author_name || "لاعب eFootball")}</a><div class="post-meta">${post.author_country ? `<span data-i18n-skip>${escapeHtml(post.author_country)}</span>` : "<span>لاعب في الـArena</span>"}<span>•</span><span>${postTypes[post.post_type] || "تحديث"}</span><span>· ${formatDate(post.created_at)}</span></div></div>
             <a class="post-profile-link" href="/app/profile.html?user=${encodeURIComponent(post.author_id)}" aria-label="عرض الملف">الملف ↗</a>
           </header>
           ${post.post_type === "match_result" ? `<div class="post-context-badge">✓ نتيجة مباراة موثقة</div>` : post.post_type === "achievement" ? `<div class="post-context-badge">✦ إنجاز تنافسي</div>` : ""}

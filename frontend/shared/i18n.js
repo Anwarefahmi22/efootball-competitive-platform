@@ -437,6 +437,18 @@
     // the substring length threshold, so both need whole-string keys.
     "مجانية بالكامل": { fr: "entièrement gratuit", en: "completely free" },
     "🎮 دوري": { fr: "🎮 Championnat", en: "🎮 League" },
+    "فتح البطولة": { fr: "Ouvrir le tournoi", en: "Open tournament" },
+    "بذرة #": { fr: "Tête de série #", en: "Seed #" },
+    "المكافأة التنافسية": { fr: "Récompense compétitive", en: "Competitive reward" },
+    "الملف ↗": { fr: "Profil ↗", en: "Profile ↗" },
+    "إعجاب": { fr: "J'aime", en: "Likes" },
+    "تعليقات": { fr: "Commentaires", en: "Comments" },
+    "نوع المنشور": { fr: "Type de publication", en: "Post type" },
+    "اكتب عن إنجاز، مباراة، أو بطولة...": { fr: "Écrivez sur un exploit, un match ou un tournoi...", en: "Write about an achievement, a match, or a tournament..." },
+    "عرض ملف": { fr: "Voir le profil de", en: "View profile of" },
+    "استكشف البطولات": { fr: "Explorer les tournois", en: "Explore tournaments" },
+    "الانتصارات": { fr: "Victoires", en: "Wins" },
+    "الخسائر": { fr: "Défaites", en: "Losses" },
     "تعذر تنفيذ العملية.": { fr: "Impossible d'exécuter l'opération.", en: "Could not perform the operation." },
     "دوري كامل": { fr: "Championnat complet", en: "Full league" },
     "صورة": { fr: "Image", en: "Image" },
@@ -691,9 +703,9 @@
         node.nodeValue = leading + translate(value, language) + trailing;
       }
     }
-    document.querySelectorAll("input, textarea, [title], [aria-label]").forEach((node) => {
+    document.querySelectorAll("input, textarea, img, [title], [aria-label]").forEach((node) => {
       if (node.closest("[data-i18n-skip]")) return;
-      ["placeholder", "title", "aria-label"].forEach((attribute) => {
+      ["placeholder", "title", "aria-label", "alt"].forEach((attribute) => {
         if (node.hasAttribute(attribute)) {
         node.__efaSourceAttributes ||= {};
         node.__efaSourceAttributes[attribute] ||= node.getAttribute(attribute);

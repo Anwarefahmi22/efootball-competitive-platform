@@ -53,7 +53,7 @@
               <div class="profile-identity">
                 <div class="profile-status"><i></i> لاعب نشط</div>
                 <h1 data-i18n-skip>${escapeHtml(p.display_name)}</h1>
-                <div class="muted" data-i18n-skip>${escapeHtml(p.country || "🌍 دولة غير محددة")} <span class="profile-dot">•</span> IGN: ${escapeHtml(p.efootball_ign || "—")}</div>
+                <div class="muted">${p.country ? `<span data-i18n-skip>${escapeHtml(p.country)}</span>` : "<span>🌍 دولة غير محددة</span>"} <span class="profile-dot">•</span> <span data-i18n-skip>IGN: ${escapeHtml(p.efootball_ign || "—")}</span></div>
                 ${me && me.id === uid ? `<div class="muted" data-i18n-skip>✉ ${escapeHtml(me.email || "")}</div>` : ""}
               </div>
               ${me && me.id !== uid ? `<div class="profile-follow"><button class="btn btn-primary" id="follow-btn" type="button">متابعة</button></div>` : ""}
@@ -68,7 +68,7 @@
           <div class="profile-intro">
             <div>
               <h2>هوية اللاعب</h2>
-              <p class="profile-bio" data-i18n-skip>${escapeHtml(p.bio || "هذا اللاعب لم يضف نبذة تعريفية بعد.")}</p>
+              <p class="profile-bio"${p.bio ? " data-i18n-skip" : ""}>${escapeHtml(p.bio || "هذا اللاعب لم يضف نبذة تعريفية بعد.")}</p>
             </div>
             <div class="profile-badge">⚡ تنافسي<br><small>جاهز للمواجهة</small></div>
           </div>
@@ -149,9 +149,9 @@
           text: "تحديث",
           general: "عام",
         };
-        box.innerHTML = `<ul class="record-list" data-i18n-skip>${posts.map((post) => {
+        box.innerHTML = `<ul class="record-list">${posts.map((post) => {
           const text = (post.content || "").trim().slice(0, 90) || "منشور";
-          return `<li class="record-line"><span>${escapeHtml(text)}</span><strong>${postTypes[post.post_type] || "تحديث"}</strong></li>`;
+          return `<li class="record-line"><span data-i18n-skip>${escapeHtml(text)}</span><strong>${postTypes[post.post_type] || "تحديث"}</strong></li>`;
         }).join("")}</ul>`;
       } catch (err) {
         box.innerHTML = '<p class="muted">تعذر تحميل المنشورات.</p>';

@@ -437,6 +437,7 @@
     // the substring length threshold, so both need whole-string keys.
     "مجانية بالكامل": { fr: "entièrement gratuit", en: "completely free" },
     "🎮 دوري": { fr: "🎮 Championnat", en: "🎮 League" },
+    "مثال على مباراة مباشرة": { fr: "Exemple d'un match en direct", en: "Example of a live match" },
     "جارية الآن": { fr: "En cours", en: "Live now" },
     "أنشئ أول بطولة": { fr: "Créez le premier tournoi", en: "Create the first tournament" },
     "جارٍ تحميل البطولات…": { fr: "Chargement des tournois…", en: "Loading tournaments…" },

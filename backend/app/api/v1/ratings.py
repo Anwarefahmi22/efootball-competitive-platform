@@ -60,8 +60,25 @@ async def get_rating(user_id: UUID, db: AsyncSession = Depends(get_db)) -> Ratin
     )
     rating = result.scalar_one_or_none()
     if rating is None:
-        user = await db.execute(select(User).where(User.id == user_id))
-        if user.scalar_one_or_none() is None:
+        user_result = await db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rating not found")
+        # Rating rows are created lazily on the first completed match.
+        # A registered player who has not played yet holds the initial
+        # rating (model default 1000) with zeroed counters — report
+        # that instead of 404ing on a valid player.
+        return RatingPublic(
+            user_id=user.id,
+            display_name=user.display_name,
+            rating=1000,
+            matches_played=0,
+            wins=0,
+            draws=0,
+            losses=0,
+            goals_for=0,
+            goals_against=0,
+            goal_difference=0,
+            points=0,
+        )
     return _to_public(rating)

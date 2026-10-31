@@ -4,7 +4,7 @@ function renderNav() {
   const logged = Auth.loggedIn();
   const currentPath = location.pathname;
   nav.innerHTML = `
-    <a class="brand" href="/index.html">eFootball Arena</a>
+    <a class="brand" href="/">eFootball Arena</a>
     <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="فتح قائمة التنقل">☰</button>
     <div class="nav-menu" id="nav-menu">
     <div class="spacer"></div>

@@ -42,7 +42,7 @@
         const winRate = matches ? Math.round((wins / matches) * 100) : 0;
         const trustScore = trust?.trust_score ?? 0;
         const initials = escapeHtml((p.display_name || "EA").trim().slice(0, 2).toUpperCase());
-        const joined = new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium" }).format(new Date(p.created_at));
+        const joined = new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium" }).format(new Date(p.created_at));
         el("pcard").innerHTML = `
           <div class="profile-cover">
             <div class="profile-cover__glow"></div>

@@ -101,7 +101,7 @@
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
-    const numberFormat = new Intl.NumberFormat("ar-EG");
+    const numberFormat = new Intl.NumberFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current());
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
     const statusText = { registration_open: "التسجيل مفتوح", registration_closed: "التسجيل مغلق", in_progress: "جارية", completed: "منتهية", cancelled: "ملغاة", waiting: "بانتظار المنافس", ready: "جاهزة", in_progress: "جارية" };
     const formatDate = (value) => value ? new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "الموعد غير محدد";

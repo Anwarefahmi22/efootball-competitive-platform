@@ -60,7 +60,7 @@
   <script src="/shared/nav.js"></script>
   <script>
     const id = new URLSearchParams(location.search).get("id");
-    const numberFormat = new Intl.NumberFormat("ar-EG");
+    const numberFormat = new Intl.NumberFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current());
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
     }[char]));

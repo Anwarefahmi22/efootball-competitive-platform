@@ -160,7 +160,7 @@
         return;
       }
       list.innerHTML = state.evidence.length
-        ? state.evidence.map((item) => `<div class="evidence-row"><span>${item.claimed_score_a} : ${item.claimed_score_b}</span><span class="muted">${new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.created_at))}</span><button class="btn btn-ghost evidence-view" type="button" data-evidence-id="${encodeURIComponent(item.id)}">عرض الدليل</button></div>`).join("")
+        ? state.evidence.map((item) => `<div class="evidence-row"><span>${item.claimed_score_a} : ${item.claimed_score_b}</span><span class="muted">${new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.created_at))}</span><button class="btn btn-ghost evidence-view" type="button" data-evidence-id="${encodeURIComponent(item.id)}">عرض الدليل</button></div>`).join("")
         : `<div class="empty">لم يتم إرسال أدلة بعد.</div>`;
       document.querySelectorAll(".evidence-view").forEach((button) => {
         button.addEventListener("click", async () => {

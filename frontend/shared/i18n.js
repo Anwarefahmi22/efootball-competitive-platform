@@ -431,6 +431,12 @@
     "لا يمكنك متابعة نفسك": { fr: "Vous ne pouvez pas vous suivre vous-même", en: "Cannot follow yourself" },
     "البطولة ممتلئة بالكامل": { fr: "Le tournoi est complet", en: "Tournament is full" },
     "التسجيل غير مفتوح في هذه البطولة": { fr: "Les inscriptions sont fermées pour ce tournoi", en: "Tournament is not open for registration" },
+    // Remnants caught by the post-fix visual check: "مجانية" alone was
+    // replaced inside the card's free label, leaving "بالكامل" Arabic
+    // ("Free بالكامل"), and the league format label "🎮 دوري" is under
+    // the substring length threshold, so both need whole-string keys.
+    "مجانية بالكامل": { fr: "entièrement gratuit", en: "completely free" },
+    "🎮 دوري": { fr: "🎮 Championnat", en: "🎮 League" },
   };
 
   Object.assign(translations, {

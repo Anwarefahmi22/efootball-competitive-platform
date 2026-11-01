@@ -17,11 +17,13 @@
     <main>
       <header class="page-heading community-heading">
         <div><span class="eyebrow">ساحة المنافسة</span><h1 class="page-title">مجتمع الـArena</h1><p class="muted">ما الذي يحدث الآن؟ تابع اللاعبين، النتائج الموثقة، والبطولات التي تحرك الساحة.</p></div>
-        <a class="btn btn-ghost" href="/app/ratings.html">التصنيف العام ↗</a>
       </header>
 
       <section class="card composer-card" aria-labelledby="composer-title">
-        <div class="section-heading"><div><h2 id="composer-title">ماذا حققت اليوم؟</h2><span class="muted">شارك لحظة تنافسية حقيقية مع المجتمع</span></div><span class="composer-mark" aria-hidden="true">+</span></div>
+        <div class="section-heading"><div><h2 id="composer-title">ماذا حققت اليوم؟</h2><span class="muted">شارك لحظة تنافسية حقيقية مع المجتمع</span></div><div class="composer-identity" id="composer-identity" hidden>
+          <div class="post-avatar" id="composer-avatar">⚽</div>
+          <div class="composer-identity__text"><strong id="composer-name"></strong><span class="title-chip" id="composer-title-chip" hidden></span></div>
+        </div></div>
         <form id="post-form">
           <label class="sr-only" for="post-content">محتوى المنشور</label>
           <textarea class="field post-composer" id="post-content" maxlength="2000" rows="4" placeholder="اكتب عن إنجاز، مباراة، أو بطولة..." ></textarea>
@@ -52,7 +54,7 @@
         <span class="eyebrow">اللعب. التنافس. الانتماء.</span>
         <h2>المنافسة تبدأ من المجتمع</h2>
         <p class="muted">هنا تظهر النتائج الموثقة، إنجازات اللاعبين، والبطولات التي تستحق المتابعة.</p>
-        <a class="btn btn-ghost" href="/app/ratings.html">استكشف التصنيف</a>
+        <a class="btn btn-primary" href="/app/tournaments.html">إنشاء بطولة</a>
       </div>
       <section class="card discover-card" aria-labelledby="discover-title">
         <div class="section-heading"><h2 id="discover-title">اكتشف في الـArena</h2><span class="panel-icon">✦</span></div>
@@ -65,7 +67,16 @@
   <script src="/shared/nav.js"></script>
   <script>
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
-    const postTypes = { text: "تحديث", image: "صورة", match_result: "نتيجة موثقة", achievement: "إنجاز", tournament: "بطولة", general: "عام" };
+    const postTypes = { text: "تحديث", image: "صورة", match_result: "نتيجة موثقة", match: "مباراة", achievement: "إنجاز", tournament: "بطولة", general: "عام" };
+    const TYPE_ICON = {
+      achievement: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4a2 2 0 0 0 2 4h1"/><path d="M17 6h3a2 2 0 0 1-2 4h-1"/></svg>',
+      match_result: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8l2.4 1.8-0.9 2.9h-3l-0.9-2.9z"/><path d="M12 3v3M20.5 9l-2.9 0.8M17.5 19.5l-2.2-2.1M6.5 19.5l2.2-2.1M3.5 9l2.9 0.8"/></svg>',
+      match: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8l2.4 1.8-0.9 2.9h-3l-0.9-2.9z"/><path d="M12 3v3M20.5 9l-2.9 0.8M17.5 19.5l-2.2-2.1M6.5 19.5l2.2-2.1M3.5 9l2.9 0.8"/></svg>',
+      tournament: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h3v4H4z"/><path d="M4 15h3v4H4z"/><path d="M17 10h3v4h-3z"/><path d="M7 7h4v5"/><path d="M7 17h4v-5"/><path d="M11 12h6"/></svg>',
+      general: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>',
+      text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>',
+      image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8.5 8.5"/></svg>'
+    };
     const formatDate = (value) => new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
     const likedPosts = new Set();
     const FEED_PAGE = 30;
@@ -80,12 +91,12 @@
     function postCard(post) {
       return `
         <article class="card post-card" data-post-id="${post.id}">
+          <div class="post-band pt-${escapeHtml(post.post_type || "general")}"><span class="post-band__icon">${TYPE_ICON[post.post_type] || TYPE_ICON.general}</span><span>${postTypes[post.post_type] || "تحديث"}</span></div>
           <header class="post-header">
             <div class="post-avatar${post.author_avatar_url ? " has-image" : ""}">${avatarMarkup(post)}</div>
             <div class="post-author-block"><a class="post-author" href="/app/profile.html?user=${encodeURIComponent(post.author_id)}" data-i18n-skip>${escapeHtml(post.author_name || "لاعب eFootball")}</a><div class="post-meta">${post.author_country ? `<span data-i18n-skip>${escapeHtml(post.author_country)}</span>` : "<span>لاعب في الـArena</span>"}<span>•</span><span>${postTypes[post.post_type] || "تحديث"}</span><span>· ${formatDate(post.created_at)}</span></div></div>
             <a class="post-profile-link" href="/app/profile.html?user=${encodeURIComponent(post.author_id)}" aria-label="عرض الملف">الملف ↗</a>
           </header>
-          ${post.post_type === "match_result" ? `<div class="post-context-badge">✓ نتيجة مباراة موثقة</div>` : post.post_type === "achievement" ? `<div class="post-context-badge">✦ إنجاز تنافسي</div>` : ""}
           ${post.match_id ? `<a class="post-profile-link" href="/app/match.html?id=${encodeURIComponent(post.match_id)}">عرض المباراة ↗</a>` : ""}
           ${post.content ? `<p class="post-content" data-i18n-skip>${escapeHtml(post.content)}</p>` : ""}
           ${post.has_image ? `<img class="post-image" src="${API_BASE}/posts/${encodeURIComponent(post.id)}/image" alt="صورة مرفقة بمنشور ${escapeHtml(post.author_name)}" loading="lazy" />` : ""}
@@ -157,9 +168,9 @@
       try {
         const [players, tournaments] = await Promise.all([apiFetch("/ratings/leaderboard?limit=3"), apiFetch("/tournaments?limit=3")]);
         const parts = [];
-        if (players.length) parts.push(`<div class="discover-group"><h3>لاعبون تحت الضوء</h3>${players.map((player, index) => `<a class="discover-row" href="/app/profile.html?user=${encodeURIComponent(player.user_id)}"><span class="discover-rank">#${index + 1}</span><span>${escapeHtml(player.display_name)}</span><strong>${player.rating} ELO</strong></a>`).join("")}</div>`);
-        if (tournaments.length) parts.push(`<div class="discover-group"><h3>بطولات تستحق المتابعة</h3>${tournaments.map((tournament) => `<a class="discover-row" href="/app/tournament.html?id=${encodeURIComponent(tournament.id)}"><span class="discover-dot"></span><span>${escapeHtml(tournament.name)}</span><strong>${tournament.participant_count}/${tournament.max_participants}</strong></a>`).join("")}</div>`);
-        el("discover").innerHTML = parts.join("") || '<div class="state-empty">لا توجد اقتراحات متاحة بعد.</div>';
+        if (players.length) parts.push(`<div class="discover-group"><h3>لاعبون تحت الضوء</h3>${players.map((player, index) => `<a class="discover-row" href="/app/profile.html?user=${encodeURIComponent(player.user_id)}"><span class="discover-avatar">${escapeHtml((player.display_name || "EA").trim().slice(0, 2).toUpperCase())}</span><span class="discover-rank"><span class="medal m${index + 1}"></span>#${index + 1}</span><span class="discover-name">${escapeHtml(player.display_name)}</span><strong>${player.rating} ELO</strong></a>`).join("")}</div>`);
+        if (tournaments.length) { const openFirst = [...tournaments].sort((a, b) => (b.status === "registration_open") - (a.status === "registration_open")); parts.push(`<div class="discover-group"><h3>بطولات تستحق المتابعة</h3>${openFirst.map((tournament) => `<a class="discover-row" href="/app/tournament.html?id=${encodeURIComponent(tournament.id)}"><span class="discover-dot"></span><span class="discover-name">${escapeHtml(tournament.name)}${tournament.status === "registration_open" ? ' <small class="discover-open">التسجيل مفتوح</small>' : ""}</span><strong>${tournament.participant_count}/${tournament.max_participants}</strong></a>`).join("")}</div>`); }
+        el("discover").innerHTML = parts.join("") || '<div class="discover-empty"><p>ستظهر هنا أبرز اللاعبين والبطولات عند بدء المنافسة.</p><a class="btn btn-ghost" href="/app/tournaments.html">استكشف البطولات</a></div>';
       } catch (error) { el("discover").innerHTML = '<div class="state-empty">ستظهر الاقتراحات عند توفر بيانات المنافسة.</div>'; }
     }
     el("post-image").addEventListener("change", (event) => { el("image-name").textContent = event.target.files[0]?.name || "JPG أو PNG، حتى 8MB"; });
@@ -171,9 +182,22 @@
       button.disabled = true; el("post-error").hidden = true;
       try { await apiFetch("/posts", { method: "POST", body: data }); form.reset(); el("image-name").textContent = "JPG أو PNG، حتى 8MB"; toast("تم نشر تحديثك."); await loadFeed(); } catch (error) { el("post-error").textContent = error.detail || "تعذر نشر التحديث."; el("post-error").hidden = false; } finally { button.disabled = false; }
     });
+    const titleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف الساحة" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
+    async function loadComposerIdentity() {
+      try {
+        const me = await apiFetch("/auth/me");
+        const avatar = el("composer-avatar");
+        avatar.innerHTML = me.profile?.avatar_url ? `<img src="${escapeHtml(me.profile.avatar_url)}" alt="">` : escapeHtml((me.display_name || "EA").trim().slice(0, 2).toUpperCase());
+        avatar.classList.toggle("has-image", Boolean(me.profile?.avatar_url));
+        el("composer-name").textContent = me.display_name || "";
+        el("composer-identity").hidden = false;
+        const rating = await apiFetch("/ratings/" + me.id).catch(() => null);
+        if (rating) { const chip = el("composer-title-chip"); chip.textContent = titleFor(rating.rating); chip.hidden = false; }
+      } catch (error) { /* identity block stays hidden; the composer still works */ }
+    }
     el("refresh-feed").addEventListener("click", () => loadFeed(false));
     el("load-more").addEventListener("click", () => loadFeed(true));
-    if (!Auth.loggedIn()) location.href = "/auth.html?next=" + encodeURIComponent(location.pathname); else { loadFeed(false); loadDiscover(); }
+    if (!Auth.loggedIn()) location.href = "/auth.html?next=" + encodeURIComponent(location.pathname); else { loadFeed(false); loadDiscover(); loadComposerIdentity(); }
   </script>
 </body>
 </html>

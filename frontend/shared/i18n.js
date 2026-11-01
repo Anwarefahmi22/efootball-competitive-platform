@@ -864,4 +864,10 @@
     "أهداف له": { fr: "Buts pour", en: "Goals for" },
     "أهداف عليه": { fr: "Buts contre", en: "Goals against" }
   });
+
+  Object.assign(translations, {
+    "ستظهر هنا أبرز اللاعبين والبطولات عند بدء المنافسة.": { fr: "Les meilleurs joueurs et tournois apparaîtront ici dès le début de la compétition.", en: "Top players and tournaments will appear here once the competition begins." },
+    "إنشاء بطولة": { fr: "Créer un tournoi", en: "Create a tournament" },
+    "مباراة": { fr: "Match", en: "Match" }
+  });
 })();

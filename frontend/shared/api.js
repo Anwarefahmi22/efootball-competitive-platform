@@ -153,7 +153,7 @@ const api = {
   },
 };
 
-function toast(message, type = "info") {
+function toast(message, type = "info", ttlMs = 4200) {
   let holder = document.getElementById("efa-toast");
   if (!holder) {
     holder = document.createElement("div");
@@ -166,7 +166,7 @@ function toast(message, type = "info") {
   t.className = "toast " + type;
   t.textContent = message;
   holder.appendChild(t);
-  setTimeout(() => t.remove(), 4200);
+  setTimeout(() => t.remove(), ttlMs);
 }
 
 function el(id) {

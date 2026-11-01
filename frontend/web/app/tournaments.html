@@ -190,7 +190,7 @@
     // One-shot flash message carried across a redirect (e.g. after deleting a
     // tournament on its own page — a toast cannot survive navigation by itself).
     const flashToast = sessionStorage.getItem("efa_flash_toast");
-    if (flashToast) { sessionStorage.removeItem("efa_flash_toast"); toast(flashToast); }
+    if (flashToast) { sessionStorage.removeItem("efa_flash_toast"); toast(flashToast, "info", 9000); }
 
     dlg.querySelector("#form-create").addEventListener("submit", async (e) => {
       e.preventDefault();

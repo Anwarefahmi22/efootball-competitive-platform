@@ -24,7 +24,7 @@
   <script>
     (async () => {
       const uid = new URLSearchParams(location.search).get("user");
-      if (!uid) { el("pcard").innerHTML = `<div class="empty">لم يُحدد اللاعب — <a href="/app/ratings.html">اذهب إلى التصنيف</a></div>`; return; }
+      if (!uid) { el("pcard").innerHTML = `<div class="empty" role="alert"><div class="empty-arena-mark" aria-hidden="true">👤</div><h2>لم يُحدد اللاعب</h2><p class="muted">افتح ملف اللاعب من صفحة التصنيف أو من روابط المجتمع.</p><a class="btn btn-primary" href="/app/ratings.html">العودة إلى التصنيف</a></div>`; return; }
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uid)) {
         el("pcard").innerHTML = `<div class="empty" role="alert"><h2>رابط الملف غير صالح</h2><p class="muted">افتح ملف اللاعب من صفحة التصنيف لاستخدام معرّف صحيح.</p><a class="btn btn-primary" href="/app/ratings.html">العودة إلى التصنيف</a></div>`;
         return;
@@ -41,22 +41,29 @@
         const rank = rating ? leaderboard.findIndex((row) => row.user_id === uid) + 1 : 0;
         const matches = rating?.matches_played || 0;
         const wins = rating?.wins || 0;
+        const draws = rating?.draws || 0;
         const losses = rating?.losses || 0;
         const winRate = matches ? Math.round((wins / matches) * 100) : 0;
         const trustScore = trust?.trust_score ?? 0;
         const initials = escapeHtml((p.display_name || "EA").trim().slice(0, 2).toUpperCase());
+        const titleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف الساحة" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
+        const isOwn = Boolean(me && me.id === uid);
+        const missingFields = [["نبذة تعريفية", p.bio], ["الدولة", p.country], ["IGN", p.efootball_ign], ["صورة شخصية", p.avatar_url]].filter(([, v]) => !v).map(([label]) => label);
+        const completeness = 100 - missingFields.length * 25;
         const joined = new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium" }).format(new Date(p.created_at));
         el("pcard").innerHTML = `
           <div class="profile-cover">
+            <svg class="identity-pitch" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#a3ff12" stroke-width="2"><rect x="14" y="14" width="372" height="232" rx="6"/><line x1="200" y1="14" x2="200" y2="246"/><circle cx="200" cy="130" r="44"/><circle cx="200" cy="130" r="3" fill="#a3ff12"/><path d="M14 84 h52 v92 h-52"/><path d="M386 84 h-52 v92 h52"/></g></svg>
             <div class="profile-cover__glow"></div>
             <div class="profile-hero">
-              <div class="profile-avatar${p.avatar_url ? " has-image" : ""}" aria-label="الصورة الشخصية">
+              <span class="avatar-ring profile-ring" style="--p:${trustScore}"><span class="profile-avatar${p.avatar_url ? " has-image" : ""}" aria-label="الصورة الشخصية">
                 ${p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="صورة ${escapeHtml(p.display_name)}">` : `<span data-i18n-skip>${initials}</span>`}
-              </div>
+              </span></span>
               <div class="profile-identity">
                 <div class="profile-status"><i></i> لاعب نشط</div>
                 <h1 data-i18n-skip>${escapeHtml(p.display_name)}</h1>
-                <div class="muted">${p.country ? `<span data-i18n-skip>${escapeHtml(p.country)}</span>` : "<span>🌍 دولة غير محددة</span>"} <span class="profile-dot">•</span> <span data-i18n-skip>IGN: ${escapeHtml(p.efootball_ign || "—")}</span></div>
+                ${rating ? `<span class="title-chip">${titleFor(rating.rating)}</span>` : ""}
+                <div class="muted">${p.country ? `<span data-i18n-skip>${escapeHtml(p.country)}</span>` : '<span class="blank-chip">🌍 دولة غير محددة</span>'} <span class="profile-dot">•</span> ${p.efootball_ign ? `<span data-i18n-skip>IGN: ${escapeHtml(p.efootball_ign)}</span>` : '<span class="blank-chip">IGN غير مضاف</span>'}</div>
                 ${me && me.id === uid ? `<div class="muted" data-i18n-skip>✉ ${escapeHtml(me.email || "")}</div>` : ""}
               </div>
               ${me && me.id !== uid ? `<div class="profile-follow"><button class="btn btn-primary" id="follow-btn" type="button">متابعة</button></div>` : ""}
@@ -68,6 +75,11 @@
             </div>
             <div class="profile-cover__meta"><span>عضو منذ ${joined}</span><span>${rank ? `المرتبة #${rank}` : "لم يدخل التصنيف بعد"}</span></div>
           </div>
+          ${isOwn ? `<div class="profile-complete">
+            <div class="profile-complete__head"><strong>اكتمال الملف</strong><span class="num">${completeness}%</span></div>
+            <div class="progress" role="progressbar" aria-label="اكتمال الملف" aria-valuenow="${completeness}" aria-valuemin="0" aria-valuemax="100"><i style="width:${completeness}%"></i></div>
+            ${missingFields.length ? `<p class="muted"><span>ينقصك:</span> ${missingFields.map((label) => `<span>${label}</span>`).join("، ")}</p><a class="btn btn-ghost" href="/app/dashboard.html">أكمل ملفك</a>` : `<p class="profile-complete__done">✓ ملفك مكتمل بالكامل</p>`}
+          </div>` : ""}
           <div class="profile-intro">
             <div>
               <h2>هوية اللاعب</h2>
@@ -92,6 +104,11 @@
             </section>
             <section class="profile-panel">
               <div class="section-heading"><h2>سجل المنافسة</h2><span class="panel-icon">↗</span></div>
+              <div class="record-blocks">
+                <div><strong class="accent-text">${wins}</strong><span>فوز</span></div>
+                <div><strong>${draws}</strong><span>تعادل</span></div>
+                <div><strong class="danger-text">${losses}</strong><span>خسارة</span></div>
+              </div>
               <div class="record-line"><span>نسبة الفوز</span><strong>${winRate}%</strong></div>
               <div class="progress profile-progress"><i style="width:${winRate}%"></i></div>
               <div class="record-line"><span>التقييم</span><strong>${rating ? rating.rating : "—"} ELO</strong></div>
@@ -141,7 +158,7 @@
       try {
         const posts = await apiFetch(`/posts?author_id=${encodeURIComponent(uid)}&limit=5`);
         if (!posts.length) {
-          box.innerHTML = '<p class="muted">لا توجد منشورات لهذا اللاعب بعد.</p>';
+          box.innerHTML = '<div class="profile-posts-empty"><div class="empty-arena-mark" aria-hidden="true">✦</div><p class="muted">لا توجد منشورات لهذا اللاعب بعد.</p></div>';
           return;
         }
         const postTypes = {

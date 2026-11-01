@@ -870,4 +870,20 @@
     "إنشاء بطولة": { fr: "Créer un tournoi", en: "Create a tournament" },
     "مباراة": { fr: "Match", en: "Match" }
   });
+
+  Object.assign(translations, {
+    "لم يُحدد اللاعب": { fr: "Aucun joueur spécifié", en: "No player specified" },
+    "افتح ملف اللاعب من صفحة التصنيف أو من روابط المجتمع.": { fr: "Ouvrez le profil d'un joueur depuis le classement ou les liens de la communauté.", en: "Open a player's profile from the rankings or community links." },
+    "اكتمال الملف": { fr: "Complétude du profil", en: "Profile completeness" },
+    "أكمل ملفك": { fr: "Compléter mon profil", en: "Complete my profile" },
+    "ملفك مكتمل بالكامل": { fr: "Votre profil est complet", en: "Your profile is fully complete" },
+    "ينقصك:": { fr: "Il vous manque :", en: "You're missing:" },
+    "نبذة تعريفية": { fr: "Bio", en: "Bio" },
+    "الدولة": { fr: "Pays", en: "Country" },
+    "صورة شخصية": { fr: "Photo de profil", en: "Profile photo" },
+    "IGN غير مضاف": { fr: "IGN non ajouté", en: "IGN not added" },
+    "فوز": { fr: "Victoires", en: "Wins" },
+    "تعادل": { fr: "Nuls", en: "Draws" },
+    "خسارة": { fr: "Défaites", en: "Losses" }
+  });
 })();

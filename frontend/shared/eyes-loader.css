@@ -1,0 +1,174 @@
+/* eFootball Arena — Eyes Loader (shared component)
+   Faithful port of the approved "Eyes Loading Animation — Arena Colors":
+   strokeless black almond eyes, neon-lime tomoe iris that swirls into a
+   neon-ringed iris, then closes as "Welcome" blurs into focus.
+   Modes: .elx-splash (full-screen, one 9.6s cycle), .elx-wait (looping
+   eyes for in-flight waits; fixed overlay or inline). All classes are
+   elx-prefixed to avoid collisions with page styles. */
+.elx {
+  --elx-bg: #0b1e13;
+  --elx-ink: #e8f5ee;
+  --elx-lime: #a3ff12;
+  --elx-lime-deep: #6dcc0a;
+  --elx-ring: #1f4a33;
+  --elx-eye-black: #050a07;
+  --elx-muted: #9dbfae;
+  --elx-cycle: 9.6s;
+  color: var(--elx-ink);
+  font-family: inherit;
+}
+.elx * { box-sizing: border-box; }
+
+/* ---------- Layout shells ---------- */
+.elx-splash {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--elx-bg);
+  display: flex; flex-direction: column; align-items: center;
+  overflow: hidden; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity .5s ease;
+}
+.elx-wait-overlay {
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(4, 12, 7, .78);
+  backdrop-filter: blur(3px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1.4rem;
+  transition: opacity .25s ease;
+}
+.elx-inline {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1rem; padding: 1.2rem 0;
+}
+.elx-dismissing { opacity: 0 !important; pointer-events: none !important; }
+
+/* ---------- Pitch motif backdrop ---------- */
+.elx-pitch { position: absolute; inset: 0; opacity: .06; pointer-events: none; }
+.elx-pitch svg { width: 100%; height: 100%; display: block; }
+
+/* ---------- Title (splash) ---------- */
+.elx-title { margin-top: clamp(3rem, 10vh, 6.5rem); text-align: center; line-height: 1.04; user-select: none; }
+.elx-title .elx-l1, .elx-title .elx-l2 {
+  display: block; font-size: clamp(2.4rem, 8vw, 4.2rem); font-weight: 800; letter-spacing: .01em;
+}
+.elx-title .elx-l1 { color: var(--elx-ink); }
+.elx-title .elx-l2 { color: var(--elx-lime); }
+
+/* ---------- Center zone ---------- */
+.elx-center {
+  position: relative; flex: 1; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(1.8rem, 4.5vh, 2.8rem);
+}
+.elx-glow {
+  position: absolute; left: 50%; top: 50%;
+  width: min(88vw, 680px); aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #143325 0%, rgba(20, 51, 37, 0) 65%);
+  pointer-events: none;
+}
+.elx-eyes { display: flex; align-items: center; justify-content: center; gap: clamp(1.2rem, 7vw, 5.5rem); width: min(92vw, 880px); padding: 0 1rem; }
+.elx-wait-overlay .elx-eyes, .elx-inline .elx-eyes { width: min(78vw, 380px); gap: clamp(1rem, 5vw, 3rem); }
+.elx-inline .elx-eyes { width: min(70vw, 300px); }
+.elx-eye { width: 50%; height: auto; display: block; overflow: visible; }
+.elx-eye.elx-flip { transform: scaleX(-1); }
+
+/* ---------- Splash cycle keyframes (one run, fill forwards) ---------- */
+.elx-once .elx-lid, .elx-once .elx-tomoe, .elx-once .elx-rings,
+.elx-once .elx-welcome span, .elx-once .elx-wordmark {
+  animation-iteration-count: 1; animation-fill-mode: forwards;
+}
+.elx-lid { transform-box: fill-box; transform-origin: 50% 50%; animation: elx-lid var(--elx-cycle) linear infinite; }
+@keyframes elx-lid {
+  0%     { transform: scaleY(.06); opacity: 1; animation-timing-function: cubic-bezier(.22, 1.35, .36, 1); }
+  4.2%   { transform: scaleY(.45); opacity: 1; animation-timing-function: cubic-bezier(.22, 1.35, .36, 1); }
+  6.25%  { transform: scaleY(1);   opacity: 1; animation-timing-function: linear; }
+  58.3%  { transform: scaleY(1);   opacity: 1; animation-timing-function: cubic-bezier(.55, .06, .68, .19); }
+  60.4%  { transform: scaleY(.38); opacity: 1; animation-timing-function: cubic-bezier(.55, .06, .68, .19); }
+  64.6%  { transform: scaleY(.05); opacity: 0; }
+  100%   { transform: scaleY(.05); opacity: 0; }
+}
+.elx-tomoe { transform-box: fill-box; transform-origin: 50% 50%; animation: elx-tomoe var(--elx-cycle) linear infinite; }
+@keyframes elx-tomoe {
+  0%    { opacity: 1; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 8px rgba(163, 255, 18, .28)) blur(0);    animation-timing-function: ease-in-out; }
+  13%   { opacity: 1; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 15px rgba(163, 255, 18, .45)) blur(0);   animation-timing-function: ease-in-out; }
+  25%   { opacity: 1; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 9px rgba(163, 255, 18, .30)) blur(0);    animation-timing-function: cubic-bezier(.55, .06, .68, .19); }
+  26.2% { opacity: 1; transform: rotate(64deg) scale(1.05);  filter: drop-shadow(0 0 12px rgba(163, 255, 18, .40)) blur(1.4px); animation-timing-function: cubic-bezier(.55, .06, .68, .19); }
+  27.1% { opacity: 1; transform: rotate(150deg) scale(.92);  filter: drop-shadow(0 0 10px rgba(163, 255, 18, .35)) blur(2px);   animation-timing-function: cubic-bezier(.55, .06, .68, .19); }
+  29.2% { opacity: 0; transform: rotate(300deg) scale(.4);   filter: drop-shadow(0 0 0 rgba(163, 255, 18, 0)) blur(0); }
+  100%  { opacity: 0; transform: rotate(300deg) scale(.4);   filter: drop-shadow(0 0 0 rgba(163, 255, 18, 0)) blur(0); }
+}
+.elx-rings { transform-box: fill-box; transform-origin: 50% 50%; animation: elx-rings var(--elx-cycle) linear infinite; }
+@keyframes elx-rings {
+  0%    { opacity: 0; transform: rotate(-300deg) scale(.4);  filter: drop-shadow(0 0 0 rgba(163, 255, 18, 0)) blur(0); }
+  25%   { opacity: 0; transform: rotate(-300deg) scale(.4);  filter: drop-shadow(0 0 0 rgba(163, 255, 18, 0)) blur(0);      animation-timing-function: cubic-bezier(.16, 1, .3, 1); }
+  26.2% { opacity: 1; transform: rotate(-190deg) scale(.7);  filter: drop-shadow(0 0 8px rgba(163, 255, 18, .18)) blur(2px);   animation-timing-function: cubic-bezier(.16, 1, .3, 1); }
+  28%   { opacity: 1; transform: rotate(-52deg) scale(1.05); filter: drop-shadow(0 0 12px rgba(163, 255, 18, .22)) blur(1.2px); animation-timing-function: cubic-bezier(.16, 1, .3, 1); }
+  29.2% { opacity: 1; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 9px rgba(163, 255, 18, .20)) blur(0);    animation-timing-function: ease-in-out; }
+  43%   { opacity: 1; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 14px rgba(163, 255, 18, .30)) blur(0);   animation-timing-function: ease-in-out; }
+  58.3% { opacity: 1; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 9px rgba(163, 255, 18, .20)) blur(0);    animation-timing-function: cubic-bezier(.55, .06, .68, .19); }
+  60.4% { opacity: 0; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 0 rgba(163, 255, 18, 0)) blur(0); }
+  100%  { opacity: 0; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 0 rgba(163, 255, 18, 0)) blur(0); }
+}
+
+/* ---------- Wait-mode keyframes (5.6s loop: tomoe ↔ rings, lid stays open) ---------- */
+.elx-waiting .elx-lid { animation: elx-wait-open .7s cubic-bezier(.22, 1.35, .36, 1) 1 forwards; }
+@keyframes elx-wait-open { from { transform: scaleY(.06); } to { transform: scaleY(1); } }
+.elx-waiting .elx-tomoe { animation: elx-wait-tomoe 5.6s linear infinite; }
+@keyframes elx-wait-tomoe {
+  0%   { opacity: 1; transform: rotate(0deg) scale(1);    filter: drop-shadow(0 0 10px rgba(163, 255, 18, .35)) blur(0); animation-timing-function: ease-in-out; }
+  21%  { opacity: 1; transform: rotate(0deg) scale(1);    filter: drop-shadow(0 0 15px rgba(163, 255, 18, .45)) blur(0); animation-timing-function: cubic-bezier(.55, .06, .68, .19); }
+  25%  { opacity: 1; transform: rotate(120deg) scale(.95); filter: drop-shadow(0 0 10px rgba(163, 255, 18, .35)) blur(1.6px); animation-timing-function: cubic-bezier(.55, .06, .68, .19); }
+  29%  { opacity: 0; transform: rotate(280deg) scale(.45); filter: blur(0); }
+  71%  { opacity: 0; transform: rotate(280deg) scale(.45); animation-timing-function: cubic-bezier(.16, 1, .3, 1); }
+  75%  { opacity: 1; transform: rotate(60deg) scale(.8);  filter: drop-shadow(0 0 10px rgba(163, 255, 18, .35)) blur(1.6px); animation-timing-function: cubic-bezier(.16, 1, .3, 1); }
+  79%  { opacity: 1; transform: rotate(0deg) scale(1);    filter: drop-shadow(0 0 10px rgba(163, 255, 18, .35)) blur(0); }
+  100% { opacity: 1; transform: rotate(0deg) scale(1);    filter: drop-shadow(0 0 10px rgba(163, 255, 18, .35)) blur(0); }
+}
+.elx-waiting .elx-rings { animation: elx-wait-rings 5.6s linear infinite; }
+@keyframes elx-wait-rings {
+  0%   { opacity: 0; transform: rotate(-280deg) scale(.45); filter: blur(0); }
+  21%  { opacity: 0; transform: rotate(-280deg) scale(.45); filter: blur(0); animation-timing-function: cubic-bezier(.16, 1, .3, 1); }
+  25%  { opacity: 1; transform: rotate(-120deg) scale(.8);  filter: drop-shadow(0 0 8px rgba(163, 255, 18, .20)) blur(1.6px); animation-timing-function: cubic-bezier(.16, 1, .3, 1); }
+  29%  { opacity: 1; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 10px rgba(163, 255, 18, .25)) blur(0); animation-timing-function: ease-in-out; }
+  50%  { opacity: 1; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 14px rgba(163, 255, 18, .32)) blur(0); animation-timing-function: cubic-bezier(.55, .06, .68, .19); }
+  71%  { opacity: 1; transform: rotate(0deg) scale(1);      filter: drop-shadow(0 0 9px rgba(163, 255, 18, .20)) blur(0); animation-timing-function: cubic-bezier(.55, .06, .68, .19); }
+  75%  { opacity: 0; transform: rotate(240deg) scale(.45);  filter: blur(0); }
+  100% { opacity: 0; transform: rotate(240deg) scale(.45);  filter: blur(0); }
+}
+
+/* ---------- Welcome + progress + wordmark + label ---------- */
+.elx-welcome { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; user-select: none; }
+.elx-welcome span {
+  font-size: clamp(2.6rem, 10vw, 5.2rem); font-weight: 800; letter-spacing: .05em;
+  color: var(--elx-ink);
+  text-shadow: 0 0 22px rgba(163, 255, 18, .55), 0 0 60px rgba(163, 255, 18, .30);
+  opacity: 0; animation: elx-welcome var(--elx-cycle) linear infinite;
+}
+@keyframes elx-welcome {
+  0%, 66.7% { opacity: 0; filter: blur(14px); transform: scale(.96); letter-spacing: .05em; animation-timing-function: cubic-bezier(.22, 1, .36, 1); }
+  76%       { opacity: 1; filter: blur(0);    transform: scale(1);  letter-spacing: 0; }
+  100%      { opacity: 1; filter: blur(0);    transform: scale(1);  letter-spacing: 0; }
+}
+.elx-progress { display: flex; align-items: center; gap: .7rem; }
+.elx-progress .elx-track { width: 180px; height: 2px; background: var(--elx-ring); border-radius: 2px; overflow: hidden; }
+.elx-progress .elx-fill { width: 100%; height: 100%; background: var(--elx-lime); transform: scaleX(0); transform-origin: left center; will-change: transform; }
+.elx-progress .elx-pct { font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; font-size: 11px; color: var(--elx-muted); min-width: 4ch; font-variant-numeric: tabular-nums; user-select: none; }
+.elx-wordmark {
+  padding-bottom: max(1.4rem, env(safe-area-inset-bottom));
+  font-size: 11px; font-weight: 600; letter-spacing: .38em; text-transform: uppercase;
+  color: var(--elx-muted); user-select: none; opacity: 0;
+  animation: elx-wordmark var(--elx-cycle) linear infinite;
+}
+@keyframes elx-wordmark {
+  0%, 68.7% { opacity: 0; animation-timing-function: ease-out; }
+  77%, 100% { opacity: 1; }
+}
+.elx-label { color: var(--elx-muted); font-size: .95rem; user-select: none; text-align: center; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .elx-lid, .elx-tomoe, .elx-rings, .elx-welcome span, .elx-wordmark { animation: none !important; }
+  .elx-waiting .elx-rings { opacity: 0; }
+  .elx-waiting .elx-tomoe { opacity: 1; }
+}

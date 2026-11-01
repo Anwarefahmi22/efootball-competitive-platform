@@ -205,6 +205,7 @@ footer b{color:var(--neon);font-family:'Orbitron'}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}.kicker{animation:none}.btn,.card{transition:none}}
 a:focus-visible,.btn:focus-visible{outline:3px solid var(--neon);outline-offset:4px}
 </style>
+<link rel="stylesheet" href="/shared/eyes-loader.css" />
 </head>
 <body>
 <a class="skip-link" href="#main-content">تجاوز إلى المحتوى</a>
@@ -352,6 +353,8 @@ a:focus-visible,.btn:focus-visible{outline:3px solid var(--neon);outline-offset:
 </footer>
 
 <script src="/shared/i18n.js"></script>
+<script src="/shared/eyes-loader.js"></script>
+<script>if (window.EyesLoader) EyesLoader.splash();</script>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const language = document.getElementById("landing-language");

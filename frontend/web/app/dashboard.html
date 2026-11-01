@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="stylesheet" href="/shared/eyes-loader.css" />
 </head>
 <body>
   <div class="container competitive-hub">
@@ -101,6 +102,7 @@
   <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/eyes-loader.js"></script>
   <script>
     const numberFormat = new Intl.NumberFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current());
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
@@ -194,6 +196,7 @@
     el("edit-display-name").addEventListener("input", (event) => renderPreview(event.target.value, ""));
     el("edit-avatar-file").addEventListener("change", (event) => { const file = event.target.files[0]; if (file) renderPreview(el("edit-display-name").value, URL.createObjectURL(file)); });
     el("profile-form").addEventListener("submit", async (event) => { event.preventDefault(); const error = el("profile-form-error"); const save = el("save-profile"); error.hidden = true; save.disabled = true; try { await apiFetch("/users/me/profile", { method: "PATCH", body: JSON.stringify({ display_name: el("edit-display-name").value.trim() }) }); const file = el("edit-avatar-file").files[0]; if (file) { const form = new FormData(); form.append("image", file); await apiFetch("/users/me/avatar", { method: "POST", body: form }); } el("profile-editor").close(); toast("تم تحديث الهوية بنجاح.", "success"); setTimeout(() => location.reload(), 1400); } catch (err) { error.textContent = err.detail || "تعذر حفظ التغييرات."; error.hidden = false; } finally { save.disabled = false; } });
+    if (window.EyesLoader) EyesLoader.wait(el("loading"), { label: "جارٍ تجهيز مركزك التنافسي…" });
     load();
   </script>
 </body>

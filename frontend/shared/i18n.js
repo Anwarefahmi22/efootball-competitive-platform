@@ -908,4 +908,10 @@
     "حذف نهائي": { fr: "Supprimer définitivement", en: "Delete permanently" },
     "نهائي": { fr: "définitif", en: "permanently" }
   });
+
+  Object.assign(translations, {
+    "كأس الساحة": { fr: "Coupe de l'arène", en: "Arena Cup" },
+    "كرة قدم ثلاثية الأبعاد — اسحبها لتدويرها": { fr: "Ballon de football 3D — faites-le glisser pour le faire tourner", en: "3D football — drag to spin it" },
+    "كأس الساحة ثلاثي الأبعاد": { fr: "Coupe de l'arène en 3D", en: "3D Arena Cup" }
+  });
 })();

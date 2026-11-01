@@ -253,7 +253,7 @@
         el("delete-error").hidden = false;
         return;
       }
-      toast("تم حذف البطولة.");
+      sessionStorage.setItem("efa_flash_toast", "تم حذف البطولة.");
       location.href = "/app/tournaments.html";
     });
     el("delete-dialog").addEventListener("cancel", (event) => {

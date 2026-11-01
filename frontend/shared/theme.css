@@ -704,7 +704,7 @@ tr.is-me td:first-child { border-inline-start: 3px solid var(--neon); }
 .match-missing__actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
 /* ——— "The bin eats the label" delete button (faithful to the reference video) ——— */
-.gulp-btn { position: relative; border-radius: 999px; padding: 10px 22px; gap: 9px; color: #fff; background: linear-gradient(135deg, #8f1d2c, #5c101d); border: 1px solid rgba(255,77,94,.45); box-shadow: 0 10px 24px rgba(255,77,94,.16); font-weight: 800; transition: width .45s cubic-bezier(.6,0,.3,1), padding .45s cubic-bezier(.6,0,.3,1), box-shadow .25s ease; }
+.gulp-btn { position: relative; overflow: hidden; border-radius: 999px; padding: 10px 22px; gap: 9px; color: #fff; background: linear-gradient(135deg, #8f1d2c, #5c101d); border: 1px solid rgba(255,77,94,.45); box-shadow: 0 10px 24px rgba(255,77,94,.16); font-weight: 800; transition: width .45s cubic-bezier(.6,0,.3,1), padding .45s cubic-bezier(.6,0,.3,1), box-shadow .25s ease; }
 .gulp-btn:hover { box-shadow: 0 12px 28px rgba(255,77,94,.28); }
 .gulp-btn:disabled { opacity: 1; cursor: wait; }
 .gulp-icon { width: 20px; height: 20px; flex: none; }
@@ -714,8 +714,9 @@ tr.is-me td:first-child { border-inline-start: 3px solid var(--neon); }
 .gulp-word { display: inline-block; transition: transform .38s cubic-bezier(.5,0,.8,.4), opacity .3s ease; }
 .gulp-btn[data-state="eating"] .gulp-word:nth-child(1), .gulp-btn[data-state="busy"] .gulp-word:nth-child(1) { transform: translateX(13px) scale(.12); opacity: 0; }
 .gulp-btn[data-state="eating"] .gulp-word:nth-child(2), .gulp-btn[data-state="busy"] .gulp-word:nth-child(2) { transform: translateX(30px) scale(.12); opacity: 0; transition-delay: .16s; }
-.gulp-btn[data-state="busy"] { padding-inline: 0; justify-content: center; }
-.gulp-ring { position: absolute; top: -4px; inset-inline-start: -4px; width: calc(100% + 8px); height: calc(100% + 8px); opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+.gulp-btn[data-state="busy"] { padding-inline: 0; justify-content: center; flex: none; }
+.gulp-btn[data-state="busy"] .gulp-label { display: none; }
+.gulp-ring { position: absolute; top: 0; inset-inline-start: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity .25s ease; }
 .gulp-ring circle { fill: none; stroke-width: 3; }
 .gulp-ring__track { stroke: rgba(255,77,94,.18); }
 .gulp-ring__arc { stroke: var(--danger); stroke-linecap: round; stroke-dasharray: 84 35.4; transform-box: fill-box; transform-origin: center; }

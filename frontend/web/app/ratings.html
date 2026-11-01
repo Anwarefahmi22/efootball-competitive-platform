@@ -37,7 +37,11 @@
       try {
         const rows = await apiFetch("/ratings/leaderboard");
         const search = el("player-search");
-        const myId = localStorage.getItem(USER_KEY);
+        // The viewer's id comes from /auth/me directly: the localStorage
+        // copy is only written by some pages, so relying on it left the
+        // my-rank chip and row highlight missing for most sessions.
+        const me = await apiFetch("/auth/me").catch(() => null);
+        const myId = me?.id;
         const initials = (name) => escapeHtml((name || "EA").trim().slice(0, 2).toUpperCase());
         if (!rows.length) {
           el("search-wrap").hidden = true;

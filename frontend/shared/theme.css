@@ -629,7 +629,8 @@ table.table tr:hover td { background: rgba(163, 255, 18, .04); }
 .my-rank { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; border: 1px solid rgba(163,255,18,.4); background: linear-gradient(120deg, rgba(163,255,18,.10), rgba(16,40,28,.6)); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-weight: 700; }
 .my-rank b { color: var(--neon); }
 .my-rank a { margin-inline-start: auto; font-size: .86rem; }
-tr.is-me td { background: rgba(163,255,18,.07); }
+tr.is-me td { background: rgba(163,255,18,.10); }
+tr.is-me td:first-child { border-inline-start: 3px solid var(--neon); }
 .board-empty { text-align: center; padding: 38px 20px 30px; }
 .board-empty__art { width: 200px; height: 108px; }
 .board-empty__title { display: block; font-size: 1.15rem; margin: 8px 0 6px; color: var(--text); }

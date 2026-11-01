@@ -37,7 +37,7 @@
 
       <section class="identity-card card" aria-labelledby="identity-title">
         <svg class="identity-pitch" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#a3ff12" stroke-width="2"><rect x="14" y="14" width="372" height="232" rx="6"/><line x1="200" y1="14" x2="200" y2="246"/><circle cx="200" cy="130" r="44"/><circle cx="200" cy="130" r="3" fill="#a3ff12"/><path d="M14 84 h52 v92 h-52"/><path d="M386 84 h-52 v92 h52"/></g></svg>
-        <span class="stage3d stage3d--ball"><i class="stage3d__shadow" aria-hidden="true"></i><img class="stage3d__fallback" src="/football.webp" alt="" width="200" height="200"><canvas data-arena3d="ball" hidden role="img" aria-label="كرة قدم ثلاثية الأبعاد — اسحبها لتدويرها"></canvas></span>
+        <span class="hero-photo hero-photo--ball"><i class="hero-photo__shadow" aria-hidden="true"></i><img src="/football.webp" alt="" width="200" height="200"></span>
         <div class="identity-card__main">
           <span class="eyebrow">هويتك التنافسية</span>
           <h2 id="identity-title">اعرف مستواك، ثم اختر تحديك التالي.</h2>
@@ -47,7 +47,7 @@
           <div><span>التقييم</span><strong class="num" id="identity-elo">—</strong></div>
           <div><span>الترتيب العالمي</span><strong class="num" id="identity-rank">—</strong></div>
           <div><span>اللقب التنافسي</span><strong id="identity-title-rank">—</strong></div>
-          <div class="identity-fact--trophy"><span class="stage3d stage3d--trophy"><i class="stage3d__shadow" aria-hidden="true"></i><svg class="stage3d__fallback" viewBox="0 0 24 24" fill="none" stroke="#d9a83f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 5H4.5a2.5 2.5 0 0 0 2.6 4.4M17 5h2.5a2.5 2.5 0 0 1-2.6 4.4"/><path d="M12 14v3M8.5 20h7M12 17c-1.2 0-2 .8-2.2 3h4.4C14 17.8 13.2 17 12 17z"/></svg><canvas data-arena3d="trophy" hidden role="img" aria-label="كأس الساحة ثلاثي الأبعاد"></canvas></span><span>كأس الساحة</span></div>
+          <div class="identity-fact--trophy"><img class="fact-trophy" src="/trophy.webp" alt="كأس الساحة" width="440" height="589"><span>كأس الساحة</span></div>
         </div>
       </section>
 
@@ -122,7 +122,6 @@
   <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
-  <script src="/shared/arena3d.js"></script>
   <script src="/shared/eyes-loader.js"></script>
   <script>
     const numberFormat = new Intl.NumberFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current());

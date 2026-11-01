@@ -403,6 +403,7 @@ function buildStops() {
   const hudStopS = window.innerWidth > 820
     ? docTop(hud) + (hud.offsetHeight - vh) / 2
     : docTop(hudStage) + hudStage.offsetHeight / 2 - vh * 0.5;
+  const dipStop = { s: 0, x: 50, y: 76, k: 0.50, o: 1 };
   let podStop;
   if (window.innerWidth > 820) {
     const offPx = docTop(pedestal) - docTop(champion);
@@ -419,12 +420,14 @@ function buildStops() {
     { s: stageTop + stageTotal * 0.50,             x: 72, y: 50, k: 1.30, o: 1 },
     { s: stageTop + stageTotal * 0.86,             x: 50, y: 50, k: 0.95, o: 1 },
     { s: hudStopS,                                 x: 50, y: 50, k: 0.55, o: 1 },
+    dipStop,
     podStop,
     { s: docTop(finale) - vh * 0.30,               x: 50, y: 32, k: 0.42, o: 0 },
   ];
   /* Phone layout (<=820px): panels become bottom sheets and the HUD stacks,
      so the ball rides higher and smaller, and docks into the HUD's reserved
      top space instead of the stacked cards. */
+  dipStop.s = Math.max(stops[3].s + 10, podStop.s - vh * 0.55);
   if (window.innerWidth <= 820) {
     stops[1].x = 30; stops[1].y = 36; stops[1].k = 0.85;
     stops[2].x = 70; stops[2].y = 36; stops[2].k = 0.85;

@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/shared/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/shared/favicon-192.png" />
+  <link rel="apple-touch-icon" href="/shared/favicon-192.png" />
   <link rel="stylesheet" href="/shared/eyes-loader.css" />
   <style>
     body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
@@ -112,6 +115,7 @@
        On this page it sits in flow, end-aligned above the logo instead. */
     .auth-card .auth-language { position: static; display: flex; width: fit-content; margin-inline-start: auto; margin-bottom: 12px; }
     .logo { text-align: center; margin-bottom: 22px; }
+    .logo .logo-img { height: 108px; width: auto; margin-bottom: 8px; filter: drop-shadow(0 12px 30px rgba(163,255,18,.16)); }
     .logo .mark {
       font-family: "Orbitron", monospace; font-size: 1.5rem; color: #a3ff12;
       letter-spacing: 2px; font-weight: 700; text-shadow: 0 0 24px rgba(163,255,18,.35);
@@ -175,7 +179,8 @@
       </select>
     </label>
     <div class="logo">
-      <div class="mark">⚡ EFOOTBALL ARENA</div>
+      <img class="logo-img" src="/shared/logo-symbol.webp" alt="eFootball Arena" />
+      <div class="mark">EFOOTBALL ARENA</div>
       <div class="sub">بطاقة دخول الملعب</div>
     </div>
 

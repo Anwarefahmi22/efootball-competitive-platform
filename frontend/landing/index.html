@@ -9,6 +9,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/shared/eyes-loader.css" />
+<link rel="icon" type="image/png" sizes="32x32" href="/shared/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="/shared/favicon-192.png" />
+<link rel="apple-touch-icon" href="/shared/favicon-192.png" />
 <style>
   :root{
     --bg:#0b1e13; --bg-deep:#050d08; --surface:#10281c; --surface2:#143325;
@@ -52,6 +55,7 @@
   .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:900;letter-spacing:.02em}
   .brand .mark{width:34px;height:34px;border:2px solid var(--neon);border-radius:50%;display:grid;place-items:center;color:var(--neon);font-family:"Anton",sans-serif;font-size:15px}
   .brand small{display:block;font-weight:600;color:var(--muted);font-size:.68rem;letter-spacing:.28em}
+  .brand .mark-img{height:42px;width:auto;display:block}
   .nav-links{display:flex;gap:30px;font-weight:700;font-size:.95rem}
   .nav-links a{text-decoration:none;color:var(--muted)}
   .nav-links a.hot{color:var(--accent)}
@@ -219,7 +223,7 @@
 <!-- ================= HERO ================= -->
 <header class="hero">
   <nav class="nav"><div class="wrap nav-in">
-    <a class="brand" href="/landing/"><span class="mark">A</span><span>eFootball Arena<small>EST. 2026</small></span></a>
+    <a class="brand" href="/landing/"><img class="mark-img" src="/shared/logo-symbol.webp" alt="eFootball Arena" /><span>eFootball Arena<small>EST. 2026</small></span></a>
     <div class="nav-links">
       <a class="hot" href="/app/tournaments.html">البطولات</a>
       <a href="#stage">كيف تعمل؟</a>

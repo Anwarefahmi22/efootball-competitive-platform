@@ -46,7 +46,9 @@ h1, h2, h3 { margin: 0 0 .5em; }
   font-family: "Orbitron", monospace;
   font-weight: 700; font-size: 1.05rem; color: var(--neon);
   letter-spacing: 1px;
+  display: flex; align-items: center; gap: 10px; text-decoration: none;
 }
+.navbar .brand-logo { height: 38px; width: auto; display: block; }
 .navbar .spacer { flex: 1; }
 .nav-menu { display: flex; align-items: center; gap: 12px; flex: 1; }
 .nav-toggle { display: none; background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font: inherit; cursor: pointer; }

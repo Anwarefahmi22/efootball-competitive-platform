@@ -853,4 +853,15 @@
     "2 أو 4 أو 8 مجموعات": { fr: "2, 4 ou 8 groupes", en: "2, 4 or 8 groups" },
     "إنشاء بهذا النظام": { fr: "Créer dans ce format", en: "Create in this format" }
   });
+
+  Object.assign(translations, {
+    "منصة التتويج": { fr: "Podium", en: "Podium" },
+    "العرش بانتظار صاحبه": { fr: "Le trône attend son champion", en: "The throne awaits its champion" },
+    "لا توجد مباريات موثقة بعد — العب مباراة موثقة وستظهر هنا في التصنيف العالمي.": { fr: "Aucun match vérifié pour le moment — jouez un match vérifié et vous apparaîtrez ici au classement mondial.", en: "No verified matches yet — play a verified match and you will appear here in the world rankings." },
+    "ترتيبك الحالي:": { fr: "Votre rang actuel :", en: "Your current rank:" },
+    "افتح ملفك": { fr: "Ouvrir mon profil", en: "Open my profile" },
+    "فارق الأهداف": { fr: "Différence de buts", en: "Goal difference" },
+    "أهداف له": { fr: "Buts pour", en: "Goals for" },
+    "أهداف عليه": { fr: "Buts contre", en: "Goals against" }
+  });
 })();

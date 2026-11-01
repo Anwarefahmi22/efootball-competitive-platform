@@ -15,12 +15,14 @@
   <div class="container">
     <div class="page-heading">
       <div><span class="eyebrow">ساحة المنافسة</span><h1 class="page-title">📊 التصنيف العام</h1><p class="muted">النقاط أولا، ثم فارق الأهداف والأهداف المسجلة، مع ELO ككاسر تعادل.</p></div>
-      <label class="search-field" for="player-search">بحث عن لاعب<input class="field" id="player-search" type="search" placeholder="اكتب اسم اللاعب…" autocomplete="off" /></label>
+      <label class="search-field" id="search-wrap" for="player-search">بحث عن لاعب<input class="field" id="player-search" type="search" placeholder="اكتب اسم اللاعب…" autocomplete="off" /></label>
     </div>
+    <div id="my-rank" class="my-rank" hidden></div>
+    <section id="podium" class="podium" hidden aria-label="منصة التتويج"></section>
     <div class="card leaderboard-card">
       <table class="table">
         <caption class="sr-only">جدول التصنيف العام للاعبي المنصة</caption>
-        <thead><tr><th>#</th><th>اللاعب</th><th>نقاط</th><th>فارق</th><th>له</th><th>عليه</th><th>ELO</th><th>لعب</th><th>فاز</th><th>تعادل</th><th>خسر</th></tr></thead>
+        <thead><tr><th>#</th><th>اللاعب</th><th>نقاط</th><th>فارق الأهداف</th><th>أهداف له</th><th>أهداف عليه</th><th>ELO</th><th>لعب</th><th>فاز</th><th>تعادل</th><th>خسر</th></tr></thead>
         <tbody id="body"></tbody>
       </table>
     </div>
@@ -30,12 +32,43 @@
   <script src="/shared/nav.js"></script>
   <script>
     (async () => {
+      const PODIUM_ART = `<svg class="board-empty__art" viewBox="0 0 200 108" aria-hidden="true"><g fill="none" stroke="#a3ff12" stroke-width="2"><circle cx="55" cy="34" r="13" stroke-opacity=".45" stroke-dasharray="4 5"/><circle cx="100" cy="22" r="15"/><circle cx="145" cy="40" r="12" stroke-opacity=".3" stroke-dasharray="4 5"/></g><g fill="#143325" stroke="#1f4a33"><rect x="76" y="58" width="48" height="42" rx="4"/><rect x="28" y="72" width="44" height="28" rx="4"/><rect x="128" y="78" width="44" height="22" rx="4"/></g><g fill="#a3ff12" font-family="Cairo, sans-serif" font-weight="800" text-anchor="middle"><text x="100" y="86" font-size="17">1</text><text x="50" y="92" font-size="13" fill-opacity=".55">2</text><text x="150" y="95" font-size="12" fill-opacity=".4">3</text></g></svg>`;
+      const titleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف الساحة" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
       try {
         const rows = await apiFetch("/ratings/leaderboard");
         const search = el("player-search");
-        const render = (visibleRows) => el("body").innerHTML = visibleRows.map((r, i) => `
-          <tr>
-            <td class="num">${i + 1}</td>
+        const myId = localStorage.getItem(USER_KEY);
+        const initials = (name) => escapeHtml((name || "EA").trim().slice(0, 2).toUpperCase());
+        if (!rows.length) {
+          el("search-wrap").hidden = true;
+          el("body").innerHTML = `<tr><td colspan="11" class="board-empty">${PODIUM_ART}<strong class="board-empty__title">العرش بانتظار صاحبه</strong><span>لا توجد مباريات موثقة بعد — العب مباراة موثقة وستظهر هنا في التصنيف العالمي.</span><br /><a class="btn btn-primary" href="/app/tournaments.html" style="margin-top:12px">استكشف البطولات</a></td></tr>`;
+          return;
+        }
+        // A: podium for the top three (winner raised in the middle)
+        if (rows.length >= 3) {
+          const [first, second, third] = rows;
+          const card = (r, rank, cls, p, ring) => `
+            <article class="podium-card ${cls}">
+              <span class="podium-rank"><span class="medal m${rank}"></span>#${rank}</span>
+              <span class="avatar-ring is-round" style="--p:${p};--ring:${ring}"><span class="podium-avatar">${initials(r.display_name)}</span></span>
+              <a class="player-link podium-name" href="/app/profile.html?user=${encodeURIComponent(r.user_id)}">${escapeHtml(r.display_name)}</a>
+              ${rank === 1 ? `<span class="podium-title">${titleFor(r.rating)}</span>` : ""}
+              <span class="podium-points"><b>${r.points}</b> نقاط</span>
+              <span class="podium-meta">${r.rating} ELO · لعب ${r.matches_played}</span>
+            </article>`;
+          el("podium").innerHTML = card(second, 2, "", 70, "#cfd8d3") + card(first, 1, "first", 100, "#a3ff12") + card(third, 3, "", 45, "#cd8f52");
+          el("podium").hidden = false;
+        }
+        // C: my-rank chip
+        const myIndex = rows.findIndex((r) => r.user_id === myId);
+        if (myIndex >= 0) {
+          const me = rows[myIndex];
+          el("my-rank").innerHTML = `<span>ترتيبك الحالي: <b>#${myIndex + 1}</b></span><span>${me.points} نقاط · ${me.rating} ELO</span><a href="/app/profile.html?user=${encodeURIComponent(myId)}">افتح ملفك</a>`;
+          el("my-rank").hidden = false;
+        }
+        const render = (entries) => el("body").innerHTML = entries.map(({ r, rank }) => `
+          <tr${r.user_id === myId ? ' class="is-me"' : ""}>
+            <td class="num">${rank <= 3 ? `<span class="medal m${rank}"></span>` : ""}${rank}</td>
             <td><a class="player-link" href="/app/profile.html?user=${encodeURIComponent(r.user_id)}">${escapeHtml(r.display_name)}</a></td>
             <td class="num accent-text">${r.points}</td>
             <td class="num">${r.goal_difference > 0 ? "+" : ""}${r.goal_difference}</td>
@@ -46,13 +79,12 @@
             <td class="accent-text">${r.wins}</td>
             <td>${r.draws}</td>
             <td class="danger-text">${r.losses}</td>
-          </tr>`).join("") || (rows.length
-            ? `<tr><td colspan="11" class="empty">لا توجد نتائج مطابقة.</td></tr>`
-            : `<tr><td colspan="11" class="empty"><strong>🏆 لا توجد مباريات موثقة بعد</strong><br />العب مباراة موثقة وستظهر هنا في التصنيف العالمي.<br /><a class="btn btn-primary" href="/app/tournaments.html" style="margin-top:10px">استكشف البطولات</a></td></tr>`);
-        render(rows);
+          </tr>`).join("") || `<tr><td colspan="11" class="empty">لا توجد نتائج مطابقة.</td></tr>`;
+        const all = rows.map((r, i) => ({ r, rank: i + 1 }));
+        render(all);
         search.addEventListener("input", () => {
           const term = search.value.trim().toLocaleLowerCase();
-          render(rows.filter((row) => row.display_name.toLocaleLowerCase().includes(term)));
+          render(all.filter(({ r }) => r.display_name.toLocaleLowerCase().includes(term)));
         });
       } catch (err) {
         el("body").innerHTML = `<tr><td colspan="11" class="empty" role="alert">${escapeHtml(err.detail || "تعذر التحميل")}</td></tr>`;

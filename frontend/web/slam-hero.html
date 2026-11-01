@@ -69,13 +69,13 @@
   .orbit i:nth-child(3){width:760px;height:760px;border-color:rgba(232,245,238,.05)}
   @media(max-width:640px){.orbit i:nth-child(1){width:300px;height:300px}.orbit i:nth-child(2){width:420px;height:420px}.orbit i:nth-child(3){width:540px;height:540px}}
   .ball-zone{flex:1;min-height:44svh}
-  .hero-side{position:absolute;z-index:3;top:50%;transform:translateY(-50%);inset-inline-start:clamp(16px,4vw,48px);display:flex;align-items:center;gap:12px;color:var(--muted);font-weight:700;font-size:.9rem}
+  .hero-side{position:absolute;z-index:35;top:50%;transform:translateY(-50%);inset-inline-start:clamp(16px,4vw,48px);display:flex;align-items:center;gap:12px;color:var(--muted);font-weight:700;font-size:.9rem}
   .play-dot{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--neon);background:rgba(16,40,28,.55);backdrop-filter:blur(4px);cursor:pointer;transition:.25s}
   .play-dot:hover{border-color:var(--neon);transform:scale(1.06)}
   @media(max-width:760px){.hero-side{display:none}}
-  .hero-count{position:absolute;z-index:3;top:50%;inset-inline-end:22px;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;
+  .hero-count{position:absolute;z-index:35;top:50%;inset-inline-end:22px;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;
     font-family:"Anton",sans-serif;letter-spacing:.35em;color:var(--muted);font-size:.8rem}
-  .hero-bottom{position:relative;z-index:3;padding-bottom:34px}
+  .hero-bottom{position:relative;z-index:35;padding-bottom:34px}
   .hero-bottom-in{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;flex-wrap:wrap}
   .price .amount{font-family:"Anton",sans-serif;font-size:2rem;color:var(--accent);letter-spacing:.03em;transition:color .4s}
   .price .spec{color:var(--muted);font-size:.78rem;letter-spacing:.22em;font-weight:700;margin-top:2px}
@@ -100,7 +100,7 @@
   /* ---------- SCROLL STAGE (panels; the one ball passes through) ---------- */
   .stage{position:relative;height:340vh;background:linear-gradient(180deg,var(--bg-deep),var(--bg) 18%,var(--bg) 82%,var(--bg-deep))}
   .stage-sticky{position:sticky;top:0;height:100svh;overflow:hidden}
-  .stage-panel{position:absolute;z-index:2;top:50%;transform:translateY(-50%);max-width:430px;opacity:0;transition:opacity .55s ease;pointer-events:none}
+  .stage-panel{position:absolute;z-index:35;top:50%;transform:translateY(-50%);max-width:430px;opacity:0;transition:opacity .55s ease;pointer-events:none}
   .stage-panel.on{opacity:1;pointer-events:auto}
   .stage-panel.p-right{inset-inline-start:clamp(18px,6vw,90px)}
   .stage-panel.p-left{inset-inline-end:clamp(18px,6vw,90px)}
@@ -126,10 +126,10 @@
     .hud{height:210vh;padding:0}
     .hud-sticky{position:sticky;top:0;height:100svh;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
   }
-  .hud-head{text-align:center;margin-bottom:8px}
+  .hud-head{text-align:center;margin-bottom:8px;position:relative;z-index:35}
   .hud-stage{position:relative;max-width:860px;margin:26px auto 0;height:430px}
   .hud-ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px dashed rgba(163,255,18,.22);border-radius:50%;width:330px;height:330px;pointer-events:none}
-  .callout{position:absolute;max-width:210px;font-size:.85rem;color:var(--muted);line-height:1.7}
+  .callout{position:absolute;z-index:35;max-width:210px;font-size:.85rem;color:var(--muted);line-height:1.7}
   .callout b{display:block;color:var(--text);font-size:.98rem;margin-bottom:2px}
   .callout::before{content:"";position:absolute;top:10px;width:64px;height:1px;background:linear-gradient(90deg,var(--neon),transparent)}
   .callout.c1{top:6%;inset-inline-start:0}.callout.c1::before{inset-inline-start:100%;margin-inline-start:10px}
@@ -141,6 +141,7 @@
 
   /* ---------- Champion ---------- */
   .champion{padding:120px 0 110px;text-align:center;position:relative;overflow:hidden}
+  .champion .wrap{position:relative;z-index:35}
   .champion .badge{display:inline-block;border:1px solid var(--line);color:var(--accent);border-radius:999px;padding:6px 16px;
     font-size:.74rem;font-weight:800;letter-spacing:.3em}
   .champion h2{font-size:clamp(2.2rem,5.4vw,3.8rem);font-weight:900;margin:.4em 0 .3em}
@@ -174,7 +175,8 @@
   .trust-strip b{color:var(--accent);font-weight:900}
 
   /* ---------- Footer note ---------- */
-  .exp-note{padding:26px 0 34px;text-align:center;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);background:#030805}
+  .finale .wrap{position:relative;z-index:35}
+  .exp-note{position:relative;z-index:35;padding:26px 0 34px;text-align:center;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);background:#030805}
   .exp-note a{color:var(--neon);font-weight:800;text-decoration:none}
 
   /* ---------- Reveal ---------- */
@@ -299,9 +301,9 @@
     <span class="badge">LIMITED • إصدار البطل</span>
     <h2>المنصّة لا تصنع نفسها</h2>
     <p>كل بطل بدأ ببطولة أولى. أنشئ بطولتك، ادعُ منافسيك، وخلّي أول اسم يُكتب في سجلّها… اسمك أنت المنظّم.</p>
-    <div class="pedestal" id="pedestal">
-      <div class="pod"><span class="pod-glow"></span></div>
-    </div>
+  </div>
+  <div class="pedestal rv" id="pedestal">
+    <div class="pod"><span class="pod-glow"></span></div>
   </div>
 </section>
 

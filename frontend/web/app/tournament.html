@@ -58,6 +58,18 @@
     </main>
   </div>
 
+  <dialog id="delete-dialog" class="modal-dialog" aria-labelledby="delete-title">
+    <form method="dialog" id="delete-form">
+      <span class="eyebrow">إجراء لا يمكن التراجع عنه</span>
+      <h2 id="delete-title">حذف البطولة</h2>
+      <p class="muted">سيتم حذف البطولة وجميع طلبات الانضمام المرتبطة بها نهائيًا. هل تريد المتابعة؟</p>
+      <div id="delete-error" class="form-error" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button class="btn btn-ghost" value="cancel" type="submit" id="delete-cancel">إلغاء</button>
+        <button class="btn gulp-btn" value="default" type="submit" id="confirm-delete" data-state="idle" aria-label="حذف نهائي"><svg class="gulp-ring" viewBox="0 0 44 44" aria-hidden="true"><circle class="gulp-ring__track" cx="22" cy="22" r="19"/><circle class="gulp-ring__arc" cx="22" cy="22" r="19"/></svg><svg class="gulp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="gulp-lid"><path d="M4 6.8h16"/><path d="M9.6 6.8V5.6A1.6 1.6 0 0 1 11.2 4h1.6a1.6 1.6 0 0 1 1.6 1.6v1.2"/></g><path d="M6.2 6.8l.75 11.1a2 2 0 0 0 2 1.85h6.1a2 2 0 0 0 2-1.85l.75-11.1"/><path d="M10.3 10.6v5.6"/><path d="M13.7 10.6v5.6"/></svg><span class="gulp-label" aria-hidden="true"><span class="gulp-word">حذف</span><span class="gulp-word">نهائي</span></span></button>
+      </div>
+    </form>
+  </dialog>
   <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
@@ -200,35 +212,14 @@
         return load();
       }
       if (action === "delete") {
-        if (!window.confirm("سيتم حذف البطولة وجميع طلبات الانضمام المرتبطة بها نهائيًا. هل تريد المتابعة؟")) return;
-        // The bin eats the label (from the reference video): the lid opens, the
-        // words fly in nearest-first, the pill collapses to a disc and the ring
-        // turns for as long as the request takes — with a floor, so the wait
-        // always reads as a wait. On failure the button restores itself.
-        const btn = sourceButton?.classList.contains("gulp-btn") ? sourceButton : null;
-        if (!btn) {
-          try { await apiFetch(`/tournaments/${id}`, { method: "DELETE", noBody: true }); toast("تم حذف البطولة."); location.href = "/app/tournaments.html"; }
-          catch (error) { showOrganizerError(error.detail || "تعذر حذف البطولة."); }
-          return;
-        }
-        btn.disabled = true;
-        el("organizer-error").hidden = true;
-        btn.style.width = `${btn.offsetWidth}px`;
-        btn.dataset.state = "eating";
-        const request = apiFetch(`/tournaments/${id}`, { method: "DELETE", noBody: true }).then(() => null, (error) => error);
-        await new Promise((resolve) => setTimeout(resolve, 580));
-        btn.dataset.state = "busy";
-        btn.style.width = "47px";
-        const [error] = await Promise.all([request, new Promise((resolve) => setTimeout(resolve, 950))]);
-        if (error) {
-          btn.dataset.state = "idle";
-          btn.style.width = "";
-          btn.disabled = false;
-          showOrganizerError(error.detail || "تعذر حذف البطولة.");
-          return;
-        }
-        toast("تم حذف البطولة.");
-        location.href = "/app/tournaments.html";
+        const dlg = el("delete-dialog");
+        const confirmBtn = el("confirm-delete");
+        confirmBtn.dataset.state = "idle";
+        confirmBtn.style.width = "";
+        confirmBtn.disabled = false;
+        el("delete-cancel").disabled = false;
+        el("delete-error").hidden = true;
+        if (!dlg.open) dlg.showModal();
         return;
       }
       if (!endpoint) return;
@@ -237,6 +228,37 @@
       try { await apiFetch(`/tournaments/${id}/${endpoint}`, { method: "POST", noBody: true }); toast(messages[action]); await load(); }
       catch (error) { showOrganizerError(error.detail || "تعذر تنفيذ الإجراء."); }
     }
+
+    el("delete-form").addEventListener("submit", async (event) => {
+      if (event.submitter?.value !== "default") return;
+      event.preventDefault();
+      const btn = el("confirm-delete");
+      if (btn.dataset.state !== "idle") return;
+      btn.disabled = true;
+      el("delete-cancel").disabled = true;
+      el("delete-error").hidden = true;
+      btn.style.width = `${btn.offsetWidth}px`;
+      btn.dataset.state = "eating";
+      const request = apiFetch(`/tournaments/${id}`, { method: "DELETE", noBody: true }).then(() => null, (error) => error);
+      await new Promise((resolve) => setTimeout(resolve, 580));
+      btn.dataset.state = "busy";
+      btn.style.width = "47px";
+      const [error] = await Promise.all([request, new Promise((resolve) => setTimeout(resolve, 950))]);
+      if (error) {
+        btn.dataset.state = "idle";
+        btn.style.width = "";
+        btn.disabled = false;
+        el("delete-cancel").disabled = false;
+        el("delete-error").textContent = error.detail || "تعذر حذف البطولة.";
+        el("delete-error").hidden = false;
+        return;
+      }
+      toast("تم حذف البطولة.");
+      location.href = "/app/tournaments.html";
+    });
+    el("delete-dialog").addEventListener("cancel", (event) => {
+      if (el("confirm-delete").dataset.state !== "idle") event.preventDefault();
+    });
 
     async function participantAction(action, userId, silent = false) {
       try {

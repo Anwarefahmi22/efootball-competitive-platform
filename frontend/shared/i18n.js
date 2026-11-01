@@ -901,4 +901,11 @@
     "تعذر تحميل المباراة": { fr: "Impossible de charger le match", en: "Could not load the match" },
     "لوحتي": { fr: "Mon tableau de bord", en: "My dashboard" }
   });
+
+  Object.assign(translations, {
+    "إجراء لا يمكن التراجع عنه": { fr: "Action irréversible", en: "This cannot be undone" },
+    "سيتم حذف البطولة وجميع طلبات الانضمام المرتبطة بها نهائيًا. هل تريد المتابعة؟": { fr: "Le tournoi et toutes ses demandes d'inscription seront définitivement supprimés. Continuer ?", en: "The tournament and all its join requests will be permanently deleted. Continue?" },
+    "حذف نهائي": { fr: "Supprimer définitivement", en: "Delete permanently" },
+    "نهائي": { fr: "définitif", en: "permanently" }
+  });
 })();

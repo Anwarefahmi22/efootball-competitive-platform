@@ -30,12 +30,17 @@
   #travelBall{
     position:fixed;left:0;top:0;z-index:30;pointer-events:none;
     width:clamp(230px,36vmin,370px);aspect-ratio:1;
-    filter:drop-shadow(0 34px 28px rgba(0,0,0,.45));
+    transform:translate(50vw,47vh) translate(-50%,-50%);
     will-change:transform,opacity;
   }
-  html[data-variant="night"] #travelBall{filter:drop-shadow(0 34px 28px rgba(0,0,0,.45)) drop-shadow(0 0 42px rgba(163,255,18,.35))}
-  #travelBall .tb-bob{width:100%;height:100%;animation:bob 5.2s ease-in-out infinite}
-  @keyframes bob{0%,100%{transform:translateY(-7px)}50%{transform:translateY(8px)}}
+  /* baked shadow/glow: painted once into the layer, then only transformed */
+  .tb-shadow{position:absolute;inset:0;transform:translateY(9%) scale(.94);border-radius:50%;
+    background:radial-gradient(closest-side, rgba(0,0,0,.55), rgba(0,0,0,0) 72%)}
+  .tb-glow{position:absolute;inset:-7%;border-radius:50%;opacity:0;transition:opacity .5s;
+    background:radial-gradient(closest-side, rgba(163,255,18,.32), rgba(163,255,18,0) 70%)}
+  html[data-variant="night"] .tb-glow{opacity:1}
+  #travelBall .tb-bob{position:relative;width:100%;height:100%;animation:bob 6.5s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(-5px)}50%{transform:translateY(5px)}}
   #travelBall img{width:100%;height:100%;display:block;transition:filter .5s ease;user-select:none;-webkit-user-drag:none}
   html[data-variant="night"] #travelBall img{filter:brightness(.34) contrast(1.15) saturate(.8)}
   html[data-variant="gold"] #travelBall img{filter:sepia(.5) saturate(2.4) hue-rotate(-10deg) brightness(1.03)}
@@ -208,7 +213,7 @@
 <body>
 
 <!-- THE ONE BALL: a single real football that travels the whole page -->
-<div id="travelBall" aria-hidden="true"><div class="tb-bob"><img id="ballImg" src="/football.webp" alt="" draggable="false" /></div></div>
+<div id="travelBall" aria-hidden="true"><div class="tb-shadow"></div><div class="tb-glow"></div><div class="tb-bob"><img id="ballImg" src="/football.webp" alt="" draggable="false" /></div></div>
 
 <!-- ================= HERO ================= -->
 <header class="hero">
@@ -437,8 +442,8 @@ function buildStops() {
   }
 }
 const hudRing = document.querySelector(".hud-ring");
-function ballTick() {
-  if (!stops.length) return;
+function computeTarget() {
+  if (!stops.length) return { x: 50, y: 47, k: 1, o: 1, rot: 0 };
   const y = window.scrollY;
   let a = stops[0], b = stops[stops.length - 1];
   if (y <= a.s) { b = a; }
@@ -467,30 +472,54 @@ function ballTick() {
       }
     }
   }
-  const rot = (y * 0.12) % 360;
-  ball.style.transform =
-    "translate(" + x + "vw, " + yy + "vh) translate(-50%, -50%) scale(" + k + ") rotate(" + rot + "deg)";
-  ball.style.opacity = o;
+  return { x: x, y: yy, k: k, o: o, rot: y * 0.12 };
 }
-let ticking = false;
-function onScroll() {
-  if (!ticking) {
-    ticking = true;
-    requestAnimationFrame(() => { ticking = false; stageTick(); ballTick(); });
-  }
+/* Fluid motion: the ball CHASES its scroll target with frame-rate
+   independent exponential smoothing (tau ~105ms) on a continuous rAF
+   loop that sleeps when settled - no more steppy 1:1 scroll mapping,
+   and waypoint turns are rounded by the chase itself. */
+const cur = { x: 50, y: 47, k: 1, o: 1, rot: 0 };
+let rafId = null, lastT = 0, lastScrollY = -1;
+function writeBall() {
+  ball.style.transform =
+    "translate3d(" + cur.x + "vw, " + cur.y + "vh, 0) translate(-50%, -50%) scale(" + cur.k + ") rotate(" + cur.rot + "deg)";
+  ball.style.opacity = cur.o;
+}
+function frame(ts) {
+  const dt = Math.min(50, Math.max(1, ts - lastT));
+  lastT = ts;
+  const tg = computeTarget();
+  const f = 1 - Math.exp(-dt / 105);
+  let moving = window.scrollY !== lastScrollY;
+  lastScrollY = window.scrollY;
+  ["x", "y", "k", "o", "rot"].forEach((key) => {
+    const d = tg[key] - cur[key];
+    if (Math.abs(d) > 0.002) { cur[key] += d * f; moving = true; }
+    else cur[key] = tg[key];
+  });
+  writeBall();
+  rafId = moving ? requestAnimationFrame(frame) : null;
+}
+function wake() {
+  if (!rafId) { lastT = performance.now(); rafId = requestAnimationFrame(frame); }
+}
+function snapToTarget() {
+  const tg = computeTarget();
+  ["x", "y", "k", "o", "rot"].forEach((key) => { cur[key] = tg[key]; });
+  writeBall();
 }
 if (reduced) {
-  ball.style.transform = "translate(50vw, 47vh) translate(-50%, -50%)";
+  buildStops(); snapToTarget(); stageTick();
 } else {
-  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("scroll", () => { stageTick(); wake(); }, { passive: true });
   let rzT;
   window.addEventListener("resize", () => {
     clearTimeout(rzT);
-    rzT = setTimeout(() => { buildStops(); ballTick(); stageTick(); }, 150);
+    rzT = setTimeout(() => { buildStops(); stageTick(); wake(); }, 150);
   });
+  buildStops(); snapToTarget(); stageTick();
+  window.addEventListener("load", () => { buildStops(); snapToTarget(); });
 }
-buildStops(); ballTick(); stageTick();
-window.addEventListener("load", () => { buildStops(); ballTick(); });
 
 /* ---------- Reveal on scroll ---------- */
 const io = new IntersectionObserver((entries) => {

@@ -375,11 +375,12 @@ function buildStops() {
     { s: stageTop + stageTotal * 0.16,             x: 28, y: 50, k: 1.30, o: 1 },
     { s: stageTop + stageTotal * 0.50,             x: 72, y: 50, k: 1.30, o: 1 },
     { s: stageTop + stageTotal * 0.86,             x: 50, y: 50, k: 0.95, o: 1 },
-    { s: docTop(hudStage) + hudStage.offsetHeight / 2 - vh * 0.54, x: 50, y: 50, k: 0.55, o: 1 },
+    { s: docTop(hudStage) + hudStage.offsetHeight / 2 - vh * 0.5, x: 50, y: 50, k: 0.55, o: 1 },
     { s: docTop(pedestal) - vh * 0.56,             x: 50, y: 50, k: 0.50, o: 1 },
     { s: docTop(finale) - vh * 0.30,               x: 50, y: 32, k: 0.42, o: 0 },
   ];
 }
+const hudRing = document.querySelector(".hud-ring");
 function ballTick() {
   if (!stops.length) return;
   const y = window.scrollY;
@@ -393,7 +394,23 @@ function ballTick() {
   }
   const t = b.s > a.s ? (y - a.s) / (b.s - a.s) : 0;
   const L = (p, q) => p + (q - p) * t;
-  const x = L(a.x, b.x), yy = L(a.y, b.y), k = L(a.k, b.k), o = L(a.o, b.o);
+  const x = L(a.x, b.x);
+  let yy = L(a.y, b.y), k = L(a.k, b.k);
+  const o = L(a.o, b.o);
+  /* HUD docking: while the ring crosses the screen's middle band, the ball
+     tracks the ring's live center exactly instead of crossing it once. */
+  if (hudRing && hudRing.offsetParent !== null) {
+    const rr = hudRing.getBoundingClientRect();
+    if (rr.height > 0) {
+      const ringVh = (rr.top + rr.height / 2) / window.innerHeight * 100;
+      const d = Math.abs(ringVh - 50);
+      if (d < 20) {
+        const w = d <= 10 ? 1 : (20 - d) / 10;
+        yy = yy + (ringVh - yy) * w;
+        k = k + (0.55 - k) * w;
+      }
+    }
+  }
   const rot = (y * 0.12) % 360;
   ball.style.transform =
     "translate(" + x + "vw, " + yy + "vh) translate(-50%, -50%) scale(" + k + ") rotate(" + rot + "deg)";

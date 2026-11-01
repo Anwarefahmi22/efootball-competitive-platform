@@ -21,7 +21,7 @@
     <main id="content" hidden>
       <header class="hub-header">
         <div class="dashboard-profile">
-          <div class="dashboard-avatar" id="player-avatar" aria-hidden="true">EA</div>
+          <div class="avatar-ring" id="avatar-ring"><div class="dashboard-avatar" id="player-avatar" aria-hidden="true">EA</div></div>
           <div>
             <div class="profile-status"><i></i> <span>لاعب نشط</span></div>
             <h1 class="page-title" id="hello-name">مركز اللاعب</h1>
@@ -36,6 +36,7 @@
       </header>
 
       <section class="identity-card card" aria-labelledby="identity-title">
+        <svg class="identity-pitch" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#a3ff12" stroke-width="2"><rect x="14" y="14" width="372" height="232" rx="6"/><line x1="200" y1="14" x2="200" y2="246"/><circle cx="200" cy="130" r="44"/><circle cx="200" cy="130" r="3" fill="#a3ff12"/><path d="M14 84 h52 v92 h-52"/><path d="M386 84 h-52 v92 h52"/></g></svg>
         <div class="identity-card__main">
           <span class="eyebrow">هويتك التنافسية</span>
           <h2 id="identity-title">اعرف مستواك، ثم اختر تحديك التالي.</h2>
@@ -44,9 +45,29 @@
         <div class="identity-facts">
           <div><span>التقييم</span><strong class="num" id="identity-elo">—</strong></div>
           <div><span>الترتيب العالمي</span><strong class="num" id="identity-rank">—</strong></div>
-          <div><span>الثقة</span><strong class="num" id="identity-trust">—</strong></div>
           <div><span>اللقب التنافسي</span><strong id="identity-title-rank">—</strong></div>
         </div>
+      </section>
+
+      <section class="journey card" id="journey" hidden aria-labelledby="journey-title">
+        <div class="section-heading"><div><span class="eyebrow">ابدأ هنا</span><h2 id="journey-title">رحلتك في الساحة</h2></div><span class="panel-icon">🧭</span></div>
+        <ol class="journey-steps">
+          <li class="journey-step" id="jstep-1" data-state="current">
+            <span class="journey-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4a2 2 0 0 0 2 4h1"/><path d="M17 6h3a2 2 0 0 1-2 4h-1"/></svg></span>
+            <div><strong>انضم إلى بطولة</strong><p>اختر بطولة مفتوحة وسجّل مقعدك.</p></div>
+            <a class="btn btn-primary" href="/app/tournaments.html">استكشف البطولات</a>
+          </li>
+          <li class="journey-step" id="jstep-2" data-state="todo">
+            <span class="journey-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8l2.4 1.8-0.9 2.9h-3l-0.9-2.9z"/><path d="M12 3v3M20.5 9l-2.9 0.8M17.5 19.5l-2.2-2.1M6.5 19.5l2.2-2.1M3.5 9l2.9 0.8"/></svg></span>
+            <div><strong>العب مباراة موثقة</strong><p>ارفع نتيجتك بصورة دليل ودع منافسك يؤكدها.</p></div>
+            <a class="btn btn-ghost" href="/app/tournaments.html">بطولاتي</a>
+          </li>
+          <li class="journey-step" id="jstep-3" data-state="todo">
+            <span class="journey-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V12"/><path d="M10 20V6"/><path d="M16 20v-6"/><path d="M2 20h20"/></svg></span>
+            <div><strong>اصعد التصنيف</strong><p>كل فوز موثق يرفع تقييمك وترتيبك العالمي.</p></div>
+            <a class="btn btn-ghost" href="/app/ratings.html">التصنيف العام</a>
+          </li>
+        </ol>
       </section>
 
       <section class="next-match card" aria-labelledby="next-match-title">
@@ -57,19 +78,13 @@
       <section aria-labelledby="stats-title">
         <div class="section-title" id="stats-title">إحصائياتك التنافسية</div>
         <div class="competitive-stats grid cols-4">
-          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">◎</span><div class="stat-value" id="stat-elo">—</div><div class="stat-label">تقييم ELO</div><small class="dashboard-kpi__hint">آخر تقييم مسجل</small></div>
-          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">#</span><div class="stat-value" id="stat-rank">—</div><div class="stat-label">الترتيب العالمي</div><small class="dashboard-kpi__hint">مقارنة باللاعبين المسجلين</small></div>
           <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">✓</span><div class="stat-value" id="stat-trust">—</div><div class="stat-label">درجة الثقة</div><div class="progress progress-spaced"><i id="trust-bar" style="width:0%"></i></div></div>
-          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">↗</span><div class="stat-value" id="stat-record">—</div><div class="stat-label">فوز / تعادل / خسارة</div><small class="dashboard-kpi__hint">نقاط الترتيب: <span id="stat-points">—</span></small></div>
-        </div>
-        <div class="stats-summary card">
-          <div><span>نسبة الفوز</span><strong id="stat-win-rate">—</strong></div>
-          <div><span>اللقب التنافسي</span><strong id="stat-rank-title">—</strong></div>
-          <div><span>تغيير التقييم</span><strong>—</strong><small>لا يوجد سجل تغييرات متاح بعد</small></div>
+          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">↗</span><div class="stat-value" id="stat-record">—</div><div class="stat-label">فوز / تعادل / خسارة</div><small class="dashboard-kpi__hint">من المباريات الموثقة فقط</small></div>
+          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">%</span><div class="stat-value" id="stat-win-rate">—</div><div class="stat-label">نسبة الفوز</div><div class="progress progress-spaced"><i id="winrate-bar" style="width:0%"></i></div></div>
+          <div class="dashboard-kpi card"><span class="dashboard-kpi__icon">#</span><div class="stat-value" id="stat-points">—</div><div class="stat-label">نقاط الترتيب</div><small class="dashboard-kpi__hint">تُحسم بها صدارة التصنيف</small></div>
         </div>
       </section>
 
-      <div id="firstrun-hint" class="card state-empty" hidden>العب أول مباراة موثقة لفتح ترتيبك العالمي ونسبة فوزك ولقبك التنافسي. <a href="/app/tournaments.html">استكشف البطولات</a></div>
       <section class="season-card card" aria-labelledby="season-title">
         <div class="section-heading"><div><span class="eyebrow">الموسم</span><h2 id="season-title">تقدم الموسم</h2></div><span class="panel-icon">✦</span></div>
         <div id="season-content" class="state-empty">لا يوجد موسم نشط مرتبط بحسابك حاليًا.</div>
@@ -112,6 +127,7 @@
     const statusText = { registration_open: "التسجيل مفتوح", registration_closed: "التسجيل مغلق", in_progress: "جارية", completed: "منتهية", cancelled: "ملغاة", waiting: "بانتظار المنافس", ready: "جاهزة", in_progress: "جارية" };
     const formatDate = (value) => value ? new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "الموعد غير محدد";
     const stateEmpty = (message) => `<div class="state-empty">${escapeHtml(message)}</div>`;
+    const titleFor = (elo) => elo === null || elo === undefined ? null : elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف الساحة" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
 
     function renderAvatar(name, url) {
       const avatar = el("player-avatar");
@@ -126,7 +142,7 @@
     function getRank(board, uid) { const index = board.findIndex((row) => row.user_id === uid); return index < 0 ? null : index + 1; }
     function renderNextMatch(match, tournaments, board, uid, myRating) {
       const target = el("next-match-content");
-      if (!match) { target.innerHTML = stateEmpty("لا توجد مباراة قادمة مجدولة حاليًا. ستظهر هنا عند إنشاء جدول مبارياتك."); return; }
+      if (!match) { target.innerHTML = `<div class="next-empty"><svg viewBox="0 0 120 64" aria-hidden="true"><path d="M8 56a52 40 0 0 1 104 0" fill="none" stroke="#a3ff12" stroke-width="2"/><path d="M26 56a34 24 0 0 1 68 0" fill="none" stroke="#a3ff12" stroke-opacity=".45" stroke-width="2"/><line x1="4" y1="56" x2="116" y2="56" stroke="#a3ff12" stroke-opacity=".45" stroke-width="2"/></svg><p>لا توجد مباراة قادمة مجدولة حاليًا. ستظهر هنا عند إنشاء جدول مبارياتك.</p><a class="btn btn-primary" href="/app/tournaments.html">استكشف البطولات</a></div>`; return; }
       const tournament = tournaments.find((item) => item.id === match.tournament_id);
       const opponentId = match.player_a_id === uid ? match.player_b_id : match.player_a_id;
       const opponent = tournament?.participants?.find((item) => item.user_id === opponentId);
@@ -184,11 +200,18 @@
         const mine = tournaments.filter((item) => item.created_by === uid || item.participants.some((participant) => participant.user_id === uid));
         const matches = (await Promise.all(mine.map((item) => apiFetch("/tournaments/" + item.id + "/matches").catch(() => [])))).flat().filter((match, index, all) => all.findIndex((item) => item.id === match.id) === index);
         const upcoming = matches.filter((match) => match.status !== "completed" && match.status !== "cancelled" && match.player_a_id && match.player_b_id && (match.player_a_id === uid || match.player_b_id === uid)).sort((a, b) => new Date(a.scheduled_at || a.created_at) - new Date(b.scheduled_at || b.created_at))[0];
-        setMetric("identity-elo", rating?.rating); setMetric("identity-rank", rank ? `#${rank}` : null); setMetric("identity-trust", trust?.trust_score); setMetric("identity-title-rank", null);
-        setMetric("stat-elo", rating?.rating); setMetric("stat-rank", rank ? `#${rank}` : null); setMetric("stat-trust", trust?.trust_score); setMetric("stat-record", rating ? `${rating.wins} / ${rating.draws} / ${rating.losses}` : null); setMetric("stat-points", rating?.points);
-        setMetric("stat-win-rate", rating?.matches_played ? `${Math.round(rating.wins * 100 / rating.matches_played)}%` : null); setMetric("stat-rank-title", null);
-        if (!rating?.matches_played) { const hint = el("firstrun-hint"); if (hint) hint.hidden = false; }
-        if (trust) el("trust-bar").style.width = `${trust.trust_score}%`;
+        setMetric("identity-elo", rating?.rating); setMetric("identity-rank", rank ? `#${rank}` : null); setMetric("identity-title-rank", titleFor(rating?.rating));
+        setMetric("stat-trust", trust?.trust_score); setMetric("stat-record", rating ? `${rating.wins} / ${rating.draws} / ${rating.losses}` : null); setMetric("stat-points", rating?.points);
+        const winRate = rating?.matches_played ? Math.round(rating.wins * 100 / rating.matches_played) : null;
+        setMetric("stat-win-rate", winRate === null ? null : `${winRate}%`);
+        if (winRate !== null) el("winrate-bar").style.width = `${winRate}%`;
+        if (!rating?.matches_played) {
+          el("journey").hidden = false;
+          const joined = mine.length > 0;
+          el("jstep-1").dataset.state = joined ? "done" : "current";
+          el("jstep-2").dataset.state = joined ? "current" : "todo";
+        }
+        if (trust) { el("trust-bar").style.width = `${trust.trust_score}%`; el("avatar-ring").style.setProperty("--p", trust.trust_score); }
         renderNextMatch(upcoming, mine, board, uid, rating); renderTournaments(mine, uid); renderSeason(seasons, board, uid); renderActivity(matches, mine, uid);
         el("loading").hidden = true; el("content").hidden = false;
       } catch (error) { el("loading").innerHTML = `<div class="empty card" role="alert">تعذر تجهيز مركز اللاعب: ${escapeHtml(error.detail || "حاول تحديث الصفحة.")}</div>`; }

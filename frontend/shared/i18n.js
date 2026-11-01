@@ -820,4 +820,24 @@
     apply();
     observer.observe(document.body, { childList: true, subtree: true });
   });
+
+  Object.assign(translations, {
+    "رحلتك في الساحة": { fr: "Votre parcours dans l'arène", en: "Your journey in the Arena" },
+    "ابدأ هنا": { fr: "Commencez ici", en: "Start here" },
+    "انضم إلى بطولة": { fr: "Rejoindre un tournoi", en: "Join a tournament" },
+    "اختر بطولة مفتوحة وسجّل مقعدك.": { fr: "Choisissez un tournoi ouvert et réservez votre place.", en: "Pick an open tournament and claim your seat." },
+    "العب مباراة موثقة": { fr: "Jouez un match vérifié", en: "Play a verified match" },
+    "ارفع نتيجتك بصورة دليل ودع منافسك يؤكدها.": { fr: "Envoyez votre score avec une photo et laissez votre adversaire le confirmer.", en: "Submit your score with photo proof and let your opponent confirm it." },
+    "اصعد التصنيف": { fr: "Grimpez au classement", en: "Climb the rankings" },
+    "كل فوز موثق يرفع تقييمك وترتيبك العالمي.": { fr: "Chaque victoire vérifiée fait grimper votre ELO et votre rang mondial.", en: "Every verified win raises your ELO and your world rank." },
+    "بطولاتي": { fr: "Mes tournois", en: "My tournaments" },
+    "أسطورة الساحة": { fr: "Légende de l'arène", en: "Arena Legend" },
+    "محترف الساحة": { fr: "Pro de l'arène", en: "Arena Pro" },
+    "منافس شرس": { fr: "Compétiteur féroce", en: "Fierce Competitor" },
+    "منافس": { fr: "Compétiteur", en: "Competitor" },
+    "صاعد": { fr: "Étoile montante", en: "Rising Player" },
+    "من المباريات الموثقة فقط": { fr: "Matchs vérifiés uniquement", en: "Verified matches only" },
+    "تُحسم بها صدارة التصنيف": { fr: "Ils départagent la tête du classement", en: "They decide the top of the table" },
+    "نقاط الترتيب": { fr: "Points de classement", en: "Ranking points" }
+  });
 })();

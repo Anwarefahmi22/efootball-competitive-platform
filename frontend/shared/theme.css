@@ -571,3 +571,41 @@ table.table tr:hover td { background: rgba(163, 255, 18, .04); }
 .next-empty { display: grid; justify-items: center; gap: 12px; text-align: center; padding: 16px 10px 8px; }
 .next-empty svg { width: 120px; height: 64px; }
 .next-empty p { margin: 0; color: var(--muted); }
+
+/* ——— Tournaments upgrade 2026-11-01: toolbar, format band + fill ring, rich empty ——— */
+@media (min-width: 761px) { .toolbar-actions { flex-wrap: nowrap; } .toolbar-actions .field { min-width: 0; } }
+.tcard-band { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: -22px -22px 0; padding: 12px 22px; border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; background: linear-gradient(120deg, rgba(163,255,18,.12), transparent 62%); }
+.tcard-band__icon { width: 26px; height: 26px; color: var(--neon); flex: none; }
+.tcard-band__icon svg { width: 100%; height: 100%; }
+.tcard-band__fmt { font-weight: 800; font-size: .92rem; }
+.tcard-band .badge { margin-inline-start: auto; }
+.tcard-band.st-in_progress { background: linear-gradient(120deg, rgba(255,197,61,.13), transparent 62%); }
+.tcard-band.st-in_progress .tcard-band__icon { color: var(--warn); }
+.tcard-band.st-cancelled { background: linear-gradient(120deg, rgba(255,77,94,.12), transparent 62%); }
+.tcard-band.st-cancelled .tcard-band__icon { color: var(--danger); }
+.tcard-band.st-completed { background: linear-gradient(120deg, rgba(157,191,174,.10), transparent 62%); }
+.tcard-band.st-completed .tcard-band__icon { color: var(--muted); }
+.tournament-card__footer { flex-wrap: wrap; }
+.fill-ring { position: relative; width: 44px; height: 44px; flex: none; }
+.fill-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.fill-ring circle { fill: none; stroke-width: 4; }
+.fill-ring__track { stroke: #1f4a33; }
+.fill-ring__arc { stroke: var(--neon); stroke-linecap: round; }
+.fill-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: .6rem; font-weight: 800; color: var(--text); }
+.empty-rich { text-align: center; padding: 34px 26px; }
+.empty-rich__art { width: 120px; height: 64px; }
+.empty-rich h2 { margin: 10px 0 6px; }
+.empty-rich > p { color: var(--muted); max-width: 52ch; margin: 0 auto 16px; line-height: 1.8; }
+.format-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 24px; text-align: start; }
+.format-card { border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 8px; justify-items: start; align-content: start; background: rgba(8,19,10,.32); }
+.format-card__icon { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--line); color: var(--neon); background: var(--surface); }
+.format-card__icon svg { width: 24px; height: 24px; }
+.format-card h3 { margin: 2px 0 0; font-size: 1rem; }
+.format-card p { margin: 0; color: var(--muted); font-size: .86rem; line-height: 1.7; }
+.format-card small { color: var(--muted); font-size: .76rem; }
+.format-card .btn { margin-top: 6px; }
+@media (max-width: 760px) {
+  .format-grid { grid-template-columns: 1fr; }
+  .empty-rich { padding: 26px 16px; }
+  .tcard-band { margin: -18px -18px 0; padding: 10px 18px; }
+}

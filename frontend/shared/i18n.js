@@ -840,4 +840,17 @@
     "تُحسم بها صدارة التصنيف": { fr: "Ils départagent la tête du classement", en: "They decide the top of the table" },
     "نقاط الترتيب": { fr: "Points de classement", en: "Ranking points" }
   });
+
+  Object.assign(translations, {
+    "لا توجد بطولات بهذه الحالة": { fr: "Aucun tournoi dans cet état", en: "No tournaments in this state" },
+    "الساحة بانتظار أول بطولة — أنشئ واحدة وادعُ المنافسين، أو جرّب حالة تصفية أخرى.": { fr: "L'arène attend son premier tournoi — créez-en un et invitez vos rivaux, ou essayez un autre filtre.", en: "The Arena awaits its first tournament — create one and invite your rivals, or try another status filter." },
+    "+ أنشئ بطولة": { fr: "+ Créer un tournoi", en: "+ Create tournament" },
+    "خسارة واحدة تعني الخروج — طريق قصير وحاسم نحو اللقب.": { fr: "Une défaite et vous êtes éliminé — un chemin court et décisif vers le titre.", en: "One loss and you're out — a short, decisive road to the title." },
+    "4 إلى 64 لاعبًا · إقصاء مباشر": { fr: "4 à 64 joueurs · élimination directe", en: "4 to 64 players · straight knockout" },
+    "الكل يواجه الكل، والنقاط وفارق الأهداف يحسمان الصدارة.": { fr: "Tout le monde affronte tout le monde ; les points et la différence de buts décident du sommet.", en: "Everyone plays everyone; points and goal difference decide the top." },
+    "حتى 64 لاعبًا · جدول كامل": { fr: "Jusqu'à 64 joueurs · calendrier complet", en: "Up to 64 players · full schedule" },
+    "دور مجموعات أولًا ثم إقصائيات — تجربة البطولات الكبرى.": { fr: "Des groupes d'abord, puis des éliminatoires — l'expérience des grands tournois.", en: "Group stage first, then knockouts — the big-tournament experience." },
+    "2 أو 4 أو 8 مجموعات": { fr: "2, 4 ou 8 groupes", en: "2, 4 or 8 groups" },
+    "إنشاء بهذا النظام": { fr: "Créer dans ce format", en: "Create in this format" }
+  });
 })();

@@ -24,7 +24,7 @@
           <option value="completed">منتهية</option>
           <option value="cancelled">ملغاة</option>
         </select>
-        <button class="btn btn-ghost" id="btn-new" type="button">+ إنشاء بطولة</button>
+        <button class="btn btn-primary" id="btn-new" type="button">+ إنشاء بطولة</button>
       </div>
     </div>
 
@@ -78,6 +78,11 @@
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
     }[char]));
 
+    const FORMAT_ICON = {
+      single_elimination: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h3v4H4z"/><path d="M4 15h3v4H4z"/><path d="M17 10h3v4h-3z"/><path d="M7 7h4v5"/><path d="M7 17h4v-5"/><path d="M11 12h6"/></svg>',
+      league: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.3h18"/><path d="M3 14.6h18"/><path d="M9 4v16"/></svg>',
+      group_knockout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>'
+    };
     function card(t) {
       const pct = t.max_participants ? Math.round((t.participant_count || 0) * 100 / t.max_participants) : 0;
       // A full tournament is not joinable even while its status is still
@@ -92,19 +97,21 @@
             ? `<span class="membership-status is-pending">◷ قيد المراجعة</span>` : "";
       return `
       <article class="card hoverable tournament-card">
+        <div class="tcard-band st-${t.status}">
+          <span class="tcard-band__icon">${FORMAT_ICON[t.format] || ""}</span>
+          <span class="tcard-band__fmt">${fmtLabel[t.format] || escapeHtml(t.format)}</span>
+          ${t.status === "registration_open" && isFull ? `<span class="badge full">ممتلئة</span>` : `<span class="badge ${t.status}">${statusLabel(t.status)}</span>`}
+        </div>
         <div class="tournament-card__head">
           <h2>${escapeHtml(t.name)}</h2>
-          ${t.status === "registration_open" && isFull ? `<span class="badge full">ممتلئة</span>` : `<span class="badge ${t.status}">${statusLabel(t.status)}</span>`}
         </div>
         <p class="tournament-card__description">${escapeHtml((t.description || "بطولة جديدة بانتظار المنافسين.").slice(0, 110))}</p>
         <div class="tournament-card__meta">
-          <span>🎮 ${fmtLabel[t.format] || escapeHtml(t.format)}</span>
           <span>👥 ${numberFormat.format(t.participant_count || 0)}/${numberFormat.format(t.max_participants)}</span>
           <span>🆓 مجانية بالكامل</span>
         </div>
         <div class="tournament-card__prize"><span>المنافسة</span><strong>نقاط وتصنيف</strong></div>
-        <div class="progress" role="progressbar" aria-label="نسبة امتلاء البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
-        <div class="tournament-card__footer"><span class="muted">${numberFormat.format(pct)}% ممتلئة</span>${membership}
+        <div class="tournament-card__footer"><span class="fill-ring" role="img" aria-label="نسبة امتلاء البطولة ${numberFormat.format(pct)}%"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="fill-ring__track" cx="22" cy="22" r="18"/><circle class="fill-ring__arc" cx="22" cy="22" r="18" stroke-dasharray="${(pct * 113.1 / 100).toFixed(1)} 113.1"/></svg><b>${numberFormat.format(pct)}%</b></span>${membership}
           ${t.status === "registration_open" && !isFull && t.created_by !== currentUserId ? `<button class="btn btn-primary" type="button" data-join="${t.id}">انضم الآن</button>` : ""}
           <a class="btn btn-ghost" href="/app/tournament.html?id=${encodeURIComponent(t.id)}">${t.created_by === currentUserId ? "إدارة البطولة" : "التفاصيل"}</a>
         </div>
@@ -122,9 +129,38 @@
         if (status) list = list.filter((t) => t.status === status);
         el("list").innerHTML = list.length
           ? list.map(card).join("")
-          : `<div class="empty card grid-span">لا توجد بطولات بهذه الحالة — <a href="#" id="first-create">أنشئ أول بطولة</a></div>`;
+          : `<div class="empty-rich card grid-span">
+              <svg class="empty-rich__art" viewBox="0 0 120 64" aria-hidden="true"><path d="M8 56a52 40 0 0 1 104 0" fill="none" stroke="#a3ff12" stroke-width="2"/><path d="M26 56a34 24 0 0 1 68 0" fill="none" stroke="#a3ff12" stroke-opacity=".45" stroke-width="2"/><line x1="4" y1="56" x2="116" y2="56" stroke="#a3ff12" stroke-opacity=".45" stroke-width="2"/></svg>
+              <h2>لا توجد بطولات بهذه الحالة</h2>
+              <p>الساحة بانتظار أول بطولة — أنشئ واحدة وادعُ المنافسين، أو جرّب حالة تصفية أخرى.</p>
+              <button class="btn btn-primary" id="first-create" type="button">+ أنشئ بطولة</button>
+              <div class="format-grid">
+                <article class="format-card">
+                  <span class="format-card__icon">${FORMAT_ICON.single_elimination}</span>
+                  <h3>خروج المغلوب</h3>
+                  <p>خسارة واحدة تعني الخروج — طريق قصير وحاسم نحو اللقب.</p>
+                  <small>4 إلى 64 لاعبًا · إقصاء مباشر</small>
+                  <button class="btn btn-ghost" type="button" data-create-format="single_elimination">إنشاء بهذا النظام</button>
+                </article>
+                <article class="format-card">
+                  <span class="format-card__icon">${FORMAT_ICON.league}</span>
+                  <h3>دوري كامل</h3>
+                  <p>الكل يواجه الكل، والنقاط وفارق الأهداف يحسمان الصدارة.</p>
+                  <small>حتى 64 لاعبًا · جدول كامل</small>
+                  <button class="btn btn-ghost" type="button" data-create-format="league">إنشاء بهذا النظام</button>
+                </article>
+                <article class="format-card">
+                  <span class="format-card__icon">${FORMAT_ICON.group_knockout}</span>
+                  <h3>مجموعات وإقصائيات</h3>
+                  <p>دور مجموعات أولًا ثم إقصائيات — تجربة البطولات الكبرى.</p>
+                  <small>2 أو 4 أو 8 مجموعات</small>
+                  <button class="btn btn-ghost" type="button" data-create-format="group_knockout">إنشاء بهذا النظام</button>
+                </article>
+              </div>
+            </div>`;
         document.querySelectorAll("[data-join]").forEach((b) => b.addEventListener("click", () => join(b.dataset.join)));
-        el("first-create")?.addEventListener("click", (e) => { e.preventDefault(); openCreate(); });
+        el("first-create")?.addEventListener("click", () => openCreate());
+        document.querySelectorAll("[data-create-format]").forEach((b) => b.addEventListener("click", () => { el("t-format").value = b.dataset.createFormat; syncFormatFields(); openCreate(); }));
       } catch (err) {
         el("list").innerHTML = `<div class="empty grid-span" role="alert">${escapeHtml(err.detail || "تعذر التحميل")}</div>`;
       }

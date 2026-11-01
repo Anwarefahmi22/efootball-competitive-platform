@@ -379,6 +379,16 @@ function buildStops() {
     { s: docTop(pedestal) - vh * 0.56,             x: 50, y: 50, k: 0.50, o: 1 },
     { s: docTop(finale) - vh * 0.30,               x: 50, y: 32, k: 0.42, o: 0 },
   ];
+  /* Phone layout (<=820px): panels become bottom sheets and the HUD stacks,
+     so the ball rides higher and smaller, and docks into the HUD's reserved
+     top space instead of the stacked cards. */
+  if (window.innerWidth <= 820) {
+    stops[1].x = 30; stops[1].y = 36; stops[1].k = 0.85;
+    stops[2].x = 70; stops[2].y = 36; stops[2].k = 0.85;
+    stops[3].y = 38; stops[3].k = 0.80;
+    stops[4].s = docTop(hudStage) + 150 - vh * 0.5;
+    stops[4].k = 0.62;
+  }
 }
 const hudRing = document.querySelector(".hud-ring");
 function ballTick() {

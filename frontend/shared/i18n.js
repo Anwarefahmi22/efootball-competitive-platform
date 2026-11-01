@@ -710,7 +710,7 @@
     "كل بطل بدأ ببطولة أولى. أنشئ بطولتك، ادعُ منافسيك، وخلّي أول اسم يُكتب في سجلّها… اسمك أنت المنظّم.": { fr: "Chaque champion a commencé par un premier tournoi. Créez le vôtre, invitez vos rivaux, et que le premier nom inscrit à son palmarès soit… le vôtre, l'organisateur.", en: "Every champion started with a first tournament. Create yours, invite your rivals, and let the first name written in its record be… yours, the organizer." },
     "NEXT LEVEL • منافسة حقيقية": { fr: "NEXT LEVEL • Vraie compétition", en: "NEXT LEVEL • Real competition" },
     "الملعب": { fr: "Le terrain", en: "The pitch" },
-    "ملكك": { fr: "est à vous.", en: "is yours." },
+    "ملكك": { fr: "est à vous", en: "is yours" },
     "ابدأ الآن مجانًا": { fr: "Commencer gratuitement", en: "Start now for free" },
     "تسجيل مجاني": { fr: "Inscription gratuite", en: "Free registration" },
     "توثيق بالصور": { fr: "Preuves par photo", en: "Photo verification" },

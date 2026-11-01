@@ -105,11 +105,12 @@
     const awaitingOpponent = () => isParticipant(state.role) && state.match?.status === "result_submitted"
       && !!latestEvidence() && !canReviewResult();
 
-    function playerCard(player, side) {
+    const titleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف الساحة" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
+    function playerCard(player, side, outcome = "") {
       const initials = escapeHtml((player.display_name || "؟").slice(0, 2));
-      return `<div class="match-player ${side === "a" ? "is-a" : "is-b"}">
+      return `<div class="match-player ${side === "a" ? "is-a" : "is-b"}${outcome === "winner" ? " is-winner" : ""}">
         <a class="match-player-avatar${player.avatar_url ? " has-image" : ""}" href="${player.id ? `/app/profile.html?user=${encodeURIComponent(player.id)}` : "#"}" aria-label="عرض ملف ${escapeHtml(player.display_name)}">${player.avatar_url ? `<img src="${escapeHtml(player.avatar_url)}" alt="">` : initials}</a>
-        <div class="match-player-info"><span class="muted">${side === "a" ? "اللاعب الأول" : "اللاعب الثاني"}</span><strong>${escapeHtml(player.display_name)}</strong><span class="match-rating">${player.rating !== null && player.rating !== undefined ? `${player.rating} ELO` : "التقييم غير متاح"}</span></div>
+        <div class="match-player-info"><span class="muted">${side === "a" ? "اللاعب الأول" : "اللاعب الثاني"}</span><strong>${escapeHtml(player.display_name)}</strong><span class="match-rating">${player.rating !== null && player.rating !== undefined ? `${player.rating} ELO` : "التقييم غير متاح"}</span>${player.rating !== null && player.rating !== undefined ? `<span class="title-chip">${titleFor(player.rating)}</span>` : ""}${outcome === "winner" ? `<span class="winner-chip">🏆 الفائز</span>` : outcome === "draw" ? `<span class="draw-chip">تعادل</span>` : ""}</div>
       </div>`;
     }
 
@@ -119,7 +120,9 @@
       const playerA = context.playerA || fallbackPlayer(match.player_a_id, "لاعب");
       const playerB = context.playerB || fallbackPlayer(match.player_b_id, "لاعب");
       const title = context.tournament?.name || "مباراة تنافسية";
-      el("match-summary").innerHTML = `<div class="match-hero-top"><div><span class="eyebrow">غرفة المباراة</span><h1>${escapeHtml(title)}</h1><p class="muted">الجولة ${escapeHtml(match.round_number)} · ${match.scheduled_at ? `موعدها ${formatDate(match.scheduled_at)}` : "الموعد غير محدد"}</p></div><span><span class="badge ${match.status}">${labels[match.status] || escapeHtml(match.status)}</span> <span class="badge">${ROLE_LABELS[state.role]}</span></span></div><div class="match-players">${playerCard(playerA, "a")}<div class="match-versus-mark"><span>VS</span><small>مواجهة</small></div>${playerCard(playerB, "b")}</div><div class="match-hero__score"><span>${match.score_a ?? "—"}</span><b>:</b><span>${match.score_b ?? "—"}</span></div><p class="match-room-note">النتيجة تصبح رسمية بعد مراجعة الطرف الآخر واعتماد الدليل.</p>`;
+      const outcomeA = match.status === "completed" ? (match.winner_id ? (match.winner_id === match.player_a_id ? "winner" : "") : "draw") : "";
+      const outcomeB = match.status === "completed" ? (match.winner_id ? (match.winner_id === match.player_b_id ? "winner" : "") : "draw") : "";
+      el("match-summary").innerHTML = `<div class="match-hero-top"><div><span class="eyebrow">غرفة المباراة</span><h1>${escapeHtml(title)}</h1><p class="muted">الجولة ${escapeHtml(match.round_number)} · ${match.scheduled_at ? `موعدها ${formatDate(match.scheduled_at)}` : "الموعد غير محدد"}</p></div><span><span class="badge ${match.status}">${labels[match.status] || escapeHtml(match.status)}</span> <span class="badge">${ROLE_LABELS[state.role]}</span></span></div><div class="match-players">${playerCard(playerA, "a", outcomeA)}<div class="match-versus-mark"><span>VS</span><small>مواجهة</small></div>${playerCard(playerB, "b", outcomeB)}</div><div class="match-hero__score"><span>${match.score_a ?? "—"}</span><b>:</b><span>${match.score_b ?? "—"}</span></div><p class="match-room-note">النتيجة تصبح رسمية بعد مراجعة الطرف الآخر واعتماد الدليل.</p>`;
     }
 
     // Role-aware visibility for the result / confirmation / dispute controls.
@@ -246,6 +249,11 @@
       if (error?.status === 404) return "لم يتم العثور على هذه المباراة.";
       return error?.detail || "تعذر تحميل المباراة.";
     }
+    function pageErrorTitle(error) {
+      if (!id) return "معرّف المباراة غير موجود";
+      if (error?.status === 404) return "لم يتم العثور على هذه المباراة";
+      return "تعذر تحميل المباراة";
+    }
 
     el("result-form").addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -300,7 +308,7 @@
         el("loading").hidden = true;
         el("content").hidden = false;
       } catch (error) {
-        el("loading").outerHTML = `<div class="empty card" role="alert">${escapeHtml(pageErrorMessage(error))}</div>`;
+        el("loading").outerHTML = `<div class="empty card match-missing" role="alert"><div class="empty-arena-mark" aria-hidden="true">⚽</div><h2>${escapeHtml(pageErrorTitle(error))}</h2><p class="muted">${escapeHtml(pageErrorMessage(error))}</p><div class="match-missing__actions"><a class="btn btn-primary" href="/app/tournaments.html">استكشف البطولات</a><a class="btn btn-ghost" href="/app/dashboard.html">لوحتي</a></div></div>`;
       }
     })();
   </script>

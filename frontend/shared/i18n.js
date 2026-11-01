@@ -886,4 +886,19 @@
     "تعادل": { fr: "Nuls", en: "Draws" },
     "خسارة": { fr: "Défaites", en: "Losses" }
   });
+
+  Object.assign(translations, {
+    "مقاعد متبقية": { fr: "Places restantes", en: "Seats left" },
+    "لم تُلعب بعد": { fr: "Pas encore joué", en: "Not played yet" },
+    "✓ مكتملة": { fr: "✓ Terminé", en: "✓ Completed" },
+    "⚠ قيد النزاع": { fr: "⚠ En litige", en: "⚠ Disputed" },
+    "بانتظار التأكيد": { fr: "En attente de confirmation", en: "Awaiting confirmation" },
+    "النهائي 🏆": { fr: "Finale 🏆", en: "Final 🏆" },
+    "الفائز": { fr: "Vainqueur", en: "Winner" },
+    "🏆 الفائز": { fr: "🏆 Vainqueur", en: "🏆 Winner" },
+    "معرّف المباراة غير موجود": { fr: "Identifiant du match manquant", en: "Match ID missing" },
+    "لم يتم العثور على هذه المباراة": { fr: "Ce match est introuvable", en: "This match could not be found" },
+    "تعذر تحميل المباراة": { fr: "Impossible de charger le match", en: "Could not load the match" },
+    "لوحتي": { fr: "Mon tableau de bord", en: "My dashboard" }
+  });
 })();

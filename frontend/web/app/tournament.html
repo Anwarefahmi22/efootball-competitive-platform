@@ -72,6 +72,11 @@
       in_progress: "جارية", completed: "منتهية", cancelled: "ملغاة",
     };
     const formatLabel = { single_elimination: "خروج المغلوب", league: "دوري", group_knockout: "مجموعات وإقصائيات" };
+    const FORMAT_ICON = {
+      single_elimination: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h3v4H4z"/><path d="M4 15h3v4H4z"/><path d="M17 10h3v4h-3z"/><path d="M7 7h4v5"/><path d="M7 17h4v-5"/><path d="M11 12h6"/></svg>',
+      league: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.3h18"/><path d="M3 14.6h18"/><path d="M9 4v16"/></svg>',
+      group_knockout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>'
+    };
     const matchLabels = {
       waiting: "بانتظار المباراة", ready: "جاهزة", in_progress: "جارية",
       result_submitted: "النتيجة مرسلة", disputed: "قيد النزاع", completed: "مكتملة", cancelled: "ملغاة",
@@ -80,16 +85,21 @@
     function renderSummary(tournament, me) {
       const pct = tournament.max_participants ? Math.round(tournament.participant_count * 100 / tournament.max_participants) : 0;
       el("tournament-summary").innerHTML = `
+        <svg class="identity-pitch" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#a3ff12" stroke-width="2"><rect x="14" y="14" width="372" height="232" rx="6"/><line x1="200" y1="14" x2="200" y2="246"/><circle cx="200" cy="130" r="44"/><circle cx="200" cy="130" r="3" fill="#a3ff12"/><path d="M14 84 h52 v92 h-52"/><path d="M386 84 h-52 v92 h52"/></g></svg>
+        <div class="tcard-band st-${tournament.status} hero-band">
+          <span class="tcard-band__icon">${FORMAT_ICON[tournament.format] || ""}</span>
+          <span class="tcard-band__fmt">${formatLabel[tournament.format] || escapeHtml(tournament.format)}</span>
+          <span class="fill-ring" role="img" aria-label="نسبة امتلاء البطولة ${numberFormat.format(pct)}%"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="fill-ring__track" cx="22" cy="22" r="18"/><circle class="fill-ring__arc" cx="22" cy="22" r="18" stroke-dasharray="${(pct * 113.1 / 100).toFixed(1)} 113.1"/></svg><b>${numberFormat.format(pct)}%</b></span>
+        </div>
         <div class="tournament-hero__top"><span class="eyebrow">مركز البطولة</span><span class="badge ${tournament.status}">${labels[tournament.status] || tournament.status}</span></div>
         <h1>${escapeHtml(tournament.name)}</h1>
         <p>${escapeHtml(tournament.description || "لا يوجد وصف لهذه البطولة.")}</p>
         <div class="tournament-stats">
-          <span><b>${formatLabel[tournament.format] || escapeHtml(tournament.format)}</b><small>النظام</small></span>
+          <span><b>${numberFormat.format(Math.max(0, tournament.max_participants - tournament.participant_count))}</b><small>مقاعد متبقية</small></span>
           <span><b>مجاني</b><small>التكلفة</small></span>
           <span><b>ELO</b><small>المكافأة التنافسية</small></span>
           <span><b>${numberFormat.format(tournament.participant_count)}/${numberFormat.format(tournament.max_participants)}</b><small>المشاركون</small></span>
         </div>
-        <div class="progress" role="progressbar" aria-label="نسبة امتلاء البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
         <div class="tournament-hero__actions">${membershipAction(tournament, me)}<a class="btn btn-ghost" href="/app/tournaments.html">استعراض بطولات أخرى</a></div>`;
       el("participant-count").textContent = `${numberFormat.format(tournament.participant_count)} مشارك`;
       el("join")?.addEventListener("click", () => changeParticipation("join"));
@@ -139,7 +149,7 @@
         // position and advancement — instead of relying on the response order.
         Object.values(rounds).forEach((roundMatches) => roundMatches.sort((a, b) => (a.bracket_slot ?? 0) - (b.bracket_slot ?? 0)));
         const roundNumbers = Object.keys(rounds).sort((a, b) => a - b);
-        el("draw-board-content").innerHTML = `<div class="bracket-grid">${Object.entries(rounds).sort(([a], [b]) => a - b).map(([round, roundMatches]) => `<div class="bracket-round"><h3>${round == 1 ? "الدور الأول" : round == roundNumbers[roundNumbers.length - 1] ? "النهائي" : `الدور ${round}`}</h3>${roundMatches.map((match) => `<a class="bracket-match" href="/app/match.html?id=${encodeURIComponent(match.id)}"><span>${escapeHtml(names[match.player_a_id] || (round == 1 ? "بانتظار التحديد" : "متأهل من الدور السابق"))}</span><b>${match.score_a ?? "—"} : ${match.score_b ?? "—"}</b><span>${escapeHtml(names[match.player_b_id] || (round == 1 ? "بانتظار التحديد" : "متأهل من الدور السابق"))}</span></a>`).join("")}</div>`).join("")}</div>`;
+        el("draw-board-content").innerHTML = `<div class="bracket-grid">${Object.entries(rounds).sort(([a], [b]) => a - b).map(([round, roundMatches]) => { const isFinal = round == roundNumbers[roundNumbers.length - 1]; return `<div class="bracket-round"><h3>${round == 1 ? "الدور الأول" : isFinal ? "النهائي 🏆" : `الدور ${round}`}</h3>${roundMatches.map((match) => `<a class="bracket-match bm-${match.status}" href="/app/match.html?id=${encodeURIComponent(match.id)}"><span>${escapeHtml(names[match.player_a_id] || (round == 1 ? "بانتظار التحديد" : "متأهل من الدور السابق"))}</span><b>${match.score_a ?? "—"} : ${match.score_b ?? "—"}</b><span>${escapeHtml(names[match.player_b_id] || (round == 1 ? "بانتظار التحديد" : "متأهل من الدور السابق"))}</span><small class="bracket-status">${match.status === "completed" ? "✓ مكتملة" : match.status === "disputed" ? "⚠ قيد النزاع" : match.status === "result_submitted" ? "بانتظار التأكيد" : "لم تُلعب بعد"}</small></a>`).join("")}</div>`; }).join("")}</div>`;
         return;
       }
       el("draw-board-content").innerHTML = `<div class="draw-grid">${seeded.map((participant) => `<div class="draw-chip"><span>${participant.seed}</span><strong>${escapeHtml(participant.display_name)}</strong></div>`).join("")}</div>`;

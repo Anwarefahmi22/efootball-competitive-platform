@@ -679,3 +679,26 @@ tr.is-me td:first-child { border-inline-start: 3px solid var(--neon); }
 @media (max-width: 900px) { .profile-metric-strip { grid-template-columns: repeat(3, 1fr); } .profile-metric-strip > div:nth-child(4) { border-inline-start: 0; } }
 @media (max-width: 760px) { .profile-complete { margin: 18px 18px 0; } }
 @media (max-width: 560px) { .profile-metric-strip { grid-template-columns: repeat(2, 1fr); margin: 0 18px 20px; } .profile-metric-strip > div:nth-child(odd) { border-inline-start: 0; } .profile-metric-strip > div:nth-child(4) { border-inline-start: 1px solid var(--line); } }
+
+/* ——— Tournament + match upgrade 2026-11-01: hero band, bracket status, winner, states ——— */
+.tournament-hero { position: relative; overflow: hidden; }
+.tournament-hero > *:not(.identity-pitch) { position: relative; }
+.tcard-band .fill-ring { margin-inline-start: auto; }
+.hero-band { margin-bottom: 18px; }
+.bracket-status { color: var(--muted); font-size: .68rem; }
+.bracket-match.bm-completed { border-color: rgba(163,255,18,.45); }
+.bracket-match.bm-completed .bracket-status { color: var(--neon); }
+.bracket-match.bm-disputed { border-color: rgba(255,77,94,.55); }
+.bracket-match.bm-disputed b { color: var(--danger); }
+.bracket-match.bm-disputed .bracket-status { color: var(--danger); }
+.bracket-match.bm-result_submitted .bracket-status { color: var(--warn); }
+.match-player .title-chip { margin-top: 3px; }
+.winner-chip { justify-self: start; margin-top: 3px; color: #081309; background: var(--neon); border-radius: 999px; padding: 1px 9px; font-size: .7rem; font-weight: 800; }
+.draw-chip { justify-self: start; margin-top: 3px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; font-size: .7rem; font-weight: 700; }
+.match-player.is-b .winner-chip, .match-player.is-b .draw-chip, .match-player.is-b .title-chip { justify-self: end; }
+.match-player.is-winner .match-player-avatar { border-color: var(--neon); box-shadow: 0 0 18px rgba(163,255,18,.35); }
+.match-player.is-winner strong { color: var(--neon); }
+.match-missing { padding: 44px 24px; }
+.match-missing h2 { margin: 0 0 8px; }
+.match-missing p { margin: 0 auto 20px; max-width: 420px; line-height: 1.8; }
+.match-missing__actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }

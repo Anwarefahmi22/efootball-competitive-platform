@@ -117,12 +117,12 @@
           var dot = x * dirs[d][0] + y * dirs[d][1] + z * dirs[d][2];
           if (dot > maxDot) maxDot = dot;
         }
-        var t = smoothstep(0.772, 0.818, maxDot);
+        var t = smoothstep(0.906, 0.938, maxDot);
         var r = WHITE[0] + (DARK[0] - WHITE[0]) * t;
         var g = WHITE[1] + (DARK[1] - WHITE[1]) * t;
         var b = WHITE[2] + (DARK[2] - WHITE[2]) * t;
-        var seam = 1 - smoothstep(0.0, 0.028, Math.abs(maxDot - 0.795));
-        r += (NEON[0] - r) * seam * 0.45; g += (NEON[1] - g) * seam * 0.45; b += (NEON[2] - b) * seam * 0.45;
+        var seam = 1 - smoothstep(0.0, 0.012, Math.abs(maxDot - 0.922));
+        r += (NEON[0] - r) * seam * 0.5; g += (NEON[1] - g) * seam * 0.5; b += (NEON[2] - b) * seam * 0.5;
         col.push(r, g, b);
       }
     }
@@ -191,6 +191,26 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
+  function buildGem(cx, cy, cz, r, color) {
+    var pos = [], norm = [], col = [], idx = [];
+    var W = 14, H = 10;
+    for (var j = 0; j <= H; j++) {
+      var v = j / H, th = v * Math.PI;
+      for (var i = 0; i <= W; i++) {
+        var u = i / W, ph = u * Math.PI * 2;
+        var x = Math.sin(th) * Math.cos(ph), y = Math.cos(th), z = Math.sin(th) * Math.sin(ph);
+        pos.push(cx + x * r, cy + y * r, cz + z * r);
+        norm.push(x, y, z);
+        col.push(color[0], color[1], color[2]);
+      }
+    }
+    for (var jj = 0; jj < H; jj++) for (var ii = 0; ii < W; ii++) {
+      var a = jj * (W + 1) + ii, b = a + W + 1;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+    return { pos: pos, norm: norm, col: col, idx: idx };
+  }
+
   function buildTrophy() {
     var profile = [
       [0.0, 0.0], [0.52, 0.0], [0.56, 0.05], [0.56, 0.13], [0.32, 0.19], [0.21, 0.28],
@@ -200,7 +220,12 @@
     var cup = lathe(profile, 72);
     var right = torus(0.50, 1.40, 0.30, 0.06, -Math.PI * 0.46, Math.PI * 0.46, false);
     var left = torus(-0.50, 1.40, 0.30, 0.06, Math.PI * 0.54, Math.PI * 1.46, true);
-    return merge([cup, right, left]);
+    var NEONC = [0.64, 1.0, 0.07];
+    var gems = [0, 1, 2].map(function (k) {
+      var a = k * Math.PI * 2 / 3 + 0.5;
+      return buildGem(Math.cos(a) * 0.705, 1.52, Math.sin(a) * 0.705, 0.05, NEONC);
+    });
+    return merge([cup, right, left].concat(gems));
   }
 
   /* ——— stage ——— */
@@ -243,6 +268,7 @@
     this.uMetal = gl.getUniformLocation(prog, "uMetal");
     this.uRim = gl.getUniformLocation(prog, "uRim");
     this.uRimAmt = gl.getUniformLocation(prog, "uRimAmt");
+    this.reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.rotX = kind === "ball" ? 0.42 : -0.06;
     this.rotY = kind === "ball" ? -0.6 : 0.5;
     this.velY = 0;
@@ -259,14 +285,15 @@
   Stage.prototype.draw = function (t, dt) {
     var gl = this.gl;
     if (!gl) return;
+    var auto = this.reduced ? 0 : 1;
     if (this.kind === "ball") {
-      this.velY += ((0.28) - this.velY) * Math.min(1, dt * 1.6);
+      this.velY += ((0.28 * auto) - this.velY) * Math.min(1, dt * 1.6);
       if (!this.dragging) this.rotY += this.velY * dt;
-      this.rotX += Math.sin(t * 0.0006) * 0.00012;
+      this.rotX += Math.sin(t * 0.0006) * 0.00012 * auto;
     } else {
-      this.rotY += 0.32 * dt;
+      this.rotY += 0.32 * dt * auto;
     }
-    var bob = this.kind === "ball" ? Math.sin(t * 0.0011) * 0.055 : 0;
+    var bob = this.kind === "ball" ? Math.sin(t * 0.0011) * 0.055 * auto : 0;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -293,7 +320,7 @@
       gl.uniform3f(this.uRim, 0.30, 0.65, 0.05);
       gl.uniform1f(this.uRimAmt, 0.35);
     } else {
-      var a = t * 0.00045;
+      var a = t * 0.0009;
       gl.uniform3f(this.uL1, Math.cos(a) * 0.8, 0.75, Math.sin(a) * 0.8 + 0.35);
       gl.uniform3f(this.uL2, -0.5, 0.1, -0.65);
       gl.uniform1f(this.uShine, 85.0);
@@ -362,10 +389,7 @@
       }
     });
     if (!stages.length) return;
-    if (reduced) {
-      stages.forEach(function (s) { s.draw(600, 0); });
-      return;
-    }
+    stages.forEach(function (s) { s.draw(600, 0); });
     var last = performance.now();
     function frame(now) {
       var dt = Math.min(0.05, (now - last) / 1000);
@@ -377,7 +401,7 @@
     var resizeTimer = null;
     window.addEventListener("resize", function () {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(function () { stages.forEach(function (s) { s.resize(); if (reduced) s.draw(600, 0); }); }, 180);
+      resizeTimer = setTimeout(function () { stages.forEach(function (s) { s.resize(); s.draw(600, 0); }); }, 180);
     });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

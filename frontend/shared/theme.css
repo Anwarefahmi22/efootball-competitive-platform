@@ -730,7 +730,7 @@ tr.is-me td:first-child { border-inline-start: 3px solid var(--neon); }
 .stage3d canvas { width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; }
 .stage3d canvas:active { cursor: grabbing; }
 .stage3d__fallback { width: 100%; height: 100%; object-fit: contain; display: block; position: relative; }
-.stage3d__shadow { position: absolute; left: 50%; bottom: 5%; width: 62%; height: 11%; transform: translateX(-50%); background: radial-gradient(ellipse at center, rgba(0,0,0,.5), rgba(0,0,0,0) 70%); border-radius: 50%; pointer-events: none; }
+.stage3d__shadow { position: absolute; left: 50%; bottom: 5%; width: 66%; height: 11%; transform: translateX(-50%); background: radial-gradient(ellipse at center, rgba(0,0,0,.62), rgba(0,0,0,0) 70%); border-radius: 50%; pointer-events: none; }
 .stage3d--ball { width: 200px; height: 200px; margin-inline: auto; }
 .stage3d--trophy { width: 84px; height: 84px; margin-inline: auto; }
 .stage3d--trophy .stage3d__shadow { bottom: 1%; width: 74%; }

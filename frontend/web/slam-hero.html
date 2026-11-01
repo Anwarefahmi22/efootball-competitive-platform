@@ -179,6 +179,10 @@
   .exp-note{position:relative;z-index:35;padding:26px 0 34px;text-align:center;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);background:#030805}
   .exp-note a{color:var(--neon);font-weight:800;text-decoration:none}
 
+  /* Text over the traveling ball: dark aura keeps glyphs readable on any panel */
+  .hud-head h2, .callout, .champion h2, .champion p, .finale h2,
+  .stage-panel h2, .stage-panel p { text-shadow: 0 2px 16px rgba(3,8,5,.92), 0 0 44px rgba(3,8,5,.6); }
+
   /* ---------- Reveal ---------- */
   .rv{opacity:0;transform:translateY(30px);transition:opacity .8s ease,transform .8s var(--ease)}
   .rv.in{opacity:1;transform:none}
@@ -302,7 +306,7 @@
     <h2>المنصّة لا تصنع نفسها</h2>
     <p>كل بطل بدأ ببطولة أولى. أنشئ بطولتك، ادعُ منافسيك، وخلّي أول اسم يُكتب في سجلّها… اسمك أنت المنظّم.</p>
   </div>
-  <div class="pedestal rv" id="pedestal">
+  <div class="pedestal" id="pedestal">
     <div class="pod"><span class="pod-glow"></span></div>
   </div>
 </section>

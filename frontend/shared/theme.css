@@ -573,7 +573,7 @@ table.table tr:hover td { background: rgba(163, 255, 18, .04); }
 .next-empty p { margin: 0; color: var(--muted); }
 
 /* ——— Tournaments upgrade 2026-11-01: toolbar, format band + fill ring, rich empty ——— */
-@media (min-width: 761px) { .toolbar-actions { flex-wrap: nowrap; } .toolbar-actions .field { min-width: 0; } }
+@media (min-width: 761px) { .toolbar-actions { flex-wrap: nowrap; } .toolbar-actions .field { min-width: 0; } .toolbar-actions .btn { flex: none; white-space: nowrap; } }
 .tcard-band { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: -22px -22px 0; padding: 12px 22px; border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; background: linear-gradient(120deg, rgba(163,255,18,.12), transparent 62%); }
 .tcard-band__icon { width: 26px; height: 26px; color: var(--neon); flex: none; }
 .tcard-band__icon svg { width: 100%; height: 100%; }

@@ -1,4 +1,5 @@
 import asyncio
+import mimetypes
 import os
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -125,6 +126,10 @@ async def root() -> RedirectResponse:
 
 # The API container serves the web frontend too, so a single free-tier
 # service (e.g. Render) can host the whole platform with no CORS setup.
+# This Python build's mime db lacks .webp, so StaticFiles served the
+# logo and the landing ball as text/plain (fragile under nosniff).
+mimetypes.add_type("image/webp", ".webp")
+
 app.mount("/shared", StaticFiles(directory=FRONTEND_DIR / "shared"), name="shared")
 app.mount("/landing", StaticFiles(directory=FRONTEND_DIR / "landing", html=True), name="landing")
 if media_backend() == "db":

@@ -122,6 +122,10 @@
 
   /* ---------- HUD diagram ---------- */
   .hud{position:relative;padding:110px 0 90px;background:radial-gradient(700px 380px at 50% 45%, #12351f 0%, transparent 70%)}
+  @media(min-width:821px){
+    .hud{height:210vh;padding:0}
+    .hud-sticky{position:sticky;top:0;height:100svh;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+  }
   .hud-head{text-align:center;margin-bottom:8px}
   .hud-stage{position:relative;max-width:860px;margin:26px auto 0;height:430px}
   .hud-ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px dashed rgba(163,255,18,.22);border-radius:50%;width:330px;height:330px;pointer-events:none}
@@ -272,17 +276,19 @@
 
 <!-- ================= HUD ================= -->
 <section class="hud" id="hud">
-  <div class="wrap">
-    <div class="hud-head rv">
-      <div class="kicker">Match Anatomy</div>
-      <h2 style="font-size:clamp(1.9rem,4.4vw,3.1rem);font-weight:900;margin:.3em 0 0">تشريح مباراة واحدة</h2>
-    </div>
-    <div class="hud-stage rv" id="hudStage">
-      <div class="hud-ring" aria-hidden="true"></div>
-      <div class="callout c1"><b>صورة الدليل</b>لقطة النتيجة النهائية تُرفع مع كل تقديم — إلزامية، بلا استثناء.</div>
-      <div class="callout c2"><b>تأكيد الخصم</b>النتيجة لا تُعتمد حتى يؤكدها الطرف الآخر بنفسه.</div>
-      <div class="callout c3"><b>ELO فوري</b>التقييم والترتيب العالمي يُحدَّثان لحظة اعتماد النتيجة.</div>
-      <div class="callout c4"><b>تحكيم المشرف</b>نزاع مفتوح؟ المشرف يراجع الدليل ويحسم — القرار موثّق.</div>
+  <div class="hud-sticky">
+    <div class="wrap">
+      <div class="hud-head rv">
+        <div class="kicker">Match Anatomy</div>
+        <h2 style="font-size:clamp(1.9rem,4.4vw,3.1rem);font-weight:900;margin:.3em 0 0">تشريح مباراة واحدة</h2>
+      </div>
+      <div class="hud-stage rv" id="hudStage">
+        <div class="hud-ring" aria-hidden="true"></div>
+        <div class="callout c1"><b>صورة الدليل</b>لقطة النتيجة النهائية تُرفع مع كل تقديم — إلزامية، بلا استثناء.</div>
+        <div class="callout c2"><b>تأكيد الخصم</b>النتيجة لا تُعتمد حتى يؤكدها الطرف الآخر بنفسه.</div>
+        <div class="callout c3"><b>ELO فوري</b>التقييم والترتيب العالمي يُحدَّثان لحظة اعتماد النتيجة.</div>
+        <div class="callout c4"><b>تحكيم المشرف</b>نزاع مفتوح؟ المشرف يراجع الدليل ويحسم — القرار موثّق.</div>
+      </div>
     </div>
   </div>
 </section>
@@ -360,6 +366,7 @@ function stageTick() {
 
 /* ---------- THE ONE BALL: scroll journey across the whole page ---------- */
 const ball = document.getElementById("travelBall");
+const hud = document.getElementById("hud");
 const hudStage = document.getElementById("hudStage");
 const pedestal = document.getElementById("pedestal");
 const finale = document.getElementById("finale");
@@ -370,12 +377,15 @@ function buildStops() {
   const vh = window.innerHeight;
   const stageTotal = stage.offsetHeight - vh;
   const stageTop = docTop(stage);
+  const hudStopS = window.innerWidth > 820
+    ? docTop(hud) + (hud.offsetHeight - vh) / 2
+    : docTop(hudStage) + hudStage.offsetHeight / 2 - vh * 0.5;
   stops = [
     { s: 0,                                        x: 50, y: 47, k: 1.00, o: 1 },
     { s: stageTop + stageTotal * 0.16,             x: 28, y: 50, k: 1.30, o: 1 },
     { s: stageTop + stageTotal * 0.50,             x: 72, y: 50, k: 1.30, o: 1 },
     { s: stageTop + stageTotal * 0.86,             x: 50, y: 50, k: 0.95, o: 1 },
-    { s: docTop(hudStage) + hudStage.offsetHeight / 2 - vh * 0.5, x: 50, y: 50, k: 0.55, o: 1 },
+    { s: hudStopS,                                 x: 50, y: 50, k: 0.55, o: 1 },
     { s: docTop(pedestal) - vh * 0.56,             x: 50, y: 50, k: 0.50, o: 1 },
     { s: docTop(finale) - vh * 0.30,               x: 50, y: 32, k: 0.42, o: 0 },
   ];
@@ -414,8 +424,8 @@ function ballTick() {
     if (rr.height > 0) {
       const ringVh = (rr.top + rr.height / 2) / window.innerHeight * 100;
       const d = Math.abs(ringVh - 50);
-      if (d < 20) {
-        const w = d <= 10 ? 1 : (20 - d) / 10;
+      if (d < 26) {
+        const w = d <= 14 ? 1 : (26 - d) / 12;
         yy = yy + (ringVh - yy) * w;
         k = k + (0.55 - k) * w;
       }

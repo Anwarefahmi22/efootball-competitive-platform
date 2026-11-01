@@ -148,14 +148,22 @@
     if (target) { target.innerHTML = ""; target.appendChild(root); }
     else document.body.appendChild(root);
 
+    /* Anti-flicker: a wait overlay that flashes for <650ms reads as a
+       glitch, so an overlay stays at least MIN_VISIBLE before fading.
+       Inline instances are removed by their page immediately. */
+    var MIN_VISIBLE = 650;
+    var shownAt = performance.now();
     var gone = false;
     return {
       hide: function () {
         if (gone) return;
         gone = true;
         if (target) { root.remove(); return; }
-        root.classList.add("elx-dismissing");
-        setTimeout(function () { root.remove(); }, 280);
+        var waitMs = Math.max(0, MIN_VISIBLE - (performance.now() - shownAt));
+        setTimeout(function () {
+          root.classList.add("elx-dismissing");
+          setTimeout(function () { root.remove(); }, 280);
+        }, waitMs);
       },
     };
   }

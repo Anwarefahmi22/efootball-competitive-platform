@@ -13,8 +13,8 @@
   <link rel="apple-touch-icon" href="/shared/favicon-192.png" />
   <link rel="stylesheet" href="/shared/eyes-loader.css" />
   <style>
-    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-    body { position: relative; overflow: hidden; isolation: isolate; }
+    body { display: flex; flex-direction: column; align-items: center; min-height: 100vh; min-height: 100svh; padding: 78px 20px 20px; }
+    body { position: relative; overflow-x: hidden; isolation: isolate; }
     .club-strip {
       position: fixed; top: 0; left: 0; right: 0; z-index: 3;
       height: 58px; overflow: hidden;
@@ -55,7 +55,7 @@
       pointer-events: none;
       background:
         linear-gradient(135deg, rgba(3,16,9,.72), rgba(4,26,15,.54)),
-        url("https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=2200&q=82")
+        url("https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1400&q=75")
         center / cover no-repeat;
       transform: scale(1.03);
     }
@@ -103,7 +103,7 @@
     .auth-card {
       width: 100%; max-width: 430px;
       position: relative;
-      margin-top: 58px;
+      margin-block: auto;
       background: linear-gradient(180deg, #10281c 0%, #0b1e13 100%);
       border: 1px solid #1f4a33; border-radius: 18px;
       padding: 34px 30px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
@@ -133,6 +133,17 @@
     .field-row { display: flex; flex-direction: column; }
     .hint { font-size: .8rem; color: #9dbfae; margin-top: 10px; text-align: center; }
     .err { color: #ff4d5e; font-size: .85rem; font-weight: 600; display: none; }
+    /* Phones: compact card so the whole form fits short viewports;
+       the page may still scroll when it cannot (never clipped). */
+    @media (max-width: 560px) {
+      body { padding: 66px 12px 12px; }
+      .auth-card { padding: 24px 18px; border-radius: 16px; }
+      .logo { margin-bottom: 14px; }
+      .logo .logo-img { height: 74px; }
+      .logo .mark { font-size: 1.12rem; letter-spacing: 1px; }
+      .tabs { margin: 12px 0 16px; }
+      form { gap: 11px; }
+    }
   </style>
 </head>
 <body>

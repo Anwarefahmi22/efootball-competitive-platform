@@ -2,9 +2,11 @@
    models (football + arena cup). No framework and no CDN: the site's CSP is
    script-src 'self', and two decorative models do not justify weakening it
    or shipping a 700 KB library. Everything is procedural: the ball's panels
-   are coloured by distance to the icosahedron's vertex directions, the cup
-   is a lathe profile with torus handles. Falls back to the static assets
-   already in the markup when WebGL is unavailable. */
+   are coloured by distance to the icosahedron's vertex directions (a real
+   pentagon subtends ~23°, so the threshold sits at dot ≈ 0.92), the cup is
+   a lathe profile with torus handles and three neon studs — a surface of
+   revolution shows no rotation without markers. Falls back to the static
+   assets already in the markup when WebGL is unavailable. */
 (function () {
   "use strict";
 
@@ -39,6 +41,7 @@
     "uniform float uMetal;",
     "uniform vec3 uRim;",
     "uniform float uRimAmt;",
+    "uniform float uBoost;",
     "void main() {",
     "  vec3 n = normalize(vNorm);",
     "  vec3 v = normalize(uCam - vWorld);",
@@ -51,7 +54,7 @@
     "  col += (uMetal > 0.5 ? base * 1.4 : vec3(1.0)) * s;",
     "  float fres = pow(1.0 - max(dot(n, v), 0.0), 3.0) * uRimAmt;",
     "  col += uRim * fres;",
-    "  gl_FragColor = vec4(col, 1.0);",
+    "  gl_FragColor = vec4(col * uBoost, 1.0);",
     "}"
   ].join("\n");
 
@@ -87,11 +90,9 @@
   /* ——— geometry ——— */
   function icoDirections() {
     var phi = (1 + Math.sqrt(5)) / 2, dirs = [];
-    var raw = [];
     [[0, 1, phi], [0, 1, -phi], [0, -1, phi], [0, -1, -phi],
      [1, phi, 0], [1, -phi, 0], [-1, phi, 0], [-1, -phi, 0],
-     [phi, 0, 1], [-phi, 0, 1], [phi, 0, -1], [-phi, 0, -1]].forEach(function (p) { raw.push(p); });
-    raw.forEach(function (p) {
+     [phi, 0, 1], [-phi, 0, 1], [phi, 0, -1], [-phi, 0, -1]].forEach(function (p) {
       var l = Math.hypot(p[0], p[1], p[2]);
       dirs.push([p[0] / l, p[1] / l, p[2] / l]);
     });
@@ -133,11 +134,9 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  function lathe(profile, segments) {
+  function lathe(profile, segments, color) {
     var pos = [], norm = [], col = [], idx = [];
-    var GOLD = [0.93, 0.72, 0.28];
-    var n = profile.length;
-    var pn = [];
+    var n = profile.length, pn = [];
     for (var k = 0; k < n; k++) {
       var p0 = profile[Math.max(0, k - 1)], p1 = profile[Math.min(n - 1, k + 1)];
       var dr = p1[0] - p0[0], dy = p1[1] - p0[1];
@@ -149,7 +148,7 @@
         var a = (i / segments) * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
         pos.push(profile[j][0] * ca, profile[j][1], profile[j][0] * sa);
         norm.push(pn[j][0] * ca, pn[j][1], pn[j][0] * sa);
-        col.push(GOLD[0], GOLD[1], GOLD[2]);
+        col.push(color[0], color[1], color[2]);
       }
     }
     for (var jj = 0; jj < n - 1; jj++) for (var ii = 0; ii < segments; ii++) {
@@ -159,18 +158,16 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  function torus(cx, cy, R, tube, arcFrom, arcTo, flip) {
+  function torus(cx, cy, R, tube, arcFrom, arcTo, flip, color) {
     var pos = [], norm = [], col = [], idx = [];
-    var GOLD = [0.93, 0.72, 0.28];
     var U = 26, V = 12;
     for (var j = 0; j <= V; j++) {
       var vv = (j / V) * Math.PI * 2, cv = Math.cos(vv), sv = Math.sin(vv);
       for (var i = 0; i <= U; i++) {
         var uu = arcFrom + (arcTo - arcFrom) * (i / U), cu = Math.cos(uu), su = Math.sin(uu);
-        var px = cx + (R + tube * cv) * cu, py = cy + (R + tube * cv) * su, pz = tube * sv;
-        pos.push(px, py, pz);
+        pos.push(cx + (R + tube * cv) * cu, cy + (R + tube * cv) * su, tube * sv);
         norm.push(cv * cu, cv * su, sv);
-        col.push(GOLD[0], GOLD[1], GOLD[2]);
+        col.push(color[0], color[1], color[2]);
       }
     }
     for (var jj = 0; jj < V; jj++) for (var ii = 0; ii < U; ii++) {
@@ -181,17 +178,7 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  function merge(geoms) {
-    var pos = [], norm = [], col = [], idx = [], off = 0;
-    geoms.forEach(function (g) {
-      pos = pos.concat(g.pos); norm = norm.concat(g.norm); col = col.concat(g.col);
-      g.idx.forEach(function (i) { idx.push(i + off); });
-      off += g.pos.length / 3;
-    });
-    return { pos: pos, norm: norm, col: col, idx: idx };
-  }
-
-  function buildGem(cx, cy, cz, r, color) {
+  function ball3(cx, cy, cz, r, color) {
     var pos = [], norm = [], col = [], idx = [];
     var W = 14, H = 10;
     for (var j = 0; j <= H; j++) {
@@ -211,21 +198,39 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  function buildTrophy() {
+  function merge(geoms) {
+    var pos = [], norm = [], col = [], idx = [], off = 0;
+    geoms.forEach(function (g) {
+      pos = pos.concat(g.pos); norm = norm.concat(g.norm); col = col.concat(g.col);
+      g.idx.forEach(function (i) { idx.push(i + off); });
+      off += g.pos.length / 3;
+    });
+    return { pos: pos, norm: norm, col: col, idx: idx };
+  }
+
+  var GOLD = [0.93, 0.72, 0.28], NEONC = [0.64, 1.0, 0.07];
+  function trophyParts() {
     var profile = [
       [0.0, 0.0], [0.52, 0.0], [0.56, 0.05], [0.56, 0.13], [0.32, 0.19], [0.21, 0.28],
       [0.175, 0.52], [0.175, 0.72], [0.28, 0.92], [0.48, 1.16], [0.64, 1.44],
       [0.72, 1.70], [0.74, 1.88], [0.70, 1.92], [0.665, 1.80]
     ];
-    var cup = lathe(profile, 72);
-    var right = torus(0.50, 1.40, 0.30, 0.06, -Math.PI * 0.46, Math.PI * 0.46, false);
-    var left = torus(-0.50, 1.40, 0.30, 0.06, Math.PI * 0.54, Math.PI * 1.46, true);
-    var NEONC = [0.64, 1.0, 0.07];
-    var gems = [0, 1, 2].map(function (k) {
+    var main = merge([
+      lathe(profile, 72, GOLD),
+      torus(0.50, 1.40, 0.30, 0.06, -Math.PI * 0.46, Math.PI * 0.46, false, GOLD),
+      torus(-0.50, 1.40, 0.30, 0.06, Math.PI * 0.54, Math.PI * 1.46, true, GOLD)
+    ]);
+    var gems = merge([0, 1, 2].map(function (k) {
       var a = k * Math.PI * 2 / 3 + 0.5;
-      return buildGem(Math.cos(a) * 0.705, 1.52, Math.sin(a) * 0.705, 0.05, NEONC);
-    });
-    return merge([cup, right, left].concat(gems));
+      return ball3(Math.cos(a) * 0.715, 1.50, Math.sin(a) * 0.715, 0.088, NEONC);
+    }));
+    return [
+      { geom: main, metal: 1.0, shine: 85.0, spec: 0.85, rim: [0.95, 0.75, 0.30], rimAmt: 0.5, boost: 1.0 },
+      { geom: gems, metal: 0.0, shine: 28.0, spec: 0.15, rim: [0.40, 0.95, 0.05], rimAmt: 0.7, boost: 1.75 }
+    ];
+  }
+  function ballParts() {
+    return [{ geom: buildBall(), metal: 0.0, shine: 55.0, spec: 0.38, rim: [0.30, 0.65, 0.05], rimAmt: 0.35, boost: 1.0 }];
   }
 
   /* ——— stage ——— */
@@ -245,9 +250,16 @@
     gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FSH));
     gl.linkProgram(prog);
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { this.gl = null; return; }
+    if (!gl.getExtension("OES_element_index_uint")) { this.gl = null; return; }
     gl.useProgram(prog);
     this.prog = prog;
-    var geom = kind === "ball" ? buildBall() : buildTrophy();
+    this.u = {};
+    ["uMVP", "uModel", "uCam", "uLight1", "uLight2", "uShine", "uSpec", "uMetal", "uRim", "uRimAmt", "uBoost"].forEach(function (name) {
+      this.u[name] = gl.getUniformLocation(prog, name);
+    }, this);
+    this.aPos = gl.getAttribLocation(prog, "aPos");
+    this.aNorm = gl.getAttribLocation(prog, "aNorm");
+    this.aCol = gl.getAttribLocation(prog, "aCol");
     function buffer(data, isIndex) {
       var buf = gl.createBuffer();
       gl.bindBuffer(isIndex ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, buf);
@@ -255,19 +267,15 @@
         isIndex ? new Uint32Array(data) : new Float32Array(data), gl.STATIC_DRAW);
       return buf;
     }
-    if (!gl.getExtension("OES_element_index_uint")) { this.gl = null; return; }
-    this.count = geom.idx.length;
-    this.bPos = buffer(geom.pos); this.bNorm = buffer(geom.norm); this.bCol = buffer(geom.col); this.bIdx = buffer(geom.idx, true);
-    this.uMVP = gl.getUniformLocation(prog, "uMVP");
-    this.uModel = gl.getUniformLocation(prog, "uModel");
-    this.uCam = gl.getUniformLocation(prog, "uCam");
-    this.uL1 = gl.getUniformLocation(prog, "uLight1");
-    this.uL2 = gl.getUniformLocation(prog, "uLight2");
-    this.uShine = gl.getUniformLocation(prog, "uShine");
-    this.uSpec = gl.getUniformLocation(prog, "uSpec");
-    this.uMetal = gl.getUniformLocation(prog, "uMetal");
-    this.uRim = gl.getUniformLocation(prog, "uRim");
-    this.uRimAmt = gl.getUniformLocation(prog, "uRimAmt");
+    var parts = kind === "ball" ? ballParts() : trophyParts();
+    this.parts = parts.map(function (part) {
+      return {
+        style: part,
+        count: part.geom.idx.length,
+        bPos: buffer(part.geom.pos), bNorm: buffer(part.geom.norm),
+        bCol: buffer(part.geom.col), bIdx: buffer(part.geom.idx, true)
+      };
+    });
     this.reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.rotX = kind === "ball" ? 0.42 : -0.06;
     this.rotY = kind === "ball" ? -0.6 : 0.5;
@@ -287,11 +295,11 @@
     if (!gl) return;
     var auto = this.reduced ? 0 : 1;
     if (this.kind === "ball") {
-      this.velY += ((0.28 * auto) - this.velY) * Math.min(1, dt * 1.6);
+      this.velY += (0.4 * auto - this.velY) * Math.min(1, dt * 1.6);
       if (!this.dragging) this.rotY += this.velY * dt;
       this.rotX += Math.sin(t * 0.0006) * 0.00012 * auto;
     } else {
-      this.rotY += 0.32 * dt * auto;
+      this.rotY += 0.5 * dt * auto;
     }
     var bob = this.kind === "ball" ? Math.sin(t * 0.0011) * 0.055 * auto : 0;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -299,56 +307,51 @@
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);
     gl.useProgram(this.prog);
-    var proj = perspective(0.56, this.aspect, 0.1, 50);
     var dist = this.kind === "ball" ? 4.0 : 4.35;
+    var proj = perspective(0.56, this.aspect, 0.1, 50);
     var view = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -dist, 1]);
     var yOff = this.kind === "ball" ? bob : -0.94;
     var model = modelMatrix(0, yOff, 0, this.rotX, this.rotY, 1);
     var mvp = multiply(proj, multiply(view, model));
     var worldModel = modelMatrix(0, 0, 0, this.rotX, this.rotY, 1);
-    // the visible model sits at (0, yOff, -0) in view space; shading uses the
-    // rotation-only model so normals stay consistent while it bobs.
-    gl.uniformMatrix4fv(this.uMVP, false, mvp);
-    gl.uniformMatrix4fv(this.uModel, false, worldModel);
-    gl.uniform3f(this.uCam, 0, 0, dist);
+    gl.uniformMatrix4fv(this.u.uMVP, false, mvp);
+    gl.uniformMatrix4fv(this.u.uModel, false, worldModel);
+    gl.uniform3f(this.u.uCam, 0, 0, dist);
     if (this.kind === "ball") {
-      gl.uniform3f(this.uL1, 0.55, 0.85, 0.75);
-      gl.uniform3f(this.uL2, -0.65, -0.15, 0.45);
-      gl.uniform1f(this.uShine, 55.0);
-      gl.uniform1f(this.uSpec, 0.38);
-      gl.uniform1f(this.uMetal, 0.0);
-      gl.uniform3f(this.uRim, 0.30, 0.65, 0.05);
-      gl.uniform1f(this.uRimAmt, 0.35);
+      gl.uniform3f(this.u.uLight1, 0.55, 0.85, 0.75);
+      gl.uniform3f(this.u.uLight2, -0.65, -0.15, 0.45);
     } else {
-      var a = t * 0.0009;
-      gl.uniform3f(this.uL1, Math.cos(a) * 0.8, 0.75, Math.sin(a) * 0.8 + 0.35);
-      gl.uniform3f(this.uL2, -0.5, 0.1, -0.65);
-      gl.uniform1f(this.uShine, 85.0);
-      gl.uniform1f(this.uSpec, 0.85);
-      gl.uniform1f(this.uMetal, 1.0);
-      gl.uniform3f(this.uRim, 0.95, 0.75, 0.30);
-      gl.uniform1f(this.uRimAmt, 0.5);
+      var a = t * 0.0014;
+      gl.uniform3f(this.u.uLight1, Math.cos(a) * 0.8, 0.75, Math.sin(a) * 0.8 + 0.35);
+      gl.uniform3f(this.u.uLight2, -0.5, 0.1, -0.65);
     }
-    var gl2 = gl;
-    [["aPos", this.bPos], ["aNorm", this.bNorm], ["aCol", this.bCol]].forEach(function (pair) {
-      var loc = gl2.getAttribLocation(this.prog, pair[0]);
-      if (loc < 0) return;
-      gl2.bindBuffer(gl2.ARRAY_BUFFER, pair[1]);
-      gl2.enableVertexAttribArray(loc);
-      gl2.vertexAttribPointer(loc, 3, gl2.FLOAT, false, 0, 0);
-    }, this);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.bIdx);
-    gl.drawElements(gl.TRIANGLES, this.count, gl.UNSIGNED_INT, 0);
+    for (var pi = 0; pi < this.parts.length; pi++) {
+      var part = this.parts[pi], st = part.style;
+      gl.uniform1f(this.u.uShine, st.shine);
+      gl.uniform1f(this.u.uSpec, st.spec);
+      gl.uniform1f(this.u.uMetal, st.metal);
+      gl.uniform3f(this.u.uRim, st.rim[0], st.rim[1], st.rim[2]);
+      gl.uniform1f(this.u.uRimAmt, st.rimAmt);
+      gl.uniform1f(this.u.uBoost, st.boost);
+      var binds = [[this.aPos, part.bPos], [this.aNorm, part.bNorm], [this.aCol, part.bCol]];
+      for (var bi = 0; bi < binds.length; bi++) {
+        if (binds[bi][0] < 0) continue;
+        gl.bindBuffer(gl.ARRAY_BUFFER, binds[bi][1]);
+        gl.enableVertexAttribArray(binds[bi][0]);
+        gl.vertexAttribPointer(binds[bi][0], 3, gl.FLOAT, false, 0, 0);
+      }
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, part.bIdx);
+      gl.drawElements(gl.TRIANGLES, part.count, gl.UNSIGNED_INT, 0);
+    }
     if (this.shadowEl) {
       var s = this.kind === "ball" ? 1 - (bob + 0.055) * 0.55 : 1;
       this.shadowEl.style.transform = "translateX(-50%) scaleX(" + s.toFixed(3) + ")";
-      this.shadowEl.style.opacity = this.kind === "ball" ? (0.5 - (bob + 0.055) * 1.1).toFixed(3) : "0.5";
+      this.shadowEl.style.opacity = this.kind === "ball" ? (0.62 - (bob + 0.055) * 1.4).toFixed(3) : "0.62";
     }
   };
 
   /* ——— boot ——— */
   var stages = [];
-  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function init() {
     document.querySelectorAll("canvas[data-arena3d]").forEach(function (canvas) {
       var stage = null;

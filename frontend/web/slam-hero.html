@@ -140,10 +140,17 @@
     .callout{position:static;max-width:none;border:1px solid var(--line);border-radius:14px;padding:14px 16px}.callout::before{display:none}}
 
   /* ---------- Champion ---------- */
-  .champion{padding:120px 0 110px;text-align:center;position:relative;overflow:hidden}
+  .champion{padding:120px 0 110px;text-align:center;position:relative}
   @media(min-width:821px){
     .champion{height:200vh;padding:0}
-    .champion-sticky{position:sticky;top:0;height:100svh;display:flex;flex-direction:column;justify-content:center;overflow:hidden;z-index:35}
+    .pod-sticky{position:sticky;top:0;height:100svh}
+    .pod-sticky .pedestal{position:absolute;left:50%;transform:translateX(-50%);bottom:11svh;margin:0}
+    .champion-sticky{position:sticky;top:0;height:100svh;margin-top:-100svh;display:flex;flex-direction:column;justify-content:center;overflow:hidden;z-index:35;pointer-events:none}
+  }
+  @media(max-width:820px){
+    .champion{display:flex;flex-direction:column}
+    .champion-sticky{order:1}
+    .pod-sticky{order:2}
   }
   .champion .wrap{position:relative;z-index:35}
   .champion .badge{display:inline-block;border:1px solid var(--line);color:var(--accent);border-radius:999px;padding:6px 16px;
@@ -306,16 +313,18 @@
 
 <!-- ================= CHAMPION ================= -->
 <section class="champion" id="champion">
- <div class="champion-sticky">
-  <div class="wrap rv">
-    <span class="badge">LIMITED • إصدار البطل</span>
-    <h2>المنصّة لا تصنع نفسها</h2>
-    <p>كل بطل بدأ ببطولة أولى. أنشئ بطولتك، ادعُ منافسيك، وخلّي أول اسم يُكتب في سجلّها… اسمك أنت المنظّم.</p>
+  <div class="pod-sticky" aria-hidden="true">
+    <div class="pedestal" id="pedestal">
+      <div class="pod"><span class="pod-glow"></span></div>
+    </div>
   </div>
-  <div class="pedestal" id="pedestal">
-    <div class="pod"><span class="pod-glow"></span></div>
+  <div class="champion-sticky">
+    <div class="wrap rv">
+      <span class="badge">LIMITED • إصدار البطل</span>
+      <h2>المنصّة لا تصنع نفسها</h2>
+      <p>كل بطل بدأ ببطولة أولى. أنشئ بطولتك، ادعُ منافسيك، وخلّي أول اسم يُكتب في سجلّها… اسمك أنت المنظّم.</p>
+    </div>
   </div>
- </div>
 </section>
 
 <!-- ================= FINALE ================= -->

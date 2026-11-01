@@ -99,7 +99,7 @@
 
   /* ---------- SCROLL STAGE (panels; the one ball passes through) ---------- */
   .stage{position:relative;height:340vh;background:linear-gradient(180deg,var(--bg-deep),var(--bg) 18%,var(--bg) 82%,var(--bg-deep))}
-  .stage-sticky{position:sticky;top:0;height:100svh;overflow:hidden}
+  .stage-sticky{position:sticky;top:0;height:100svh;overflow:hidden;z-index:35}
   .stage-panel{position:absolute;z-index:35;top:50%;transform:translateY(-50%);max-width:430px;opacity:0;transition:opacity .55s ease;pointer-events:none}
   .stage-panel.on{opacity:1;pointer-events:auto}
   .stage-panel.p-right{inset-inline-start:clamp(18px,6vw,90px)}
@@ -124,7 +124,7 @@
   .hud{position:relative;padding:110px 0 90px;background:radial-gradient(700px 380px at 50% 45%, #12351f 0%, transparent 70%)}
   @media(min-width:821px){
     .hud{height:210vh;padding:0}
-    .hud-sticky{position:sticky;top:0;height:100svh;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+    .hud-sticky{position:sticky;top:0;height:100svh;display:flex;flex-direction:column;justify-content:center;overflow:hidden;z-index:35}
   }
   .hud-head{text-align:center;margin-bottom:8px;position:relative;z-index:35}
   .hud-stage{position:relative;max-width:860px;margin:26px auto 0;height:430px}
@@ -181,7 +181,7 @@
 
   /* Text over the traveling ball: dark aura keeps glyphs readable on any panel */
   .hud-head h2, .callout, .champion h2, .champion p, .finale h2,
-  .stage-panel h2, .stage-panel p { text-shadow: 0 2px 16px rgba(3,8,5,.92), 0 0 44px rgba(3,8,5,.6); }
+  .stage-panel h2, .stage-panel p { text-shadow: 0 2px 22px rgba(3,8,5,.95), 0 0 60px rgba(3,8,5,.8); }
 
   /* ---------- Reveal ---------- */
   .rv{opacity:0;transform:translateY(30px);transition:opacity .8s ease,transform .8s var(--ease)}
@@ -392,7 +392,7 @@ function buildStops() {
     { s: stageTop + stageTotal * 0.50,             x: 72, y: 50, k: 1.30, o: 1 },
     { s: stageTop + stageTotal * 0.86,             x: 50, y: 50, k: 0.95, o: 1 },
     { s: hudStopS,                                 x: 50, y: 50, k: 0.55, o: 1 },
-    { s: docTop(pedestal) - vh * 0.56,             x: 50, y: 50, k: 0.50, o: 1 },
+    { s: docTop(pedestal) - vh * (50 + (ball.offsetWidth * 0.5 / 2) / vh * 100) / 100, x: 50, y: 50, k: 0.50, o: 1 },
     { s: docTop(finale) - vh * 0.30,               x: 50, y: 32, k: 0.42, o: 0 },
   ];
   /* Phone layout (<=820px): panels become bottom sheets and the HUD stacks,

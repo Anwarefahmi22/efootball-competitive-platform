@@ -556,7 +556,7 @@ table.table tr:hover td { background: rgba(163, 255, 18, .04); }
 .identity-pitch { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .07; pointer-events: none; }
 .identity-card__main, .identity-facts { position: relative; }
 .avatar-ring { --p: 100; flex: none; padding: 3px; border-radius: 21px; background: conic-gradient(var(--neon) calc(var(--p) * 1%), rgba(163,255,18,.13) 0); }
-.avatar-ring .dashboard-avatar { box-shadow: none; }
+.avatar-ring .dashboard-avatar { box-shadow: none; border: 2px solid #08150d; }
 .journey { padding: 24px 26px; }
 .journey-steps { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .journey-step { display: grid; gap: 10px; justify-items: start; align-content: start; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: rgba(8,19,10,.32); }

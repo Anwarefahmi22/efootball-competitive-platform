@@ -1,4 +1,4 @@
-/* arena3d.js v7 — hand-rolled WebGL renderer for the dashboard's football
+/* arena3d.js v8 — hand-rolled WebGL renderer for the dashboard's football
    and arena cup, shaded to a photographic standard (user's bar: the landing
    page's real ball and a real 🏆). No framework, no CDN (CSP script-src
    'self'). Round-3 lessons baked in:
@@ -360,8 +360,8 @@
       ringY(0.62, 0.178, 0.020, GOLD)
     ]);
     var plaque = merge([
-      disc(0, 1.30, 0.575, 0.26, 0.42, DEEPGOLD),
-      disc(0, 1.30, 0.615, 0.185, 0.5, MEDAL)
+      disc(0, 1.30, 0.575, 0.26, 0.42, [0.16, 0.11, 0.05]),
+      disc(0, 1.30, 0.63, 0.155, 0.5, MEDAL)
     ]);
     return [
       { geom: body, kind: 1.0 },

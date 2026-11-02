@@ -1,4 +1,4 @@
-/* arena3d.js v8 — hand-rolled WebGL renderer for the dashboard's football
+/* arena3d.js v9 — hand-rolled WebGL renderer for the dashboard's football
    and arena cup, shaded to a photographic standard (user's bar: the landing
    page's real ball and a real 🏆). No framework, no CDN (CSP script-src
    'self'). Round-3 lessons baked in:
@@ -83,7 +83,8 @@
     "  return vec2(sqrt(f1), sqrt(f2));",
     "}",
     "vec3 studioEnv(vec3 r) {",
-    "  vec3 c = vec3(0.008, 0.016, 0.010);",
+    "  vec3 c = vec3(0.050, 0.062, 0.038);",
+    "  c += vec3(0.95, 0.85, 0.62) * pow(max(dot(r, normalize(vec3(0.1, 0.55, 0.83))), 0.0), 6.0) * 0.38;",
     "  c += vec3(1.10, 1.02, 0.86) * pow(max(dot(r, normalize(vec3(0.25, 0.90, 0.35))), 0.0), 90.0) * 2.2;",
     "  c += vec3(0.82, 0.92, 1.00) * pow(max(dot(r, normalize(vec3(-0.90, 0.05, 0.44))), 0.0), 140.0) * 1.4;",
     "  c += vec3(1.00, 0.90, 0.70) * pow(max(dot(r, normalize(vec3(0.0, 0.35, 0.94))), 0.0), 70.0) * 0.9;",
@@ -360,8 +361,8 @@
       ringY(0.62, 0.178, 0.020, GOLD)
     ]);
     var plaque = merge([
-      disc(0, 1.30, 0.575, 0.26, 0.42, [0.16, 0.11, 0.05]),
-      disc(0, 1.30, 0.63, 0.155, 0.5, MEDAL)
+      disc(0, 1.30, 0.665, 0.26, 0.42, [0.16, 0.11, 0.05]),
+      disc(0, 1.30, 0.715, 0.155, 0.5, MEDAL)
     ]);
     return [
       { geom: body, kind: 1.0 },
@@ -480,7 +481,9 @@
           gl.vertexAttribPointer(binds[bi][0], 3, gl.FLOAT, false, 0, 0);
         }
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, part.bIdx);
+        if (part.kind > 1.5) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-2.0, -2.0); }
         gl.drawElements(gl.TRIANGLES, part.count, gl.UNSIGNED_INT, 0);
+        if (part.kind > 1.5) { gl.disable(gl.POLYGON_OFFSET_FILL); }
       }
     }
     if (this.kind === "trophy") {

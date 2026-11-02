@@ -34,11 +34,25 @@ function renderNav() {
   document.body.prepend(nav);
   const menu = nav.querySelector("#nav-menu");
   const toggle = nav.querySelector("#nav-toggle");
+  const closeMenu = () => {
+    nav.classList.remove("menu-open");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "فتح قائمة التنقل");
+  };
   toggle.addEventListener("click", () => {
     const isOpen = nav.classList.toggle("menu-open");
     toggle.setAttribute("aria-expanded", String(isOpen));
     toggle.setAttribute("aria-label", isOpen ? "إغلاق قائمة التنقل" : "فتح قائمة التنقل");
   });
+  // Choosing a destination closes the menu immediately (before the new
+  // page loads), and a page restored from the back/forward cache must
+  // never come back with the menu still open.
+  menu.querySelectorAll("a, button").forEach((elm) => elm.addEventListener("click", closeMenu));
+  window.addEventListener("pageshow", (e) => { if (e.persisted) closeMenu(); });
+  document.addEventListener("click", (e) => {
+    if (nav.classList.contains("menu-open") && !nav.contains(e.target)) closeMenu();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
   nav.querySelector("#nav-logout")?.addEventListener("click", () => Auth.logout());
   nav.querySelector("#nav-user")?.addEventListener("click", () => location.href = "/app/dashboard.html");
   const language = nav.querySelector("#nav-language");

@@ -68,7 +68,10 @@ def _now() -> datetime:
 
 async def _brief(db: AsyncSession, user_id: UUID) -> PlayerBrief:
     user = await db.get(User, user_id)
-    profile = await db.get(Profile, user_id)
+    # Profile has its own PK; user_id is a unique FK — db.get(Profile, ...)
+    # by user id would silently miss every profile (avatars lost).
+    profile_result = await db.execute(select(Profile).where(Profile.user_id == user_id))
+    profile = profile_result.scalar_one_or_none()
     return PlayerBrief(
         user_id=user_id,
         display_name=user.display_name if user else "لاعب",

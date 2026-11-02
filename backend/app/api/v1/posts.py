@@ -1,21 +1,22 @@
-import mimetypes
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse, Response
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.v1.auth import get_current_user
 from app.core.media import (
-    ALLOWED_CONTENT_TYPES,
     MAX_UPLOAD_BYTES,
     get_media_file,
     is_media_ref,
     media_backend,
     media_ref,
+    normalize_image,
     parse_media_ref,
+    read_upload_limited,
     save_post_image,
     save_post_image_db,
 )
@@ -84,17 +85,18 @@ async def create_post(
     }
     post_type = category_types.get(category, PostType.GENERAL)
     if image is not None:
-        content_type = image.content_type or mimetypes.guess_type(image.filename or "")[0]
-        if content_type not in ALLOWED_CONTENT_TYPES:
+        # AUD-12/AUD-16: stream with a hard cap, then decode-verify and
+        # re-encode — the declared content type is never trusted.
+        raw_bytes = await read_upload_limited(image, MAX_UPLOAD_BYTES)
+        try:
+            file_bytes = normalize_image(raw_bytes, max_width=1600)
+        except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Only JPEG or PNG images accepted"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The uploaded file is not a valid image",
             )
-        file_bytes = await image.read()
-        if len(file_bytes) > MAX_UPLOAD_BYTES:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Image exceeds 8MB limit"
-            )
-        extension = ".png" if content_type == "image/png" else ".jpg"
+        content_type = "image/webp"
+        extension = ".webp"
         if media_backend() == "db":
             media_id = await save_post_image_db(db, file_bytes, content_type)
             image_path = media_ref(media_id)
@@ -175,7 +177,13 @@ async def like_post(
     if existing.scalar_one_or_none() is not None:
         return
     db.add(PostLike(post_id=post_id, user_id=current_user.id))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # AUD-15: concurrent duplicate like — idempotent endpoint, the
+        # desired end state already exists; resolve silently like the
+        # pre-check above does.
+        await db.rollback()
 
 
 @router.delete("/{post_id}/like", status_code=status.HTTP_204_NO_CONTENT)

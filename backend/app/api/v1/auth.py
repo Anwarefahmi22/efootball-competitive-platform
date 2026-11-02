@@ -29,6 +29,12 @@ from app.schemas.user import UserRead, UserRegister
 router = APIRouter()
 bearer_scheme = HTTPBearer()
 
+# AUD-18: a real bcrypt hash of a throwaway password, verified against
+# when a login names an unregistered email — the endpoint then performs
+# the same expensive verification on both paths and its timing stops
+# revealing which emails exist. Computed once at import.
+_DUMMY_PASSWORD_HASH = hash_password("timing-equalization-dummy")
+
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
@@ -86,7 +92,12 @@ async def login(
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=TOO_MANY)
     result = await db.execute(select(User).where(User.email == payload.email))
     user = result.scalar_one_or_none()
-    if user is None or not verify_password(payload.password, user.hashed_password):
+    if user is None:
+        verify_password(payload.password, _DUMMY_PASSWORD_HASH)
+        password_ok = False
+    else:
+        password_ok = verify_password(payload.password, user.hashed_password)
+    if not password_ok:
         await record_hit(
             db, email_key, limit=LOGIN_EMAIL_LIMIT, window=LOGIN_WINDOW, lock_for=LOGIN_LOCK
         )

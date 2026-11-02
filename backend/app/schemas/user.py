@@ -21,7 +21,10 @@ class ProfileRead(BaseModel):
 
 class ProfileUpdate(BaseModel):
     display_name: str | None = Field(default=None, min_length=2, max_length=100)
-    avatar_url: str | None = None
+    # AUD-17: no avatar_url here. Avatars change only through the
+    # validated upload endpoint (POST /users/me/avatar); a free-text URL
+    # field let any client bypass image validation and hotlink arbitrary
+    # external images.
     bio: str | None = None
     country: str | None = None
     efootball_ign: str | None = None

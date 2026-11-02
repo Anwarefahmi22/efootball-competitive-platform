@@ -66,7 +66,6 @@
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
-    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
     const postTypes = { text: "تحديث", image: "صورة", match_result: "نتيجة موثقة", match: "مباراة", achievement: "إنجاز", tournament: "بطولة", general: "عام" };
     const TYPE_ICON = {
       achievement: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4a2 2 0 0 0 2 4h1"/><path d="M17 6h3a2 2 0 0 1-2 4h-1"/></svg>',
@@ -90,7 +89,7 @@
 
     function postCard(post) {
       return `
-        <article class="card post-card" data-post-id="${post.id}">
+        <article class="card post-card" data-post-id="${escapeHtml(post.id)}">
           <div class="post-band pt-${escapeHtml(post.post_type || "general")}"><span class="post-band__icon">${TYPE_ICON[post.post_type] || TYPE_ICON.general}</span><span>${postTypes[post.post_type] || "تحديث"}</span></div>
           <header class="post-header">
             <div class="post-avatar${post.author_avatar_url ? " has-image" : ""}">${avatarMarkup(post)}</div>

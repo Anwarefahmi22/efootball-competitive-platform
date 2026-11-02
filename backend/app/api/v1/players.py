@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -116,7 +117,13 @@ async def like_player(
     if existing.scalar_one_or_none() is not None:
         return
     db.add(PlayerLike(player_id=user_id, user_id=current_user.id))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # AUD-15: a concurrent duplicate like landed first. This endpoint
+        # is idempotent by contract (a pre-existing like is a silent 204),
+        # so the race resolves to the same end state — not an error.
+        await db.rollback()
 
 
 @router.delete("/{user_id}/like", status_code=status.HTTP_204_NO_CONTENT)

@@ -36,11 +36,30 @@ REGISTER_WINDOW = timedelta(minutes=60)
 REGISTER_LOCK = timedelta(minutes=60)
 
 
+def _trust_proxy_headers() -> bool:
+    """Whether X-Forwarded-For may be trusted in this deployment (AUD-11).
+
+    On Vercel the platform itself sets X-Forwarded-For on every request
+    (the runtime exposes the ``VERCEL`` env var), so the header is
+    trustworthy there. Anywhere else — including the repo's long-running
+    server track, which is directly reachable — a client can send any
+    XFF it likes, so the header is ignored unless the operator explicitly
+    declares a trusted proxy in front via ``TRUST_PROXY_HEADERS=1``.
+    Evaluated per call, like ``core.media.media_backend``.
+    """
+    import os
+
+    return os.environ.get("VERCEL") is not None or os.environ.get(
+        "TRUST_PROXY_HEADERS"
+    ) == "1"
+
+
 def client_ip(request: Request) -> str:
-    """Best-effort client IP: Vercel sets X-Forwarded-For on every hit."""
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()[:64]
+    """Client IP for throttling: XFF only behind a trusted proxy."""
+    if _trust_proxy_headers():
+        forwarded = request.headers.get("x-forwarded-for", "")
+        if forwarded:
+            return forwarded.split(",")[0].strip()[:64]
     return (request.client.host if request.client else "unknown")[:64]
 
 

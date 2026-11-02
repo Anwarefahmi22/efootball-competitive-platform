@@ -9,7 +9,6 @@ exactly what a tournament win is worth. Anti-farming guards (approved with
 the phase): one open challenge per pair, a 24h pair cooldown after a
 completed challenge, and at most 5 completed challenges per player per 24h.
 """
-import mimetypes
 import uuid as uuid_module
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -17,12 +16,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy import func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import get_current_user
 from app.api.v1.matches import _apply_elo_draw, _apply_elo_win
+from app.core.competition import MAX_SCORE
+from app.core.media import evidence_media_type, normalize_image, read_upload_limited
 from app.core.permissions import get_current_admin
-from app.core.storage import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES
+from app.core.storage import MAX_UPLOAD_BYTES
 from app.core.trust import record_confirmed_match, record_dispute_filed, record_dispute_resolved
 from app.db.session import get_db
 from app.models.invite import (
@@ -291,11 +293,21 @@ async def accept_match_invite(
         invite_id=invite.id, player_a_id=invite.challenger_id, player_b_id=invite.opponent_id
     )
     db.add(challenge)
-    await db.flush()
-    invite.status = InviteStatus.ACCEPTED
-    invite.challenge_id = challenge.id
-    invite.responded_at = _now()
-    await db.commit()
+    try:
+        await db.flush()
+        invite.status = InviteStatus.ACCEPTED
+        invite.challenge_id = challenge.id
+        invite.responded_at = _now()
+        await db.commit()
+    except IntegrityError:
+        # AUD-15: a concurrent accept of the same invite won the race —
+        # challenge_matches.invite_id is unique, so translate the database
+        # conflict into the controlled response instead of a 500.
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="تم إنشاء تحدٍّ لهذه الدعوة من قبل",
+        )
     await db.refresh(challenge)
     return await _challenge_read(db, challenge)
 
@@ -546,17 +558,27 @@ async def submit_challenge_result(
     _require_participant(challenge, current_user)
     if score_a < 0 or score_b < 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="لا يمكن أن تكون النتيجة سالبة")
+    if score_a > MAX_SCORE or score_b > MAX_SCORE:
+        # AUD-25: same plausibility cap as tournament matches.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"لا يمكن أن تتجاوز النتيجة {MAX_SCORE}",
+        )
     if challenge.status != ChallengeStatus.READY:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="هذا التحدي لا يقبل إرسال نتيجة الآن")
-    content_type = image.content_type or mimetypes.guess_type(image.filename or "")[0]
-    if content_type not in ALLOWED_CONTENT_TYPES:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تُقبل صور JPEG أو PNG فقط")
-    file_bytes = await image.read()
-    if len(file_bytes) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تجاوزت الصورة حد 8MB")
+    # AUD-12/AUD-16: streamed size cap, then Pillow decode + WebP
+    # re-encode — identical image policy to tournament evidence.
+    raw_bytes = await read_upload_limited(image, MAX_UPLOAD_BYTES)
+    try:
+        file_bytes = normalize_image(raw_bytes, max_width=2048, quality=88)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="الملف المرفوع ليس صورة صالحة",
+        )
     if not await _claim_challenge_state(db, challenge.id, {ChallengeStatus.READY}, ChallengeStatus.RESULT_SUBMITTED):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="تم إرسال نتيجة لهذا التحدي بالفعل")
-    extension = ".png" if content_type == "image/png" else ".jpg"
+    extension = ".webp"
     evidence = ChallengeEvidence(
         challenge_id=challenge.id,
         submitted_by=current_user.id,
@@ -599,8 +621,7 @@ async def get_challenge_evidence_image(
     evidence = await db.get(ChallengeEvidence, evidence_id)
     if evidence is None or evidence.challenge_id != challenge_id or evidence.image_data is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الدليل غير موجود")
-    media_type = "image/png" if (evidence.image_path or "").endswith(".png") else "image/jpeg"
-    return Response(content=evidence.image_data, media_type=media_type)
+    return Response(content=evidence.image_data, media_type=evidence_media_type(evidence.image_path))
 
 
 @challenges_router.post("/{challenge_id}/confirm", response_model=ChallengeRead)

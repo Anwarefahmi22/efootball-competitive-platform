@@ -85,7 +85,7 @@
     const reasonText = (r) => (r ? REASON_LABELS[r] || r : "—");
     const state = { rows: [], current: null, historyFor: null };
 
-    const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
+    const esc = escapeHtml; // AUD-32: shared escaper from api.js
     const fmt = (n) => new Intl.NumberFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current()).format(n ?? 0);
     const when = (value) => value ? new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "غير محدد";
     const statusText = (s) => STATUS_LABELS[s] || s;

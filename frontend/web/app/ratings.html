@@ -94,7 +94,6 @@
         el("body").innerHTML = `<tr><td colspan="11" class="empty" role="alert">${escapeHtml(err.detail || "تعذر التحميل")}</td></tr>`;
       }
     })();
-    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
   </script>
 </body>
 </html>

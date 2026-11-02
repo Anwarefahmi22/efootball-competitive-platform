@@ -197,7 +197,6 @@
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
-    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
     const stTitleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
     const stPersonSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`;
     const stAvatarHtml = (p) => p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="" />` : stPersonSvg;
@@ -224,13 +223,13 @@
         ? `<span class="st-verified">✓ لاعب موثّق</span>`
         : (p.is_me ? `<span class="st-me">أنت</span>` : "");
       const invites = p.is_me
-        ? `<button class="st-inv primary" type="button" data-act="share" data-uid="${p.user_id}"><span class="ic">↗</span>مشاركة بطاقتي</button>
+        ? `<button class="st-inv primary" type="button" data-act="share" data-uid="${escapeHtml(p.user_id)}"><span class="ic">↗</span>مشاركة بطاقتي</button>
            <a class="st-inv ghost" href="/app/dashboard.html"><span class="ic">✎</span>تعديل الهوية</a>`
-        : `<button class="st-inv primary" type="button" data-act="invite-match" data-uid="${p.user_id}"><span class="ic">⚔</span>دعوة مباراة</button>
-           <button class="st-inv ghost" type="button" data-act="invite-tournament" data-uid="${p.user_id}"><span class="ic">🏆</span>دعوة بطولة</button>`;
+        : `<button class="st-inv primary" type="button" data-act="invite-match" data-uid="${escapeHtml(p.user_id)}"><span class="ic">⚔</span>دعوة مباراة</button>
+           <button class="st-inv ghost" type="button" data-act="invite-tournament" data-uid="${escapeHtml(p.user_id)}"><span class="ic">🏆</span>دعوة بطولة</button>`;
       const like = p.is_me
         ? `<span class="st-mini static">♡ <span>${p.likes_count}</span> · بطاقتك</span>`
-        : `<button class="st-mini${p.liked_by_me ? " liked" : ""}" type="button" data-act="like" data-uid="${p.user_id}">${p.liked_by_me ? "♥" : "♡"} <span>${p.likes_count}</span></button>`;
+        : `<button class="st-mini${p.liked_by_me ? " liked" : ""}" type="button" data-act="like" data-uid="${escapeHtml(p.user_id)}">${p.liked_by_me ? "♥" : "♡"} <span>${p.likes_count}</span></button>`;
       return `
       <div class="st-idrow"><span>ARENA ID #${p.arena_no}</span>${badge}</div>
       <div class="st-head">
@@ -256,7 +255,7 @@
         <button class="st-next-circle" type="button" data-act="next" aria-label="البطاقة التالية"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16m0 0 6-6m-6 6-6-6"/></svg></button>
       </div>
       <div class="st-bottom">
-        <button class="st-mini" type="button" data-act="share" data-uid="${p.user_id}">↗ مشاركة البطاقة</button>
+        <button class="st-mini" type="button" data-act="share" data-uid="${escapeHtml(p.user_id)}">↗ مشاركة البطاقة</button>
         ${like}
       </div>`;
     }

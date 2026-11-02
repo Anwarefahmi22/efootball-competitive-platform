@@ -73,6 +73,7 @@
       disputed: ["قيد مراجعة الإدارة", "bad"], completed: ["منتهية", "dim"], cancelled: ["ملغاة", "dim"]
     };
     let myId = null;
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 
     const chip = (map, s) => { const [label, cls] = map[s] || [s, "dim"]; return `<span class="inv-status ${cls}">${label}</span>`; };
     const avaHtml = (p) => p.avatar_url

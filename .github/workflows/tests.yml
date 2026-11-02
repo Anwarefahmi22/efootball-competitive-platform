@@ -1,0 +1,45 @@
+name: tests
+
+# AUD-01: the remediation test suite gates every change to the
+# remediation branch and any future pull request. The suite runs
+# against a real PostgreSQL service container — never SQLite — because
+# it validates PostgreSQL constraints and concurrency behaviour.
+# To make failures block merges, mark the "pytest" job as a required
+# status check in the repository's branch protection settings.
+
+on:
+  push:
+    branches: [remediation/audit-2026-11-03]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: arena_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      JWT_SECRET_KEY: ci-test-secret
+      DATABASE_URL: postgresql+asyncpg://postgres@127.0.0.1:5432/arena_test
+      TEST_DATABASE_URL: postgresql+asyncpg://postgres@127.0.0.1:5432/arena_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Apply migrations to the test database
+        working-directory: backend
+        run: python -m alembic upgrade head
+      - name: Run the test suite
+        working-directory: backend
+        run: python -m pytest -q

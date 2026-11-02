@@ -62,7 +62,7 @@ async def test_record_hit_counts_every_concurrent_hit():
 
 
 async def test_record_hit_locks_at_limit_and_resets_after_window():
-    key = "login:email:lock@example.test"
+    key = "login:email:lock@arena.dev"
     for _ in range(5):
         async with AsyncSessionLocal() as db:
             await throttle.record_hit(

@@ -49,13 +49,52 @@ async def _clean_db():
 
 
 @pytest_asyncio.fixture
+async def client():
+    """The real FastAPI app over ASGI transport — full HTTP stack."""
+    from httpx import ASGITransport, AsyncClient
+
+    from app.main import app
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+
+
+@pytest_asyncio.fixture
+async def register_user(client):
+    """Register a user through the real API; returns (user_id, headers)."""
+    from uuid import uuid4
+
+    async def _register() -> tuple[str, dict]:
+        tag = uuid4().hex[:10]
+        resp = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": f"player-{tag}@arena.dev",
+                "password": "TestPass!2026",
+                "display_name": f"Player {tag[:6]}",
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        tokens = resp.json()
+        me = await client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"},
+        )
+        assert me.status_code == 200, me.text
+        return me.json()["id"], {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    return _register
+
+
+@pytest_asyncio.fixture
 async def make_user():
     from uuid import uuid4
 
     async def _make(db=None) -> User:
         tag = uuid4().hex[:12]
         user = User(
-            email=f"tester-{tag}@example.test",
+            email=f"tester-{tag}@arena.dev",
             hashed_password="not-a-real-hash",
             display_name=f"Tester {tag[:6]}",
         )

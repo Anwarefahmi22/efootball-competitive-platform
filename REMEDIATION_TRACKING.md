@@ -75,7 +75,7 @@ Status vocabulary: NOT STARTED · IN PROGRESS · FIXED AND VERIFIED · FIXED BUT
 
 | ID | Sev | Stage | Primary files / modules | Migration | Status |
 |---|---|---|---|---|---|
-| AUD-01 | P1 | 3 | `backend/tests/` (new), `.github/workflows/ci.yml` (new), `backend/app/**` (subjects) | — | NOT STARTED |
+| AUD-01 | P1 | 3 | `backend/tests/` (new), `.github/workflows/ci.yml` (new), `backend/app/**` (subjects) | — | FIXED AND VERIFIED (Stage 3 — 34-test suite green locally and from a clean venv; CI workflow added; branch-protection required-check remains an owner-side GitHub setting) |
 | AUD-02 | P1 | 7 | Runbook in final decisions pack (operations only) | — | OWNER DECISION REQUIRED |
 | AUD-03 | P2 | 6 | `backend/app/api/v1/players.py`, `backend/app/schemas/player.py`, `frontend/web/app/arena-star.html` | — | NOT STARTED |
 | AUD-04 | P2 | 2 | `backend/alembic/versions/020_*.py` (new) | **020** | FIXED AND VERIFIED (Stage 2 — migration 020 upgrade/downgrade/upgrade on PostgreSQL 16; 19 indexes present) |
@@ -86,11 +86,11 @@ Status vocabulary: NOT STARTED · IN PROGRESS · FIXED AND VERIFIED · FIXED BUT
 | AUD-09 | P2 | 1 | `frontend/web/app/invites.html` (error render paths ~L157, L184–191) | — | FIXED AND VERIFIED (Stage 1) |
 | AUD-10 | P2 | 4 | `backend/app/core/security.py`, `backend/app/api/v1/auth.py`, new refresh-session model + migration, `frontend/shared/api.js` | **021** (planned, Stage 4) | NOT STARTED |
 | AUD-11 | P2 | 1 | `backend/app/core/throttle.py` (`client_ip`), `backend/app/core/config.py` (trusted-proxy setting) | — | FIXED AND VERIFIED (Stage 1) |
-| AUD-12 | P2 | 1 | Upload handlers: `api/v1/users.py`, `api/v1/posts.py`, `api/v1/matches.py`, `api/v1/invites.py`; shared helper in `backend/app/core/storage.py` | — | FIXED BUT NOT FULLY VERIFIED (Stage 1 — endpoint integration tests join the Stage 3 suite) |
+| AUD-12 | P2 | 1 | Upload handlers: `api/v1/users.py`, `api/v1/posts.py`, `api/v1/matches.py`, `api/v1/invites.py`; shared helper in `backend/app/core/storage.py` | — | FIXED AND VERIFIED (Stages 1+3 — endpoint tests: 413 oversize, streamed abort) |
 | AUD-13 | P2 | 2 | Migration 020 (canonical pair index), `backend/app/api/v1/invites.py` (send path) | **020** | FIXED AND VERIFIED (Stage 2 — canonical pair index in 020 + 409 translation; concurrent test passes) |
 | AUD-14 | P2 | 7 | Proposal only (public card vs. authenticated) — no code change without approval | — | OWNER DECISION REQUIRED |
 | AUD-15 | P3 | 1+2 | `backend/app/api/v1/invites.py` (accept), `backend/app/api/v1/players.py` (like), `posts.py` (like) | — | FIXED AND VERIFIED (Stages 1–2 — double-accept concurrency test passes) |
-| AUD-16 | P3 | 1 | `backend/app/core/media.py` (decode/re-encode helpers), avatar/post/evidence handlers | — | FIXED BUT NOT FULLY VERIFIED (Stage 1 — endpoint integration tests join the Stage 3 suite) |
+| AUD-16 | P3 | 1 | `backend/app/core/media.py` (decode/re-encode helpers), avatar/post/evidence handlers | — | FIXED AND VERIFIED (Stages 1+3 — endpoint tests: non-image 400, WebP normalization on avatar + evidence) |
 | AUD-17 | P3 | 1 | `backend/app/schemas/user.py` (ProfileUpdate), `backend/app/api/v1/users.py` | — | FIXED AND VERIFIED (Stage 1) |
 | AUD-18 | P3 | 1 | `backend/app/api/v1/auth.py` (login dummy verify) | — | FIXED AND VERIFIED (Stage 1) |
 | AUD-19 | P3 | 4 | `backend/app/core/throttle.py` (policy), `backend/app/api/v1/auth.py` | — | NOT STARTED |
@@ -99,7 +99,7 @@ Status vocabulary: NOT STARTED · IN PROGRESS · FIXED AND VERIFIED · FIXED BUT
 | AUD-22 | P3 | 4 | `backend/app/main.py` (header middleware, dedupe vs. vercel.json), `vercel.json` untouched | — | NOT STARTED |
 | AUD-23 | P3 | 4+7 | Ops checklist (this doc §5); `backend/app/api/v1/internal.py` guard already sound | — | NOT STARTED |
 | AUD-24 | P3 | 4 | `backend/requirements.txt` + root `requirements.txt` (PyJWT), `backend/app/core/security.py`, password byte-length policy in `schemas/user.py`/`schemas/auth.py` | — | NOT STARTED |
-| AUD-25 | P3 | 1 | `backend/app/api/v1/matches.py`, `backend/app/api/v1/invites.py` (submit paths), shared `MAX_SCORE` constant | — | FIXED BUT NOT FULLY VERIFIED (Stage 1 — boundary API tests join the Stage 3 suite) |
+| AUD-25 | P3 | 1 | `backend/app/api/v1/matches.py`, `backend/app/api/v1/invites.py` (submit paths), shared `MAX_SCORE` constant | — | FIXED AND VERIFIED (Stages 1+3 — boundary tests in both submit paths) |
 | AUD-26 | P3 | 7 | Documented policy (public match reads) — no change without approval | — | DEFERRED (documented) |
 | AUD-27 | P3 | 6 | `frontend/web/app/ratings.html` (criteria subtitle), `frontend/web/app/arena-star.html`, docs note in this file §6 | — | NOT STARTED |
 | AUD-28 | P3 | 5 | `backend/app/api/v1/fraud.py`, `frontend/web/app/admin.html` (signal visibility) — human review only, never auto-penalty | — | NOT STARTED |
@@ -158,3 +158,9 @@ Implemented on `remediation/audit-2026-11-03`: AUD-09, AUD-11, AUD-12, AUD-15 (S
 ## 8. Stage 2 completion note (2026-11-03)
 
 Implemented: AUD-06 (tournament row lock in join + tournament-invite accept, reusing the existing `for_update` loader pattern), AUD-13 (migration 020 rebuilds `uq_match_invite_pending_pair` on LEAST/GREATEST; send-path IntegrityError → 409), AUD-20 (`record_hit` is now one atomic INSERT … ON CONFLICT DO UPDATE — identical window/lock semantics), AUD-04 (migration **020_fk_indexes_pair_invite**, parent 019: 19 new FK indexes; columns already leading an existing unique index were not duplicated). Test infrastructure: a self-contained **PostgreSQL 16.15** was installed via conda-forge (micromamba) at `/opt/pg-test/pg16`, running as user `pgtest` on 127.0.0.1:55432 with a disposable `arena_test` database — no production infrastructure was touched. The full migration chain 001→019 was first proven on real PostgreSQL, then 020 upgrade → downgrade → upgrade. New tests in `backend/tests/` (seed of the Stage 3 suite): **6/6 pass** — throttle atomicity (30 concurrent hits counted exactly), lock/window semantics, join capacity race, invite-accept capacity race, opposite-direction invite race, double-accept exactly-one-challenge.
+
+---
+
+## 9. Stage 3 completion note (2026-11-03)
+
+AUD-01 delivered. Suite layout (`backend/tests/`, 34 tests): `test_elo.py` (pure ELO incl. zero-sum), `test_auth_api.py` (register/login/refresh, AUD-17/18 regressions), `test_uploads.py` (AUD-12/16 endpoint proof), `test_lifecycles.py` (match confirm exactly-once ELO, dispute → admin resolve, challenge flow + anti-farming, AUD-25 boundaries, approval/cancel), `test_authorization.py` (anonymous/non-admin/outsider matrix), `test_stage2_concurrency.py` (Stage 2 races), `test_migrations.py` (dedicated scratch DB: full chain up/down/up). Fixtures refuse non-test DSNs. Config: `backend/pytest.ini`, `backend/requirements-dev.txt` (pinned). CI: `.github/workflows/tests.yml` (PostgreSQL 16 service, migrations, pytest). Clean-environment proof: fresh venv installed from the two requirements files and ran **34/34 green**. Two test-authoring lessons recorded: EmailStr rejects reserved TLDs (fixtures use arena.dev), and the random bracket draw means tests must derive actors from the drawn match, never assume pairings (this caused one flaky failure, root-caused and fixed). Remaining owner-side step: mark the CI `pytest` job a required status check in GitHub branch protection for the remediation/production branches.

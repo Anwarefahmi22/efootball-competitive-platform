@@ -108,6 +108,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# AUD-22: the security headers used to exist only in vercel.json (the
+# Vercel edge). The alternate deployment track serves this app without
+# them. Mirror them here — but only when the response does not already
+# carry the header, so the Vercel track never emits duplicates.
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com data:; "
+        "img-src 'self' data: blob: https://media.api-sports.io https://images.unsplash.com; "
+        "connect-src 'self'; object-src 'none'; base-uri 'self'; "
+        "form-action 'self'; frame-ancestors 'none'"
+    ),
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+}
+
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    for key, value in SECURITY_HEADERS.items():
+        if key not in response.headers:
+            response.headers[key] = value
+    return response
+
 app.include_router(api_router, prefix="/api/v1")
 # Mounted at the root (no /api/v1 prefix): Vercel Cron calls this exact
 # path, /internal/maintenance — see app/api/v1/internal.py.

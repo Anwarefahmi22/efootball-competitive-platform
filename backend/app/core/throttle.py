@@ -7,10 +7,17 @@ by bots. Vercel functions are stateless, so the counters live in the
 
 Policy
 ------
-- Login, per email: 5 failures inside 15 minutes -> locked 15 minutes.
+- Login, per (email, IP) pair: 5 failures inside 15 minutes -> that
+  pair is locked 15 minutes. (AUD-19: the lock used to be per email
+  alone, so anyone who knew a victim's email could keep the victim
+  locked out from everywhere by failing 5 logins from their own IP.
+  Pairing the lock to the attacker's IP removes that targeted-DoS:
+  the victim's own IP is a different pair and stays unaffected. The
+  accepted trade-off is that a distributed attacker gets 5 guesses
+  per IP — bounded by the per-IP lock below and by password strength.)
 - Login, per IP:    20 failures inside 15 minutes -> locked 15 minutes.
 - Register, per IP: 10 attempts inside 60 minutes -> locked 60 minutes.
-- A successful login clears the email counter (the IP counter decays
+- A successful login clears the pair counter (the IP counter decays
   with its window; a shared IP should not stay punished forever, and
   20 failures is a high bar for a NAT full of honest players).
 
@@ -19,7 +26,7 @@ frontend localizes it through the i18n reverse dictionary.
 """
 from datetime import datetime, timedelta, timezone
 
-from fastapi import Request
+from fastapi import HTTPException, Request, status
 from sqlalchemy import case, delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +35,7 @@ from app.models.auth_throttle import AuthThrottle
 
 TOO_MANY = "Too many attempts. Try again later."
 
-LOGIN_EMAIL_LIMIT = 5
+LOGIN_PAIR_LIMIT = 5
 LOGIN_IP_LIMIT = 20
 LOGIN_WINDOW = timedelta(minutes=15)
 LOGIN_LOCK = timedelta(minutes=15)
@@ -125,3 +132,27 @@ async def record_hit(
 async def clear_key(db: AsyncSession, key: str) -> None:
     await db.execute(delete(AuthThrottle).where(AuthThrottle.key == key))
     await db.commit()
+
+
+async def enforce_quota(
+    db: AsyncSession,
+    key: str,
+    *,
+    limit: int,
+    window: timedelta,
+    lock_for: timedelta,
+) -> None:
+    """Per-user write quota (AUD-21), built on the throttle counters.
+
+    Raises 429 when the caller is already at the limit for this window;
+    otherwise records one use. Quotas guard abuse-sensitive creation
+    endpoints (posts, tournaments, follows, comments) — competitive
+    operations (match/challenge play) are deliberately never quota'd.
+    """
+    if await is_locked(db, key):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=TOO_MANY
+        )
+    # The hit that reaches the limit still succeeds; the lock it sets
+    # rejects the NEXT request. Exactly `limit` uses per window.
+    await record_hit(db, key, limit=limit, window=window, lock_for=lock_for)

@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
@@ -18,6 +20,7 @@ from app.core.groups import (
     is_valid_group_count,
 )
 from app.core.league import compute_standings, generate_league_schedule
+from app.core.throttle import enforce_quota
 from app.db.session import get_db
 from app.models.group import Group
 from app.models.match import Match, MatchStatus
@@ -77,6 +80,7 @@ async def _refund_and_remove(db: AsyncSession, tournament: Tournament, participa
 async def create_tournament(
     payload: TournamentCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
+    await enforce_quota(db, f"quota:tournament:{current_user.id}", limit=10, window=timedelta(hours=1), lock_for=timedelta(hours=1))
     if payload.format == TournamentFormat.GROUP_KNOCKOUT:
         if payload.num_groups is None or not is_valid_group_count(payload.num_groups):
             raise HTTPException(

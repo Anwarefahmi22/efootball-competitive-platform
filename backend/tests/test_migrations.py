@@ -15,8 +15,8 @@ import pytest
 BACKEND = Path(__file__).resolve().parent.parent
 ADMIN_DSN = "postgresql://postgres@127.0.0.1:55432/postgres"
 MIG_DSN_ASYNC = "postgresql+asyncpg://postgres@127.0.0.1:55432/arena_test_mig"
-HEAD = "020_fk_indexes_pair_invite"
-PREV = "019_invites_challenges"
+HEAD = "021_refresh_sessions"
+PREV = "020_fk_indexes_pair_invite"
 
 
 def _alembic(*args: str) -> subprocess.CompletedProcess:

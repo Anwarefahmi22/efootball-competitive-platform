@@ -1,3 +1,4 @@
+from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -20,6 +21,7 @@ from app.core.media import (
     save_post_image,
     save_post_image_db,
 )
+from app.core.throttle import enforce_quota
 from app.db.session import get_db
 from app.models.match import Match
 from app.models.social import Comment, Post, PostLike, PostType
@@ -65,6 +67,7 @@ async def create_post(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PostRead:
+    await enforce_quota(db, f"quota:post:{current_user.id}", limit=20, window=timedelta(hours=1), lock_for=timedelta(hours=1))
     if content is not None and not content.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -208,6 +211,7 @@ async def add_comment(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CommentRead:
+    await enforce_quota(db, f"quota:comment:{current_user.id}", limit=60, window=timedelta(hours=1), lock_for=timedelta(hours=1))
     post_result = await db.execute(select(Post).where(Post.id == post_id))
     if post_result.scalar_one_or_none() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")

@@ -26,6 +26,17 @@ const Auth = {
     return !!localStorage.getItem(TOKEN_KEY);
   },
   logout() {
+    // AUD-10: revoke the session server-side (best effort — local
+    // cleanup proceeds whatever the network does).
+    const refresh = localStorage.getItem(REFRESH_KEY);
+    if (refresh) {
+      fetch(API_BASE + "/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refresh }),
+        keepalive: true,
+      }).catch(() => {});
+    }
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
@@ -74,7 +85,13 @@ async function refreshAccessToken() {
       if (!res.ok) return false;
       const body = await readResponseBody(res);
       if (!body || !body.access_token) return false;
-      Auth.save({ access_token: body.access_token, refresh_token: refresh });
+      // AUD-10: the server rotates the refresh token on every refresh —
+      // store the new one when it is returned (older servers that only
+      // return an access token keep the existing refresh token).
+      Auth.save({
+        access_token: body.access_token,
+        refresh_token: body.refresh_token || refresh,
+      });
       return true;
     }).finally(() => {
       refreshPromise = null;

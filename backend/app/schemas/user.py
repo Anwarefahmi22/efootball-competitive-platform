@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class ProfileRead(BaseModel):
@@ -62,3 +62,15 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=72)
     display_name: str = Field(min_length=2, max_length=100)
+
+    @field_validator("password")
+    @classmethod
+    def _password_within_bcrypt_byte_limit(cls, value: str) -> str:
+        # AUD-24: bcrypt consumes at most 72 BYTES; the character cap
+        # above lets multibyte passwords pass 72 bytes and be silently
+        # truncated by the hash. Reject those explicitly instead.
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError(
+                "Password is too long (maximum 72 bytes when UTF-8 encoded)"
+            )
+        return value

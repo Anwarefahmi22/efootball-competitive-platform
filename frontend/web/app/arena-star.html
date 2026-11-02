@@ -173,6 +173,7 @@
         <p class="muted">كومة بطاقات اللاعبين — مرّر لتكتشف نجوم الساحة، وأعجب بمن يلفت نظرك.</p>
       </div>
     </div>
+    <a id="invites-alert" href="/app/invites.html" style="display:none;margin:0 0 14px;padding:12px 16px;border-radius:14px;background:linear-gradient(90deg,#a3ff12,#6dcc0a);color:#08130a;font-weight:800;text-decoration:none;text-align:center"></a>
     <div id="st-state" class="st-state">جارٍ تحميل البطاقات…</div>
     <div class="st-wrap" id="st-wrap" hidden>
       <div class="st-deck" id="st-deck"></div>
@@ -425,7 +426,8 @@
 
     (async () => {
       if (!(await requireAuthOrRedirect())) return;
-      try {
+      apiFetch("/invites/count").then((r) => { if (r && r.pending_received > 0) { const b = el("invites-alert"); b.textContent = `✉️ لديك ${r.pending_received} دعوة بانتظار الرد — اضغط للعرض`; b.style.display = "block"; } }).catch(() => {});
+    try {
         stCards = await apiFetch("/players/cards");
       } catch (err) {
         el("st-state").textContent = err.detail || "تعذر تحميل البطاقات";

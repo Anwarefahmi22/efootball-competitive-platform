@@ -15,10 +15,12 @@
 <body>
   <div class="container competitive-hub">
     <div id="loading" class="dashboard-loading" role="status" aria-live="polite">
-      <div class="spinner"></div><span>جارٍ تجهيز مركزك التنافسي…</span>
+      <div class="spinner"></div>
+      <span>جارٍ تجهيز مركزك التنافسي…</span>
     </div>
 
     <main id="content" hidden>
+      <a id="invites-alert" href="/app/invites.html" style="display:none;margin:0 0 14px;padding:12px 16px;border-radius:14px;background:linear-gradient(90deg,#a3ff12,#6dcc0a);color:#08130a;font-weight:800;text-decoration:none;text-align:center"></a>
       <header class="hub-header">
         <div class="dashboard-profile">
           <div class="avatar-ring" id="avatar-ring"><div class="dashboard-avatar" id="player-avatar" aria-hidden="true">EA</div></div>
@@ -256,6 +258,7 @@
     el("edit-avatar-file").addEventListener("change", (event) => { const file = event.target.files[0]; if (file) renderPreview(el("edit-display-name").value, URL.createObjectURL(file)); });
     el("profile-form").addEventListener("submit", async (event) => { event.preventDefault(); const error = el("profile-form-error"); const save = el("save-profile"); error.hidden = true; save.disabled = true; try { await apiFetch("/users/me/profile", { method: "PATCH", body: JSON.stringify({ display_name: el("edit-display-name").value.trim(), formation: el("edit-formation").value || null, squad_strength: el("edit-squad-strength").value === "" ? null : Number(el("edit-squad-strength").value) }) }); const file = el("edit-avatar-file").files[0]; if (file) { const form = new FormData(); form.append("image", file); await apiFetch("/users/me/avatar", { method: "POST", body: form }); } const squadFile = el("edit-squad-file").files[0]; if (squadFile) { const squadForm = new FormData(); squadForm.append("image", squadFile); await apiFetch("/users/me/squad-image", { method: "POST", body: squadForm }); } else if (squadRemoved) { await apiFetch("/users/me/squad-image", { method: "DELETE" }); } el("profile-editor").close(); toast("تم تحديث الهوية بنجاح.", "success"); setTimeout(() => location.reload(), 1400); } catch (err) { error.textContent = err.detail || "تعذر حفظ التغييرات."; error.hidden = false; } finally { save.disabled = false; } });
     if (window.EyesLoader) EyesLoader.wait(el("loading"), { label: "جارٍ تجهيز مركزك التنافسي…" });
+    apiFetch("/invites/count").then((r) => { if (r && r.pending_received > 0) { const b = el("invites-alert"); b.textContent = `✉️ لديك ${r.pending_received} دعوة بانتظار الرد — اضغط للعرض`; b.style.display = "block"; } }).catch(() => {});
     load();
   </script>
 </body>

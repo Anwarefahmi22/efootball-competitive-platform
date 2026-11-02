@@ -49,10 +49,19 @@ function renderNav() {
     const bellStyle = document.createElement("style");
     bellStyle.textContent = ".nav-bell{position:relative;font-size:1.05rem;text-decoration:none;padding:6px 4px;line-height:1}.nav-badge{position:absolute;top:-3px;inset-inline-end:-7px;background:#e5484d;color:#fff;border-radius:999px;font-size:.62rem;font-weight:800;min-width:17px;height:17px;display:grid;place-items:center;padding:0 4px}";
     document.head.appendChild(bellStyle);
-    apiFetch("/invites/count").then((r) => {
-      const badge = nav.querySelector("#nav-invite-badge");
-      if (badge && r && r.pending_received > 0) { badge.textContent = r.pending_received; badge.hidden = false; }
-    }).catch(() => {});
+    // The badge must not depend on a page reload: an invite can arrive
+    // while a page sits open, so poll. One quiet retry covers a dropped
+    // first fetch on a slow mobile connection.
+    const updateInviteBadge = (isRetry) => {
+      apiFetch("/invites/count").then((r) => {
+        const badge = nav.querySelector("#nav-invite-badge");
+        if (!badge) return;
+        if (r && r.pending_received > 0) { badge.textContent = r.pending_received; badge.hidden = false; }
+        else { badge.hidden = true; }
+      }).catch(() => { if (!isRetry) setTimeout(() => updateInviteBadge(true), 3000); });
+    };
+    updateInviteBadge(false);
+    setInterval(() => updateInviteBadge(true), 30000);
   }
 }
 document.addEventListener("DOMContentLoaded", renderNav);

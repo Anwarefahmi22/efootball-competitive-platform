@@ -993,6 +993,8 @@
     "تم إرسال النتيجة — بانتظار تأكيد الخصم": { fr: "Résultat envoyé — en attente de la confirmation de l'adversaire", en: "Result submitted — awaiting your opponent's confirmation" },
     "تم تأكيد النتيجة واحتسابها في التصنيف": { fr: "Résultat confirmé et compté dans le classement", en: "Result confirmed and counted in the ranking" },
     "تم إرسال الطعن إلى الإدارة": { fr: "Contestation envoyée à l'administration", en: "Dispute sent to the admins" },
-    "تم قبول التحدي — المباراة جاهزة في الأعلى": { fr: "Défi accepté — le match est prêt en haut de la page", en: "Challenge accepted — the match is ready at the top" }
+    "تم قبول التحدي — المباراة جاهزة في الأعلى": { fr: "Défi accepté — le match est prêt en haut de la page", en: "Challenge accepted — the match is ready at the top" },
+    "لديك": { fr: "Vous avez", en: "You have" },
+    "دعوة بانتظار الرد — اضغط للعرض": { fr: "invitation(s) en attente de réponse — touchez pour ouvrir", en: "invite(s) awaiting your reply — tap to view" }
   });
 })();

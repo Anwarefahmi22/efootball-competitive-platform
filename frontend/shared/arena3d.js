@@ -1,16 +1,17 @@
-/* arena3d.js v2 — hand-rolled WebGL renderer for the dashboard's football
+/* arena3d.js v3 — hand-rolled WebGL renderer for the dashboard's football
    and arena cup, shaded to a photographic standard (user's bar: the landing
-   page's real ball and a real 🏆). No framework, no CDN (CSP is script-src
-   'self'). What makes it read as real instead of a flat render:
-   - Ball: panels computed per-fragment from the icosahedron directions
-     (crisp at any zoom), procedural leather grain, dark stitched grooves
-     with ambient occlusion rolling into the seams, a studio-environment
-     reflection swept by a fresnel term, tight clearcoat-style specular.
-   - Cup: gold is mostly reflected environment, so the shader reflects a
-     procedural studio (ceiling softbox + side strips + pitch bounce) tinted
-     by the metal, over a lathe body with lip/stem rings and handles, plus
-     fine vertical brushing noise.
-   The photo assets stay in the markup as the no-WebGL fallback. */
+   page's real ball and a real 🏆). No framework, no CDN (CSP script-src
+   'self'). Round-3 lessons baked in:
+   - A ball reads as a render when its surface is smooth: v3 gives it a
+     true cellular pebble-grain height field (3D Voronoi) used as a bump
+     map, and folds the panel seams into the same height field so the
+     grooves are recessed geometry in the lighting, not painted lines.
+   - A surface of revolution CANNOT show Y-rotation under a fixed world
+     (its image is mathematically invariant) — so the cup also rocks
+     gently, its key light orbits, and it carries an asymmetric front
+     medallion; the studio environment it reflects got hotter, narrower
+     softboxes so the metal shows defined bands instead of a flat wash.
+   Photos stay in the markup as the no-WebGL fallback. */
 (function () {
   "use strict";
 
@@ -35,7 +36,11 @@
   ].join("\n");
 
   var FSH = [
+    "#ifdef GL_FRAGMENT_PRECISION_HIGH",
+    "precision highp float;",
+    "#else",
     "precision mediump float;",
+    "#endif",
     "varying vec3 vNorm;",
     "varying vec3 vCol;",
     "varying vec3 vWorld;",
@@ -44,23 +49,40 @@
     "uniform vec3 uLight1;",
     "uniform vec3 uLight2;",
     "uniform float uKind;",
-    "float hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123); }",
+    "vec3 hash3(vec3 p3) {",
+    "  p3 = fract(p3 * vec3(0.1031, 0.1030, 0.0973));",
+    "  p3 += dot(p3, p3.yxz + 33.33);",
+    "  return fract((p3.xxy + p3.yxx) * p3.zyx);",
+    "}",
     "float vnoise(vec3 p) {",
     "  vec3 i = floor(p); vec3 f = fract(p); f = f * f * (3.0 - 2.0 * f);",
-    "  float n000 = hash(i); float n100 = hash(i + vec3(1.0, 0.0, 0.0));",
-    "  float n010 = hash(i + vec3(0.0, 1.0, 0.0)); float n110 = hash(i + vec3(1.0, 1.0, 0.0));",
-    "  float n001 = hash(i + vec3(0.0, 0.0, 1.0)); float n101 = hash(i + vec3(1.0, 0.0, 1.0));",
-    "  float n011 = hash(i + vec3(0.0, 1.0, 1.0)); float n111 = hash(i + vec3(1.0, 1.0, 1.0));",
+    "  float n000 = hash3(i).x; float n100 = hash3(i + vec3(1.0, 0.0, 0.0)).x;",
+    "  float n010 = hash3(i + vec3(0.0, 1.0, 0.0)).x; float n110 = hash3(i + vec3(1.0, 1.0, 0.0)).x;",
+    "  float n001 = hash3(i + vec3(0.0, 0.0, 1.0)).x; float n101 = hash3(i + vec3(1.0, 0.0, 1.0)).x;",
+    "  float n011 = hash3(i + vec3(0.0, 1.0, 1.0)).x; float n111 = hash3(i + vec3(1.0, 1.0, 1.0)).x;",
     "  return mix(mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),",
     "             mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y), f.z);",
     "}",
+    "vec2 voro(vec3 p) {",
+    "  vec3 ip = floor(p); vec3 fp = fract(p);",
+    "  float f1 = 8.0; float f2 = 8.0;",
+    "  for (int k = -1; k <= 1; k++)",
+    "  for (int j = -1; j <= 1; j++)",
+    "  for (int i = -1; i <= 1; i++) {",
+    "    vec3 g = vec3(float(i), float(j), float(k));",
+    "    vec3 r = g + hash3(ip + g) - fp;",
+    "    float d = dot(r, r);",
+    "    if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) { f2 = d; }",
+    "  }",
+    "  return vec2(sqrt(f1), sqrt(f2));",
+    "}",
     "vec3 studioEnv(vec3 r) {",
     "  float h = clamp(r.y * 0.5 + 0.5, 0.0, 1.0);",
-    "  vec3 c = mix(vec3(0.012, 0.028, 0.018), vec3(0.10, 0.17, 0.12), pow(h, 1.4));",
-    "  c += vec3(1.05, 1.0, 0.88) * pow(max(dot(r, normalize(vec3(0.25, 0.9, 0.35))), 0.0), 16.0) * 1.35;",
-    "  c += vec3(0.85, 0.93, 1.0) * pow(max(dot(r, normalize(vec3(-0.85, 0.18, 0.42))), 0.0), 26.0) * 0.75;",
-    "  c += vec3(1.0, 0.88, 0.66) * pow(max(dot(r, normalize(vec3(0.82, -0.02, -0.45))), 0.0), 22.0) * 0.65;",
-    "  c += vec3(0.55, 0.75, 0.35) * pow(max(dot(r, normalize(vec3(-0.2, -0.85, -0.4))), 0.0), 8.0) * 0.25;",
+    "  vec3 c = mix(vec3(0.006, 0.014, 0.009), vec3(0.07, 0.12, 0.085), pow(h, 1.5));",
+    "  c += vec3(1.1, 1.05, 0.9) * pow(max(dot(r, normalize(vec3(0.25, 0.9, 0.35))), 0.0), 40.0) * 1.7;",
+    "  c += vec3(0.85, 0.93, 1.0) * pow(max(dot(r, normalize(vec3(-0.85, 0.18, 0.42))), 0.0), 55.0) * 0.95;",
+    "  c += vec3(1.0, 0.88, 0.66) * pow(max(dot(r, normalize(vec3(0.82, -0.02, -0.45))), 0.0), 48.0) * 0.85;",
+    "  c += vec3(0.55, 0.75, 0.35) * pow(max(dot(r, normalize(vec3(-0.2, -0.85, -0.4))), 0.0), 8.0) * 0.22;",
     "  return c;",
     "}",
     "float ballField(vec3 p) {",
@@ -79,40 +101,58 @@
     "  md = max(md, dot(p, vec3(-0.8507, 0.0, -0.5257)));",
     "  return md;",
     "}",
+    "float ballHeight(vec3 p) {",
+    "  vec2 fA = voro(p * 17.0);",
+    "  vec2 fB = voro(p * 38.0);",
+    "  float peb = clamp((fA.y - fA.x) * 2.4, 0.0, 1.0) * 0.7 + clamp((fB.y - fB.x) * 2.4, 0.0, 1.0) * 0.3;",
+    "  float md = ballField(p);",
+    "  float gw = max(0.0, 1.0 - abs(md - 0.922) / 0.016);",
+    "  return peb - gw * gw * 1.35;",
+    "}",
     "void main() {",
     "  vec3 n = normalize(vNorm);",
     "  vec3 v = normalize(uCam - vWorld);",
     "  vec3 l1 = normalize(uLight1);",
     "  vec3 l2 = normalize(uLight2);",
-    "  float d1 = max(dot(n, l1), 0.0);",
-    "  float d2 = max(dot(n, l2), 0.0);",
-    "  vec3 r = reflect(-v, n);",
-    "  vec3 env = studioEnv(r);",
     "  float fres = pow(1.0 - max(dot(n, v), 0.0), 3.0);",
     "  vec3 col;",
     "  if (uKind < 0.5) {",
     "    vec3 p = normalize(vObj);",
+    "    vec3 t1 = normalize(cross(vec3(0.0, 1.0, 0.0), p) + vec3(0.001, 0.0, 0.0));",
+    "    vec3 t2 = normalize(cross(p, t1));",
+    "    float e = 0.012;",
+    "    float h0 = ballHeight(p);",
+    "    float hx = ballHeight(normalize(p + t1 * e));",
+    "    float hy = ballHeight(normalize(p + t2 * e));",
+    "    vec3 bn = normalize(n - (t1 * (hx - h0) + t2 * (hy - h0)) * 2.6);",
     "    float md = ballField(p);",
     "    float panel = smoothstep(0.906, 0.938, md);",
     "    vec3 albedo = mix(vec3(0.96, 0.965, 0.95), vec3(0.045, 0.05, 0.065), panel);",
-    "    float grain = vnoise(p * 80.0) * 0.6 + vnoise(p * 190.0) * 0.4;",
-    "    albedo *= 0.93 + 0.11 * grain;",
+    "    albedo *= 0.90 + 0.16 * clamp(h0 + 0.35, 0.0, 1.0);",
     "    float groove = 1.0 - smoothstep(0.0, 0.013, abs(md - 0.922));",
-    "    albedo = mix(albedo, vec3(0.02, 0.02, 0.025), groove * 0.8);",
+    "    albedo = mix(albedo, vec3(0.015, 0.015, 0.02), groove * 0.85);",
     "    float aoBand = 1.0 - smoothstep(0.0, 0.055, abs(md - 0.922));",
+    "    float d1 = max(dot(bn, l1), 0.0);",
+    "    float d2 = max(dot(bn, l2), 0.0);",
     "    vec3 base = albedo * (0.30 + d1 * 0.95 + d2 * 0.30) * (1.0 - aoBand * 0.16);",
+    "    vec3 r = reflect(-v, bn);",
+    "    vec3 env = studioEnv(r);",
     "    vec3 hv = normalize(l1 + v);",
-    "    base += vec3(1.0) * pow(max(dot(n, hv), 0.0), 60.0) * 0.5 * (1.0 - groove * 0.7);",
-    "    base += env * (0.05 + 0.38 * fres) * mix(1.0, 0.55, panel) * (1.0 - groove * 0.6);",
+    "    base += vec3(1.0) * pow(max(dot(bn, hv), 0.0), 70.0) * 0.75 * (1.0 - groove * 0.7);",
+    "    base += env * (0.13 + 0.45 * fres) * mix(1.0, 0.55, panel) * (1.0 - groove * 0.6);",
     "    col = base;",
     "  } else {",
+    "    float d1 = max(dot(n, l1), 0.0);",
+    "    float d2 = max(dot(n, l2), 0.0);",
+    "    vec3 r = reflect(-v, n);",
+    "    vec3 env = studioEnv(r);",
     "    float brush = vnoise(vec3(vObj.x * 140.0, vObj.y * 10.0, vObj.z * 140.0));",
     "    vec3 envM = env * (0.90 + 0.16 * brush);",
-    "    col = vCol * envM * 1.25;",
+    "    col = vCol * envM * 1.35;",
     "    col += vCol * (d1 * 0.30 + d2 * 0.10);",
     "    vec3 hv = normalize(l1 + v);",
     "    col += vCol * pow(max(dot(n, hv), 0.0), 90.0) * 0.9;",
-    "    col += vec3(1.0, 0.85, 0.55) * pow(max(dot(r, l1), 0.0), 42.0) * 0.35;",
+    "    col += vec3(1.0, 0.85, 0.55) * pow(max(dot(r, l1), 0.0), 42.0) * 0.4;",
     "    col *= 0.92 + 0.16 * fres;",
     "  }",
     "  gl_FragColor = vec4(col, 1.0);",
@@ -231,6 +271,27 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
+  /* flattened sphere: the winner's medallion on the cup's front */
+  function disc(cx, cy, cz, r, sz, color) {
+    var pos = [], norm = [], col = [], idx = [];
+    var W = 20, H = 14;
+    for (var j = 0; j <= H; j++) {
+      var v = j / H, th = v * Math.PI;
+      for (var i = 0; i <= W; i++) {
+        var u = i / W, ph = u * Math.PI * 2;
+        var x = Math.sin(th) * Math.cos(ph), y = Math.cos(th), z = Math.sin(th) * Math.sin(ph);
+        pos.push(cx + x * r, cy + y * r, cz + z * r * sz);
+        norm.push(x, y, z);
+        col.push(color[0], color[1], color[2]);
+      }
+    }
+    for (var jj = 0; jj < H; jj++) for (var ii = 0; ii < W; ii++) {
+      var a = jj * (W + 1) + ii, b = a + W + 1;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+    return { pos: pos, norm: norm, col: col, idx: idx };
+  }
+
   function merge(geoms) {
     var pos = [], norm = [], col = [], idx = [], off = 0;
     geoms.forEach(function (g) {
@@ -241,7 +302,7 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  var GOLD = [0.93, 0.72, 0.28];
+  var GOLD = [0.93, 0.72, 0.28], DEEPGOLD = [0.72, 0.50, 0.15];
   function buildTrophy() {
     var profile = [
       [0.0, 0.0], [0.52, 0.0], [0.56, 0.05], [0.56, 0.13], [0.32, 0.19], [0.21, 0.28],
@@ -253,7 +314,8 @@
       torus(0.50, 1.40, 0.30, 0.06, -Math.PI * 0.46, Math.PI * 0.46, false, GOLD),
       torus(-0.50, 1.40, 0.30, 0.06, Math.PI * 0.54, Math.PI * 1.46, true, GOLD),
       ringY(1.90, 0.715, 0.030, GOLD),
-      ringY(0.62, 0.178, 0.020, GOLD)
+      ringY(0.62, 0.178, 0.020, GOLD),
+      disc(0, 1.34, 0.583, 0.17, 0.38, DEEPGOLD)
     ]);
   }
 
@@ -313,12 +375,14 @@
     var gl = this.gl;
     if (!gl) return;
     var auto = this.reduced ? 0 : 1;
+    var rockX = 0;
     if (this.kind === "ball") {
       this.velY += (0.4 * auto - this.velY) * Math.min(1, dt * 1.6);
       if (!this.dragging) this.rotY += this.velY * dt;
       this.rotX += Math.sin(t * 0.0006) * 0.00012 * auto;
     } else {
       this.rotY += 0.5 * dt * auto;
+      rockX = Math.sin(t * 0.00045) * 0.07 * auto;
     }
     var bob = this.kind === "ball" ? Math.sin(t * 0.0011) * 0.055 * auto : 0;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -330,13 +394,19 @@
     var proj = perspective(0.56, this.aspect, 0.1, 50);
     var view = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -dist, 1]);
     var yOff = this.kind === "ball" ? bob : -0.94;
-    var model = modelMatrix(0, yOff, 0, this.rotX, this.rotY, 1);
+    var effRotX = this.rotX + rockX;
+    var model = modelMatrix(0, yOff, 0, effRotX, this.rotY, 1);
     var mvp = multiply(proj, multiply(view, model));
-    var worldModel = modelMatrix(0, 0, 0, this.rotX, this.rotY, 1);
+    var worldModel = modelMatrix(0, 0, 0, effRotX, this.rotY, 1);
     gl.uniformMatrix4fv(this.u.uMVP, false, mvp);
     gl.uniformMatrix4fv(this.u.uModel, false, worldModel);
     gl.uniform3f(this.u.uCam, 0, 0, dist);
-    gl.uniform3f(this.u.uLight1, 0.55, 0.85, 0.75);
+    if (this.kind === "ball") {
+      gl.uniform3f(this.u.uLight1, 0.55, 0.85, 0.75);
+    } else {
+      var la = t * 0.0005;
+      gl.uniform3f(this.u.uLight1, Math.cos(la) * 0.62 + 0.3, 0.85, Math.sin(la) * 0.62 + 0.45);
+    }
     gl.uniform3f(this.u.uLight2, -0.65, -0.15, 0.45);
     gl.uniform1f(this.u.uKind, this.kind === "ball" ? 0.0 : 1.0);
     var binds = [[this.aPos, this.bPos], [this.aNorm, this.bNorm], [this.aCol, this.bCol]];

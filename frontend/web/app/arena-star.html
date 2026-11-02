@@ -327,9 +327,16 @@
           b.className = "st-modal-item";
           b.type = "button";
           b.innerHTML = `<span>${escapeHtml(t.name)}</span><span class="cnt">${(t.participants || []).length}/${t.max_participants} لاعبًا</span>`;
-          b.addEventListener("click", () => {
-            invModal.hidden = true;
-            stShare("دعوة بطولة", `🏆 ${me.display_name} يدعوك للانضمام إلى بطولة «${t.name}» في eFootball Arena — سجّل الآن!`, `${location.origin}/app/tournament.html?id=${t.id}`);
+          b.addEventListener("click", async () => {
+            b.disabled = true;
+            try {
+              await apiFetch("/invites/tournament", { method: "POST", body: JSON.stringify({ tournament_id: t.id, invitee_id: card.user_id }) });
+              invModal.hidden = true;
+              toast(`تم إرسال دعوة البطولة إلى ${card.display_name}`, "success");
+            } catch (err) {
+              toast(err.detail || "تعذر إرسال الدعوة", "error");
+              b.disabled = false;
+            }
           });
           invList.appendChild(b);
         });
@@ -372,9 +379,14 @@
         const url = `${location.origin}/app/arena-star.html?player=${card.user_id}`;
         stShare("بطاقة " + card.display_name, `بطاقة اللاعب ${card.display_name} — ELO ${card.rating} في eFootball Arena`, url);
       } else if (btn.dataset.act === "invite-match") {
-        const me = stMyCard();
-        const url = me ? `${location.origin}/app/arena-star.html?player=${me.user_id}` : `${location.origin}/app/arena-star.html`;
-        stShare("دعوة مباراة", `⚔️ ${me ? me.display_name : "لاعب"} يتحدّاك في مباراة eFootball على الساحة! شوف البطاقة وردّ التحدي`, url);
+        btn.disabled = true;
+        try {
+          await apiFetch("/invites/match", { method: "POST", body: JSON.stringify({ opponent_id: card.user_id }) });
+          toast(`تم إرسال دعوة المباراة إلى ${card.display_name} — بانتظار رده في صفحة الدعوات`, "success");
+        } catch (err) {
+          toast(err.detail || "تعذر إرسال الدعوة", "error");
+        }
+        btn.disabled = false;
       } else if (btn.dataset.act === "invite-tournament") {
         stOpenInviteModal(card);
       }

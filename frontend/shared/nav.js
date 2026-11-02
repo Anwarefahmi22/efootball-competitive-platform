@@ -14,6 +14,7 @@ function renderNav() {
       <a class="nav-link ${currentPath.endsWith("/ratings.html") ? "active" : ""}" href="/app/ratings.html">التصنيف</a>
       <a class="nav-link ${currentPath.endsWith("/community.html") ? "active" : ""}" href="/app/community.html">المجتمع</a>
       <a class="nav-link ${currentPath.endsWith("/arena-star.html") ? "active" : ""}" href="/app/arena-star.html">أرينا ستار</a>
+      <a class="nav-bell" href="/app/invites.html" aria-label="الدعوات" title="الدعوات">🔔<span class="nav-badge" id="nav-invite-badge" hidden></span></a>
       <button class="user-chip" id="nav-user" type="button" title="لوحة اللاعب">⚽ <span>حسابي</span></button>
       <button class="btn btn-ghost" type="button" id="nav-logout" style="padding:8px 14px">خروج</button>
     ` : `
@@ -44,5 +45,14 @@ function renderNav() {
   language.value = i18n.current();
   language.addEventListener("change", () => i18n.setLanguage(language.value));
   i18n.apply();
+  if (logged && typeof apiFetch === "function") {
+    const bellStyle = document.createElement("style");
+    bellStyle.textContent = ".nav-bell{position:relative;font-size:1.05rem;text-decoration:none;padding:6px 4px;line-height:1}.nav-badge{position:absolute;top:-3px;inset-inline-end:-7px;background:#e5484d;color:#fff;border-radius:999px;font-size:.62rem;font-weight:800;min-width:17px;height:17px;display:grid;place-items:center;padding:0 4px}";
+    document.head.appendChild(bellStyle);
+    apiFetch("/invites/count").then((r) => {
+      const badge = nav.querySelector("#nav-invite-badge");
+      if (badge && r && r.pending_received > 0) { badge.textContent = r.pending_received; badge.hidden = false; }
+    }).catch(() => {});
+  }
 }
 document.addEventListener("DOMContentLoaded", renderNav);

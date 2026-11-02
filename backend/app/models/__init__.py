@@ -1,6 +1,7 @@
 from app.models.auth_throttle import AuthThrottle
 from app.models.evidence import MatchEvidence
 from app.models.group import Group
+from app.models.invite import ChallengeEvidence, ChallengeMatch, MatchInvite, TournamentInvite
 from app.models.match import Match
 from app.models.media_file import MediaFile
 from app.models.rating import PlayerRating

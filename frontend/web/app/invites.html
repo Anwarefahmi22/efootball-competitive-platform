@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1e13" />
+  <title>الدعوات والتحديات — eFootball Arena</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/shared/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/shared/favicon-192.png" />
+  <link rel="apple-touch-icon" href="/shared/favicon-192.png" />
+  <style>
+    .inv-sec { margin-bottom: 18px; }
+    .inv-sec h2 { font-size: 1.08rem; margin: 0 0 10px; }
+    .inv-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid rgba(163,255,18,.18); border-radius: 14px; background: rgba(10,32,19,.45); margin-bottom: 10px; flex-wrap: wrap; }
+    .inv-ava { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; flex: none; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #274b63, #101f30); border: 2px solid rgba(163,255,18,.45); color: var(--neon); font-weight: 800; }
+    .inv-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .inv-main { flex: 1 1 180px; min-width: 0; }
+    .inv-name { font-weight: 800; }
+    .inv-sub { color: #8fa6bb; font-size: .8rem; font-weight: 600; }
+    .inv-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .inv-status { font-size: .74rem; font-weight: 800; border-radius: 999px; padding: 3px 10px; border: 1px solid rgba(163,255,18,.35); color: var(--neon); white-space: nowrap; }
+    .inv-status.warn { color: #ffcf5c; border-color: rgba(255,207,92,.45); }
+    .inv-status.dim { color: #8fa6bb; border-color: rgba(143,166,187,.35); }
+    .inv-status.bad { color: #ff8f8f; border-color: rgba(255,143,143,.4); }
+    .inv-play { flex: 1 1 100%; border-top: 1px dashed rgba(163,255,18,.18); padding-top: 10px; }
+    .inv-score-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+    .inv-score-row .field { width: 84px; }
+    .inv-claim { font-size: 1.25rem; font-weight: 800; }
+    .inv-claim .n { color: var(--neon); font-variant-numeric: tabular-nums; }
+    .inv-evidence-img { width: 100%; max-width: 420px; border-radius: 10px; display: block; margin-top: 10px; }
+    .inv-empty { color: #8fa6bb; font-weight: 600; padding: 8px 2px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="page-heading">
+      <div>
+        <span class="eyebrow">ساحة المنافسة</span>
+        <h1 class="page-title">✉️ الدعوات والتحديات</h1>
+        <p class="muted">دعوات المباريات والبطولات تصل إلى هنا. قبول دعوة مباراة يفتح تحدّيًا <b>محسوبًا في التصنيف (ELO)</b>: العب المباراة، أرسل النتيجة مع لقطة الشاشة، ويؤكّدها خصمك — أو يطعن فيها فتذهب للإدارة. حدّ الحماية: تحدٍّ واحد مفتوح بين كل لاعبين، وتحدٍّ محسوب واحد بينكما كل 24 ساعة، وخمسة تحديات محسوبة كحد أقصى يوميًا.</p>
+      </div>
+    </div>
+    <div id="inv-state" class="muted" role="status">جارٍ التحميل…</div>
+    <section class="card inv-sec" id="sec-challenges" hidden>
+      <h2>⚔️ مباريات التحدي</h2>
+      <div id="list-challenges"></div>
+    </section>
+    <section class="card inv-sec" id="sec-match-received" hidden>
+      <h2>📥 دعوات مباراة واردة</h2>
+      <div id="list-match-received"></div>
+    </section>
+    <section class="card inv-sec" id="sec-tour-received" hidden>
+      <h2>🏆 دعوات بطولة واردة</h2>
+      <div id="list-tour-received"></div>
+    </section>
+    <section class="card inv-sec" id="sec-sent" hidden>
+      <h2>📤 دعوات أرسلتها</h2>
+      <div id="list-sent"></div>
+    </section>
+  </div>
+  <script src="/shared/i18n.js"></script>
+  <script src="/shared/api.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script>
+    const INV_STATUS = {
+      pending: ["بانتظار الرد", ""], accepted: ["مقبولة", ""], declined: ["مرفوضة", "bad"],
+      cancelled: ["ملغاة", "dim"], expired: ["منتهية الصلاحية", "dim"]
+    };
+    const CH_STATUS = {
+      ready: ["بانتظار اللعب", "warn"], result_submitted: ["نتيجة بانتظار التأكيد", "warn"],
+      disputed: ["قيد مراجعة الإدارة", "bad"], completed: ["منتهية", "dim"], cancelled: ["ملغاة", "dim"]
+    };
+    let myId = null;
+
+    const chip = (map, s) => { const [label, cls] = map[s] || [s, "dim"]; return `<span class="inv-status ${cls}">${label}</span>`; };
+    const avaHtml = (p) => p.avatar_url
+      ? `<span class="inv-ava"><img src="${escapeHtml(p.avatar_url)}" alt=""></span>`
+      : `<span class="inv-ava">${escapeHtml((p.display_name || "؟").trim().slice(0, 1))}</span>`;
+    const when = (iso) => new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+    const playerLine = (p) => `${escapeHtml(p.display_name)}${p.arena_no ? ` <span class="inv-sub">#${p.arena_no}</span>` : ""}`;
+
+    function matchReceivedHtml(inv) {
+      const actions = inv.status === "pending"
+        ? `<div class="inv-actions"><button class="btn btn-primary" type="button" data-act="m-accept" data-id="${inv.id}">قبول التحدي</button><button class="btn btn-ghost" type="button" data-act="m-decline" data-id="${inv.id}">رفض</button></div>`
+        : "";
+      return `<div class="inv-item">${avaHtml(inv.challenger)}<div class="inv-main"><div class="inv-name">${playerLine(inv.challenger)}</div><div class="inv-sub">يدعوك إلى مباراة تحدٍّ محسوبة · ${when(inv.created_at)}</div></div>${chip(INV_STATUS, inv.status)}${actions}</div>`;
+    }
+
+    function tourReceivedHtml(inv) {
+      const actions = inv.status === "pending"
+        ? `<div class="inv-actions"><button class="btn btn-primary" type="button" data-act="t-accept" data-id="${inv.id}">قبول والانضمام</button><button class="btn btn-ghost" type="button" data-act="t-decline" data-id="${inv.id}">رفض</button></div>`
+        : "";
+      return `<div class="inv-item"><div class="inv-main"><div class="inv-name">🏆 ${escapeHtml(inv.tournament_name)}</div><div class="inv-sub">دعوة من ${escapeHtml(inv.inviter.display_name)} · ${when(inv.created_at)}</div></div>${chip(INV_STATUS, inv.status)}${actions}</div>`;
+    }
+
+    function sentHtml(inv, kind) {
+      const other = kind === "match" ? inv.opponent : inv.invitee;
+      const title = kind === "match" ? `⚔️ دعوة مباراة إلى ${escapeHtml(other.display_name)}` : `🏆 دعوة إلى «${escapeHtml(inv.tournament_name)}» لـ${escapeHtml(other.display_name)}`;
+      const cancel = inv.status === "pending"
+        ? `<div class="inv-actions"><button class="btn btn-ghost" type="button" data-act="${kind === "match" ? "m-cancel" : "t-cancel"}" data-id="${inv.id}">إلغاء الدعوة</button></div>`
+        : "";
+      return `<div class="inv-item"><div class="inv-main"><div class="inv-name">${title}</div><div class="inv-sub">${when(inv.created_at)}</div></div>${chip(INV_STATUS, inv.status)}${cancel}</div>`;
+    }
+
+    function challengeHtml(ch) {
+      const mine = ch.player_a.user_id === myId ? ch.player_a : ch.player_b;
+      const opp = ch.player_a.user_id === myId ? ch.player_b : ch.player_a;
+      const a = ch.player_a, b = ch.player_b;
+      let play = "";
+      if (ch.status === "ready") {
+        play = `<div class="inv-play"><div class="inv-sub" style="margin-bottom:8px">بعد لعب المباراة، أرسل النتيجة هنا مع لقطة شاشة النتيجة — سيؤكّدها خصمك.</div>
+          <div class="inv-score-row">
+            <label class="lbl">أهداف ${escapeHtml(a.display_name)}<input class="field" type="number" min="0" max="99" step="1" data-sa="${ch.id}" placeholder="0"></label>
+            <label class="lbl">أهداف ${escapeHtml(b.display_name)}<input class="field" type="number" min="0" max="99" step="1" data-sb="${ch.id}" placeholder="0"></label>
+            <label class="lbl">لقطة النتيجة<input class="field" type="file" accept="image/jpeg,image/png" data-img="${ch.id}"></label>
+            <button class="btn btn-primary" type="button" data-act="ch-submit" data-id="${ch.id}">إرسال النتيجة</button>
+          </div></div>`;
+      } else if (ch.status === "result_submitted") {
+        const claim = `<span class="inv-claim">${escapeHtml(a.display_name)} <span class="n">${ch.pending_score_a} – ${ch.pending_score_b}</span> ${escapeHtml(b.display_name)}</span>`;
+        const evBtn = ch.pending_evidence_id ? `<button class="btn btn-ghost" type="button" data-act="ch-evidence" data-id="${ch.id}" data-ev="${ch.pending_evidence_id}">عرض لقطة النتيجة</button>` : "";
+        if (ch.pending_submitted_by === myId) {
+          play = `<div class="inv-play"><div class="inv-sub">أرسلت هذه النتيجة — بانتظار تأكيد ${escapeHtml(opp.display_name)}:</div>${claim}<div class="inv-actions" style="margin-top:8px">${evBtn}</div><img class="inv-evidence-img" data-evimg="${ch.id}" hidden alt="لقطة النتيجة"></div>`;
+        } else {
+          play = `<div class="inv-play"><div class="inv-sub">${escapeHtml(opp.display_name)} أرسل النتيجة — راجع اللقطة ثم أكّدها أو اطعن فيها:</div>${claim}<div class="inv-actions" style="margin-top:8px">${evBtn}<button class="btn btn-primary" type="button" data-act="ch-confirm" data-id="${ch.id}">تأكيد النتيجة</button><button class="btn btn-ghost" type="button" data-act="ch-dispute" data-id="${ch.id}">طعن</button></div><img class="inv-evidence-img" data-evimg="${ch.id}" hidden alt="لقطة النتيجة"></div>`;
+        }
+      } else if (ch.status === "disputed") {
+        play = `<div class="inv-play"><div class="inv-sub">النتيجة متنازع عليها — الإدارة تراجع اللقطة وستحسم النتيجة النهائية.</div></div>`;
+      } else if (ch.status === "completed") {
+        const verdict = ch.winner_id === null ? "تعادل" : `الفائز: ${escapeHtml(ch.winner_id === a.user_id ? a.display_name : b.display_name)}`;
+        play = `<div class="inv-play"><span class="inv-claim">${escapeHtml(a.display_name)} <span class="n">${ch.score_a} – ${ch.score_b}</span> ${escapeHtml(b.display_name)}</span><div class="inv-sub">${verdict} · احتُسبت في التصنيف (ELO)</div></div>`;
+      }
+      return `<div class="inv-item">${avaHtml(opp)}<div class="inv-main"><div class="inv-name">أنت × ${playerLine(opp)}</div><div class="inv-sub">تحدٍّ محسوب في التصنيف · ${when(ch.created_at)}</div></div>${chip(CH_STATUS, ch.status)}${play}</div>`;
+    }
+
+    async function load() {
+      const state = el("inv-state");
+      try {
+        const me = await apiFetch("/auth/me");
+        myId = me.id;
+        const [inbox, challenges] = await Promise.all([apiFetch("/invites"), apiFetch("/challenges")]);
+        const fill = (secId, listId, rows, render) => {
+          el(secId).hidden = false;
+          el(listId).innerHTML = rows.length ? rows.map(render).join("") : `<div class="inv-empty">لا شيء هنا بعد.</div>`;
+        };
+        fill("sec-challenges", "list-challenges", challenges, challengeHtml);
+        fill("sec-match-received", "list-match-received", inbox.match_received, matchReceivedHtml);
+        fill("sec-tour-received", "list-tour-received", inbox.tournament_received, tourReceivedHtml);
+        const sent = [
+          ...inbox.match_sent.map((i) => sentHtml(i, "match")),
+          ...inbox.tournament_sent.map((i) => sentHtml(i, "tournament"))
+        ];
+        el("sec-sent").hidden = false;
+        el("list-sent").innerHTML = sent.length ? sent.join("") : `<div class="inv-empty">لا شيء هنا بعد.</div>`;
+        state.hidden = true;
+      } catch (err) {
+        state.textContent = err.detail || "تعذر تحميل الدعوات";
+      }
+    }
+
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-act]");
+      if (!btn) return;
+      const act = btn.dataset.act, id = btn.dataset.id;
+      const run = async (fn, okMsg) => {
+        btn.disabled = true;
+        try { await fn(); if (okMsg) toast(okMsg, "success"); await load(); }
+        catch (err) { toast(err.detail || "تعذر تنفيذ الإجراء", "error"); btn.disabled = false; }
+      };
+      if (act === "m-accept") run(() => apiFetch(`/invites/match/${id}/accept`, { method: "POST" }), "تم قبول التحدي — المباراة جاهزة في الأعلى");
+      else if (act === "m-decline") run(() => apiFetch(`/invites/match/${id}/decline`, { method: "POST" }), "تم رفض الدعوة");
+      else if (act === "m-cancel") run(() => apiFetch(`/invites/match/${id}`, { method: "DELETE" }), "تم إلغاء الدعوة");
+      else if (act === "t-accept") run(() => apiFetch(`/invites/tournament/${id}/accept`, { method: "POST" }), "تم الانضمام إلى البطولة");
+      else if (act === "t-decline") run(() => apiFetch(`/invites/tournament/${id}/decline`, { method: "POST" }), "تم رفض الدعوة");
+      else if (act === "t-cancel") run(() => apiFetch(`/invites/tournament/${id}`, { method: "DELETE" }), "تم إلغاء الدعوة");
+      else if (act === "ch-confirm") run(() => apiFetch(`/challenges/${id}/confirm`, { method: "POST" }), "تم تأكيد النتيجة واحتسابها في التصنيف");
+      else if (act === "ch-dispute") run(() => apiFetch(`/challenges/${id}/dispute`, { method: "POST", body: JSON.stringify({}) }), "تم إرسال الطعن إلى الإدارة");
+      else if (act === "ch-evidence") {
+        btn.disabled = true;
+        try {
+          const blob = await apiFetchFile(`/challenges/${id}/evidence/${btn.dataset.ev}/image`);
+          const img = document.querySelector(`[data-evimg="${id}"]`);
+          img.src = URL.createObjectURL(blob);
+          img.hidden = false;
+        } catch (err) { toast(err.detail || "تعذر تحميل اللقطة", "error"); }
+        btn.disabled = false;
+      } else if (act === "ch-submit") {
+        const sa = document.querySelector(`[data-sa="${id}"]`);
+        const sb = document.querySelector(`[data-sb="${id}"]`);
+        const img = document.querySelector(`[data-img="${id}"]`);
+        if (!sa.value || !sb.value) { toast("أدخل نتيجة المباراة كاملة", "error"); return; }
+        if (!img.files || !img.files[0]) { toast("أرفق لقطة شاشة النتيجة", "error"); return; }
+        const form = new FormData();
+        form.append("score_a", sa.value);
+        form.append("score_b", sb.value);
+        form.append("image", img.files[0]);
+        run(() => apiFetch(`/challenges/${id}/submit-result`, { method: "POST", body: form }), "تم إرسال النتيجة — بانتظار تأكيد الخصم");
+      }
+    });
+
+    (async () => {
+      if (!(await requireAuthOrRedirect())) return;
+      load();
+    })();
+  </script>
+</body>
+</html>

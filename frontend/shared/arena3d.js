@@ -21,16 +21,19 @@
     "attribute vec3 aCol;",
     "uniform mat4 uMVP;",
     "uniform mat4 uModel;",
+    "uniform mat4 uModelFull;",
     "varying vec3 vNorm;",
     "varying vec3 vCol;",
     "varying vec3 vWorld;",
     "varying vec3 vObj;",
+    "varying float vDispY;",
     "void main() {",
     "  vec4 world = uModel * vec4(aPos, 1.0);",
     "  vWorld = world.xyz;",
     "  vNorm = mat3(uModel) * aNorm;",
     "  vCol = aCol;",
     "  vObj = aPos;",
+    "  vDispY = (uModelFull * vec4(aPos, 1.0)).y;",
     "  gl_Position = uMVP * vec4(aPos, 1.0);",
     "}"
   ].join("\n");
@@ -45,10 +48,13 @@
     "varying vec3 vCol;",
     "varying vec3 vWorld;",
     "varying vec3 vObj;",
+    "varying float vDispY;",
     "uniform vec3 uCam;",
     "uniform vec3 uLight1;",
     "uniform vec3 uLight2;",
     "uniform float uKind;",
+    "uniform float uReflect;",
+    "uniform float uBaseY;",
     "vec3 hash3(vec3 p3) {",
     "  p3 = fract(p3 * vec3(0.1031, 0.1030, 0.0973));",
     "  p3 += dot(p3, p3.yxz + 33.33);",
@@ -107,7 +113,8 @@
     "  float peb = clamp((fA.y - fA.x) * 2.4, 0.0, 1.0) * 0.7 + clamp((fB.y - fB.x) * 2.4, 0.0, 1.0) * 0.3;",
     "  float md = ballField(p);",
     "  float gw = max(0.0, 1.0 - abs(md - 0.922) / 0.016);",
-    "  return peb - gw * gw * 1.35;",
+    "  float puff = clamp(abs(md - 0.922) / 0.05, 0.0, 1.0);",
+    "  return peb + puff * 0.5 - gw * gw * 1.35;",
     "}",
     "void main() {",
     "  vec3 n = normalize(vNorm);",
@@ -131,14 +138,16 @@
     "    albedo *= 0.90 + 0.16 * clamp(h0 + 0.35, 0.0, 1.0);",
     "    float groove = 1.0 - smoothstep(0.0, 0.013, abs(md - 0.922));",
     "    albedo = mix(albedo, vec3(0.015, 0.015, 0.02), groove * 0.85);",
+    "    float stitch = groove * step(0.72, vnoise(p * 300.0));",
+    "    albedo = mix(albedo, vec3(0.72, 0.70, 0.62), stitch * 0.55);",
     "    float aoBand = 1.0 - smoothstep(0.0, 0.055, abs(md - 0.922));",
-    "    float d1 = max(dot(bn, l1), 0.0);",
+    "    float d1w = pow(clamp((dot(bn, l1) + 0.35) / 1.35, 0.0, 1.0), 1.3);",
     "    float d2 = max(dot(bn, l2), 0.0);",
-    "    vec3 base = albedo * (0.30 + d1 * 0.95 + d2 * 0.30) * (1.0 - aoBand * 0.16);",
+    "    vec3 base = albedo * (0.30 + d1w * 0.95 + d2 * 0.30) * (1.0 - aoBand * 0.16);",
     "    vec3 r = reflect(-v, bn);",
     "    vec3 env = studioEnv(r);",
     "    vec3 hv = normalize(l1 + v);",
-    "    base += vec3(1.0) * pow(max(dot(bn, hv), 0.0), 70.0) * 0.75 * (1.0 - groove * 0.7);",
+    "    base += vec3(1.0) * pow(max(dot(bn, hv), 0.0), 70.0) * 0.75 * (1.0 - groove * 0.7) * mix(1.0, 0.75, panel);",
     "    base += env * (0.13 + 0.45 * fres) * mix(1.0, 0.55, panel) * (1.0 - groove * 0.6);",
     "    col = base;",
     "  } else {",
@@ -151,11 +160,14 @@
     "    col = vCol * envM * 1.35;",
     "    col += vCol * (d1 * 0.30 + d2 * 0.10);",
     "    vec3 hv = normalize(l1 + v);",
-    "    col += vCol * pow(max(dot(n, hv), 0.0), 90.0) * 0.9;",
+    "    col += vCol * pow(max(dot(n, hv), 0.0), 90.0) * 1.1;",
     "    col += vec3(1.0, 0.85, 0.55) * pow(max(dot(r, l1), 0.0), 42.0) * 0.4;",
     "    col *= 0.92 + 0.16 * fres;",
     "  }",
-    "  gl_FragColor = vec4(col, 1.0);",
+    "  col = pow(col / (col + 0.82) * 1.30, vec3(0.92));",
+    "  float alpha = 1.0;",
+    "  if (uReflect > 0.5) { alpha = clamp((uBaseY - vDispY) / 0.5, 0.0, 1.0) * 0.38; col *= 0.55; }",
+    "  gl_FragColor = vec4(col, alpha);",
     "}"
   ].join("\n");
 
@@ -231,14 +243,14 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  function torus(cx, cy, R, tube, arcFrom, arcTo, flip, color) {
+  function torus(cx, cy, cz, R, tube, arcFrom, arcTo, flip, color) {
     var pos = [], norm = [], col = [], idx = [];
     var U = 26, V = 12;
     for (var j = 0; j <= V; j++) {
       var vv = (j / V) * Math.PI * 2, cv = Math.cos(vv), sv = Math.sin(vv);
       for (var i = 0; i <= U; i++) {
         var uu = arcFrom + (arcTo - arcFrom) * (i / U), cu = Math.cos(uu), su = Math.sin(uu);
-        pos.push(cx + (R + tube * cv) * cu, cy + (R + tube * cv) * su, tube * sv);
+        pos.push(cx + (R + tube * cv) * cu, cy + (R + tube * cv) * su, cz + tube * sv);
         norm.push(cv * cu, cv * su, sv);
         col.push(color[0], color[1], color[2]);
       }
@@ -311,8 +323,9 @@
     ];
     return merge([
       lathe(profile, 80, GOLD),
-      torus(0.50, 1.40, 0.30, 0.06, -Math.PI * 0.46, Math.PI * 0.46, false, GOLD),
-      torus(-0.50, 1.40, 0.30, 0.06, Math.PI * 0.54, Math.PI * 1.46, true, GOLD),
+      torus(0.50, 1.40, 0, 0.30, 0.06, -Math.PI * 0.46, Math.PI * 0.46, false, GOLD),
+      torus(-0.50, 1.40, 0, 0.30, 0.06, Math.PI * 0.54, Math.PI * 1.46, true, GOLD),
+      torus(0, 1.34, 0.615, 0.175, 0.018, 0, Math.PI * 2, false, GOLD),
       ringY(1.90, 0.715, 0.030, GOLD),
       ringY(0.62, 0.178, 0.020, GOLD),
       disc(0, 1.34, 0.583, 0.17, 0.38, DEEPGOLD)
@@ -340,7 +353,7 @@
     gl.useProgram(prog);
     this.prog = prog;
     this.u = {};
-    ["uMVP", "uModel", "uCam", "uLight1", "uLight2", "uKind"].forEach(function (name) {
+    ["uMVP", "uModel", "uModelFull", "uCam", "uLight1", "uLight2", "uKind", "uReflect", "uBaseY"].forEach(function (name) {
       this.u[name] = gl.getUniformLocation(prog, name);
     }, this);
     this.aPos = gl.getAttribLocation(prog, "aPos");
@@ -393,13 +406,14 @@
     var dist = this.kind === "ball" ? 4.0 : 4.35;
     var proj = perspective(0.56, this.aspect, 0.1, 50);
     var view = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -dist, 1]);
-    var yOff = this.kind === "ball" ? bob : -0.94;
+    var scale = this.kind === "ball" ? 1 : 0.86;
+    var yOff = this.kind === "ball" ? bob : -0.646;
     var effRotX = this.rotX + rockX;
-    var model = modelMatrix(0, yOff, 0, effRotX, this.rotY, 1);
-    var mvp = multiply(proj, multiply(view, model));
+    var model = modelMatrix(0, yOff, 0, effRotX, this.rotY, scale);
     var worldModel = modelMatrix(0, 0, 0, effRotX, this.rotY, 1);
-    gl.uniformMatrix4fv(this.u.uMVP, false, mvp);
-    gl.uniformMatrix4fv(this.u.uModel, false, worldModel);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.uniform1f(this.u.uBaseY, -0.645);
     gl.uniform3f(this.u.uCam, 0, 0, dist);
     if (this.kind === "ball") {
       gl.uniform3f(this.u.uLight1, 0.55, 0.85, 0.75);
@@ -417,11 +431,26 @@
       gl.vertexAttribPointer(binds[bi][0], 3, gl.FLOAT, false, 0, 0);
     }
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.bIdx);
-    gl.drawElements(gl.TRIANGLES, this.count, gl.UNSIGNED_INT, 0);
-    if (this.shadowEl) {
-      var s = this.kind === "ball" ? 1 - (bob + 0.055) * 0.55 : 1;
+    var self = this;
+    function drawPass(mFull, mLight, refl) {
+      gl.uniformMatrix4fv(self.u.uMVP, false, multiply(proj, multiply(view, mFull)));
+      gl.uniformMatrix4fv(self.u.uModel, false, mLight);
+      gl.uniformMatrix4fv(self.u.uModelFull, false, mFull);
+      gl.uniform1f(self.u.uReflect, refl);
+      gl.drawElements(gl.TRIANGLES, self.count, gl.UNSIGNED_INT, 0);
+    }
+    if (this.kind === "trophy") {
+      var mFull = Float32Array.from(model); mFull[1] = -mFull[1]; mFull[5] = -mFull[5]; mFull[9] = -mFull[9]; mFull[13] = -mFull[13];
+      var mLight = Float32Array.from(worldModel); mLight[1] = -mLight[1]; mLight[5] = -mLight[5]; mLight[9] = -mLight[9]; mLight[13] = -mLight[13];
+      gl.depthMask(false);
+      drawPass(mFull, mLight, 1.0);
+      gl.depthMask(true);
+    }
+    drawPass(model, worldModel, 0.0);
+    if (this.shadowEl && this.kind === "ball") {
+      var s = 1 - (bob + 0.055) * 0.55;
       this.shadowEl.style.transform = "translateX(-50%) scaleX(" + s.toFixed(3) + ")";
-      this.shadowEl.style.opacity = this.kind === "ball" ? (0.62 - (bob + 0.055) * 1.4).toFixed(3) : "0.62";
+      this.shadowEl.style.opacity = (0.62 - (bob + 0.055) * 1.4).toFixed(3);
     }
   };
 

@@ -1,4 +1,4 @@
-/* arena3d.js v9 — hand-rolled WebGL renderer for the dashboard's football
+/* arena3d.js v10 — hand-rolled WebGL renderer for the dashboard's football
    and arena cup, shaded to a photographic standard (user's bar: the landing
    page's real ball and a real 🏆). No framework, no CDN (CSP script-src
    'self'). Round-3 lessons baked in:
@@ -83,8 +83,8 @@
     "  return vec2(sqrt(f1), sqrt(f2));",
     "}",
     "vec3 studioEnv(vec3 r) {",
-    "  vec3 c = vec3(0.050, 0.062, 0.038);",
-    "  c += vec3(0.95, 0.85, 0.62) * pow(max(dot(r, normalize(vec3(0.1, 0.55, 0.83))), 0.0), 6.0) * 0.38;",
+    "  vec3 c = vec3(0.30, 0.28, 0.22);",
+    "  c += vec3(0.95, 0.85, 0.62) * pow(max(dot(r, normalize(vec3(0.1, 0.55, 0.83))), 0.0), 3.0) * 0.55;",
     "  c += vec3(1.10, 1.02, 0.86) * pow(max(dot(r, normalize(vec3(0.25, 0.90, 0.35))), 0.0), 90.0) * 2.2;",
     "  c += vec3(0.82, 0.92, 1.00) * pow(max(dot(r, normalize(vec3(-0.90, 0.05, 0.44))), 0.0), 140.0) * 1.4;",
     "  c += vec3(1.00, 0.90, 0.70) * pow(max(dot(r, normalize(vec3(0.0, 0.35, 0.94))), 0.0), 70.0) * 0.9;",
@@ -186,7 +186,7 @@
     "    col += vec3(1.0, 0.85, 0.55) * pow(max(dot(r, l1), 0.0), 42.0) * 0.4;",
     "    col *= 0.92 + 0.16 * fres;",
     "  } else {",
-    "    float rr = length(vec2(vObj.x, vObj.y - 1.30)) / 0.26;",
+    "    float rr = length(vec2(vObj.x, vObj.y - 1.30)) / 0.29;",
     "    float d1 = max(dot(n, l1), 0.0);",
     "    vec3 pc = vCol * (studioEnv(reflect(-v, n)) * 1.2 + d1 * 0.35);",
     "    vec3 hv2 = normalize(l1 + v);",
@@ -361,8 +361,8 @@
       ringY(0.62, 0.178, 0.020, GOLD)
     ]);
     var plaque = merge([
-      disc(0, 1.30, 0.665, 0.26, 0.42, [0.16, 0.11, 0.05]),
-      disc(0, 1.30, 0.715, 0.155, 0.5, MEDAL)
+      disc(0, 1.30, 0.665, 0.29, 0.42, [0.16, 0.11, 0.05]),
+      disc(0, 1.30, 0.715, 0.17, 0.5, MEDAL)
     ]);
     return [
       { geom: body, kind: 1.0 },

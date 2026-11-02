@@ -725,12 +725,15 @@ tr.is-me td:first-child { border-inline-start: 3px solid var(--neon); }
 @keyframes gulp-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .gulp-word, .gulp-lid { transition: opacity .2s ease; transform: none !important; } .gulp-btn[data-state="busy"] .gulp-ring__arc { animation: none; } }
 
-/* ——— Dashboard hero photos 2026-11-02: real static ball + trophy, no animation (user call) ——— */
-.hero-photo { position: relative; display: block; }
-.hero-photo img { position: relative; width: 100%; height: 100%; object-fit: contain; display: block; }
-.hero-photo__shadow { position: absolute; left: 50%; bottom: 0; width: 74%; height: 10%; transform: translateX(-50%); background: radial-gradient(ellipse at center, rgba(0,0,0,.55) 0%, rgba(0,0,0,.28) 55%, rgba(0,0,0,0) 75%); border-radius: 50%; pointer-events: none; }
-.hero-photo--ball { width: 200px; height: 200px; margin-inline: auto; }
-.fact-trophy { height: 92px; width: auto; max-width: 100%; object-fit: contain; display: block; margin-inline: auto; }
+/* ——— Dashboard 3D hero v2 2026-11-02: photographic-grade WebGL (arena3d.js), photos as fallback ——— */
+.stage3d { position: relative; display: block; }
+.stage3d canvas { width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; }
+.stage3d canvas:active { cursor: grabbing; }
+.stage3d__fallback { width: 100%; height: 100%; object-fit: contain; display: block; position: relative; }
+.stage3d__shadow { position: absolute; left: 50%; bottom: -3%; width: 76%; height: 13%; transform: translateX(-50%); background: radial-gradient(ellipse at center, rgba(0,0,0,.78) 0%, rgba(0,0,0,.45) 55%, rgba(0,0,0,0) 75%); border-radius: 50%; pointer-events: none; }
+.stage3d--ball { width: 200px; height: 200px; margin-inline: auto; }
+.stage3d--trophy { width: 84px; height: 84px; margin-inline: auto; }
+.stage3d--trophy .stage3d__shadow { bottom: -2%; width: 84%; }
 .identity-fact--trophy { justify-items: center; text-align: center; align-content: center; }
 @media (min-width: 981px) { .identity-card { grid-template-columns: 200px 1fr 1.55fr; } .identity-facts { grid-template-columns: repeat(4, 1fr); } }
-@media (max-width: 560px) { .identity-facts { grid-template-columns: repeat(2, 1fr); } .identity-facts > div:nth-child(3) { border-inline-start: 0; } .hero-photo--ball { width: 168px; height: 168px; } }
+@media (max-width: 560px) { .identity-facts { grid-template-columns: repeat(2, 1fr); } .identity-facts > div:nth-child(3) { border-inline-start: 0; } .stage3d--ball { width: 168px; height: 168px; } }

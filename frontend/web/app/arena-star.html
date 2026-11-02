@@ -14,75 +14,123 @@
     /* Arena Star fan deck — mechanic approved in the standalone v2 demo:
        cards pivot from the bottom in a fan, the front card glides out
        sideways, then the deck reshuffles once (.5s cubic-bezier(.4,0,.2,1)).
+       Card face follows the user's reference mock element for element:
+       id row + verified pill, big name/title beside a large avatar,
+       stats row, MY SQUAD panel with a strength strip, cups row, the
+       two invite buttons with the circular next button on their seam,
+       and a quiet share/like bottom row.
        Classes are st- prefixed: theme.css owns .card/.btn/.avatar names. */
     .st-wrap { display: flex; flex-direction: column; align-items: center; }
     .st-deck {
       position: relative; margin-top: 20px;
-      width: min(94vw, 400px); aspect-ratio: 0.58;
-      max-height: calc(100dvh - 330px); min-height: 430px;
+      width: min(94vw, 400px); aspect-ratio: 0.54;
+      /* min-height = the card's true content minimum (fixed rows ~440px
+         + squad min 108px): the squad zone flexes, nothing ever clips;
+         on short viewports the page scrolls instead. */
+      max-height: calc(100dvh - 272px); min-height: 550px;
     }
     .st-card {
-      position: absolute; inset: 0; border-radius: 18px; overflow: hidden;
-      background: linear-gradient(168deg, #132c1e 0%, #0b1e13 58%, #08170d 100%);
-      border: 1px solid rgba(163, 255, 18, .30);
+      position: absolute; inset: 0; border-radius: 20px; overflow: hidden;
+      background: linear-gradient(170deg, #0c1d2e 0%, #071322 55%, #040b13 100%);
+      border: 1px solid rgba(163, 255, 18, .32);
       box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
-      padding: 14px 15px; display: flex; flex-direction: column; gap: 8px;
+      padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 9px;
       transform-origin: 50% 106%;
       transition: transform .5s cubic-bezier(.4, 0, .2, 1), opacity .3s ease;
       user-select: none; -webkit-user-select: none; touch-action: pan-y;
       pointer-events: none; will-change: transform;
     }
     .st-card.front { pointer-events: auto; }
-    .st-ghost {
-      position: absolute; top: 8px; inset-inline-end: 14px;
-      font-size: .8rem; font-weight: 800; color: var(--neon); letter-spacing: .08em;
+    .st-idrow {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      font-size: .74rem; color: #8fa6bb; font-weight: 700; letter-spacing: .05em; flex: none;
     }
-    .st-idrow { display: flex; align-items: center; gap: 8px; font-size: .72rem; color: var(--muted); font-weight: 700; }
-    .st-verified { color: #08130a; background: var(--neon); border-radius: 999px; padding: 2px 9px; font-size: .66rem; font-weight: 800; }
-    .st-me { color: var(--neon); border: 1px solid var(--neon-dim); border-radius: 999px; padding: 1px 9px; font-size: .66rem; font-weight: 800; }
-    .st-head { display: flex; align-items: center; gap: 12px; }
+    .st-verified {
+      color: var(--neon); background: #0f3520; border: 1px solid rgba(163, 255, 18, .45);
+      border-radius: 999px; padding: 3px 11px; font-size: .68rem; font-weight: 800; letter-spacing: .03em;
+    }
+    .st-me {
+      color: #08130a; background: var(--neon); border-radius: 999px;
+      padding: 3px 11px; font-size: .68rem; font-weight: 800;
+    }
+    .st-head { display: flex; align-items: center; gap: 14px; flex: none; }
+    .st-headtx { flex: 1 1 auto; min-width: 0; }
     .st-avatar {
-      width: 60px; height: 60px; border-radius: 50%; flex: none; overflow: hidden;
-      display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; color: var(--neon);
-      background: radial-gradient(circle at 35% 30%, #1d4a2e, #0e2415);
-      border: 2px solid rgba(163, 255, 18, .55);
+      width: 84px; height: 84px; border-radius: 50%; flex: none; overflow: hidden;
+      display: grid; place-items: center; color: var(--neon);
+      background: radial-gradient(circle at 35% 30%, #274b63, #101f30);
+      border: 2px solid rgba(163, 255, 18, .5);
     }
     .st-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .st-name { font-size: 1.24rem; font-weight: 800; line-height: 1.15; }
+    .st-avatar svg { width: 46px; height: 46px; }
+    .st-name { font-size: 1.72rem; font-weight: 800; line-height: 1.12; overflow-wrap: anywhere; }
     .st-name a { color: inherit; text-decoration: none; }
-    .st-title { color: var(--neon); font-weight: 800; font-size: .9rem; }
-    .st-meta { color: var(--muted); font-size: .76rem; }
-    .st-divider { height: 1px; background: var(--line); flex: none; }
-    .st-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; }
-    .st-stat b { display: block; font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .st-title { color: var(--neon); font-weight: 800; font-size: 1.02rem; font-style: italic; }
+    .st-meta { color: #8fa6bb; font-size: .8rem; }
+    .st-divider { height: 1px; background: rgba(163, 255, 18, .16); flex: none; }
+    .st-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; flex: none; }
+    .st-stat b { display: block; font-size: 1.9rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
     .st-stat b.elo { color: var(--neon); }
-    .st-stat span { color: var(--muted); font-size: .7rem; font-weight: 700; }
+    .st-stat span { color: #8fa6bb; font-size: .72rem; font-weight: 700; }
+    .st-squad-head { font-size: 1.02rem; font-weight: 800; flex: none; }
     .st-squad {
-      flex: 1 1 auto; min-height: 104px; display: flex; flex-direction: column;
-      background: #0d2417; border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px;
+      flex: 1 1 auto; min-height: 108px; display: flex; flex-direction: column; gap: 8px;
+      background: linear-gradient(180deg, #0a2013, #071a0f);
+      border: 1px solid rgba(163, 255, 18, .28); border-radius: 16px; padding: 10px;
     }
-    .st-squad .cap { display: flex; justify-content: space-between; font-size: .74rem; font-weight: 800; flex: none; margin-bottom: 4px; }
-    .st-squad .cap .form { color: var(--neon); }
-    .st-squad svg { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; display: block; }
+    .st-squad-main { display: flex; gap: 10px; flex: 1 1 auto; min-height: 0; }
+    .st-strip {
+      width: 84px; flex: none; border-radius: 10px; padding: 8px 4px;
+      background: linear-gradient(180deg, #12402a, #081c10);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 5px; text-align: center;
+    }
+    .st-strip .ph {
+      width: 52px; height: 52px; border-radius: 10px; overflow: hidden; flex: none;
+      display: grid; place-items: center; color: var(--neon); background: #0d2c1a;
+    }
+    .st-strip .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .st-strip .ph svg { width: 30px; height: 30px; }
+    .st-strip .lbl { font-size: .6rem; color: #b9c9d6; font-weight: 700; line-height: 1.3; }
+    .st-strip .val { color: #ffd21f; font-size: 1.28rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+    .st-pitch { flex: 1 1 auto; min-width: 0; display: flex; }
+    .st-pitch svg { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; display: block; }
+    .st-squad-cap { text-align: center; color: var(--neon); font-weight: 800; font-size: .92rem; flex: none; }
     .st-squad-text {
-      flex: 1 1 auto; min-height: 104px; border: 1px solid var(--line); border-radius: 14px;
-      background: #0d2417; display: grid; place-items: center; text-align: center; padding: 14px 8px;
+      flex: 1 1 auto; min-height: 108px; border: 1px solid rgba(163, 255, 18, .28); border-radius: 16px;
+      background: #0a2013; display: grid; place-items: center; text-align: center; padding: 14px 8px;
     }
     .st-squad-text b { color: var(--neon); font-size: 1.5rem; display: block; }
     .st-squad-empty {
-      flex: 1 1 auto; min-height: 104px; border: 1.5px dashed var(--line); border-radius: 14px;
-      color: var(--muted); display: grid; place-items: center;
+      flex: 1 1 auto; min-height: 108px; border: 1.5px dashed rgba(163, 255, 18, .3); border-radius: 16px;
+      color: #8fa6bb; display: grid; place-items: center;
       font-size: .82rem; font-weight: 700; padding: 16px 8px; text-align: center;
     }
     .st-squad-empty a { color: var(--neon); }
-    .st-cups { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: .95rem; flex: none; }
-    .st-cups .n { color: var(--neon); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
-    .st-cups .lbl { color: var(--muted); font-size: .74rem; font-weight: 700; }
-    .st-actions { display: flex; justify-content: space-between; align-items: center; flex: none; }
+    .st-cups { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.05rem; flex: none; }
+    .st-cups .n { color: var(--neon); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+    .st-cups .lbl { color: #8fa6bb; font-size: .78rem; font-weight: 700; margin-inline-start: auto; }
+    .st-invites { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; flex: none; }
+    .st-inv {
+      border-radius: 14px; padding: 10px 6px 9px; min-height: 62px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+      font: inherit; font-weight: 800; font-size: .92rem; cursor: pointer; text-decoration: none;
+    }
+    .st-inv .ic { font-size: 1.25rem; line-height: 1; }
+    .st-inv.primary { background: var(--neon); color: #0a1403; border: none; }
+    .st-inv.ghost { background: transparent; color: var(--neon); border: 1.5px solid var(--neon); }
+    .st-next-circle {
+      position: absolute; left: 50%; bottom: -24px; transform: translateX(-50%); z-index: 3;
+      width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer;
+      background: #1b2f42; color: #fff; display: grid; place-items: center;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .5);
+    }
+    .st-next-circle svg { width: 22px; height: 22px; }
+    .st-bottom { display: flex; justify-content: space-between; align-items: center; flex: none; }
     .st-mini {
-      background: none; border: none; color: var(--muted); font: inherit; font-size: .85rem;
+      background: none; border: none; color: #8fa6bb; font: inherit; font-size: .85rem;
       font-weight: 700; cursor: pointer; display: flex; gap: 6px; align-items: center;
-      padding: 8px 4px; min-height: 40px;
+      padding: 6px 2px; min-height: 36px;
     }
     .st-mini.liked { color: #ff5d7a; }
     .st-mini.static { cursor: default; }
@@ -96,11 +144,36 @@
     .st-counter b { color: var(--text); }
     .st-hint { color: var(--muted); font-size: .74rem; margin-top: 8px; text-align: center; }
     .st-state { text-align: center; color: var(--muted); padding: 48px 16px; font-weight: 700; }
-    @media (max-height: 700px) {
-      .st-card { gap: 6px; padding: 12px 13px; }
-      .st-avatar { width: 50px; height: 50px; font-size: 1.02rem; }
-      .st-name { font-size: 1.08rem; }
-      .st-stat b { font-size: 1.18rem; }
+    .st-modal {
+      position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
+      background: rgba(2, 8, 5, .66); padding: 18px;
+    }
+    .st-modal[hidden] { display: none; }
+    .st-modal-box {
+      width: min(92vw, 380px); background: #0c1d2e; color: var(--text);
+      border: 1px solid rgba(163, 255, 18, .35); border-radius: 16px; padding: 16px;
+    }
+    .st-modal-box h3 { margin: 0 0 10px; font-size: 1rem; }
+    .st-modal-item {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
+      text-align: start; background: #0a2a18; border: 1px solid var(--line); color: var(--text);
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+      font: inherit; font-weight: 700; cursor: pointer;
+    }
+    .st-modal-item .cnt { color: var(--muted); font-size: .78rem; font-weight: 700; }
+    @media (max-height: 760px) {
+      .st-deck { min-height: 476px; }
+      .st-squad, .st-squad-text, .st-squad-empty { min-height: 96px; }
+      .st-card { gap: 7px; padding: 13px 13px 10px; }
+      .st-avatar { width: 66px; height: 66px; }
+      .st-avatar svg { width: 36px; height: 36px; }
+      .st-name { font-size: 1.38rem; }
+      .st-title { font-size: .92rem; }
+      .st-stat b { font-size: 1.5rem; }
+      .st-inv { min-height: 54px; padding: 7px 6px 6px; }
+      .st-strip { width: 72px; }
+      .st-strip .ph { width: 42px; height: 42px; }
+      .st-strip .val { font-size: 1.1rem; }
     }
   </style>
 </head>
@@ -124,14 +197,21 @@
       <p class="st-hint">انقر على الكومة أو اسحب أفقيًا لتدويرها — البطاقة الأمامية فقط تفاعلية</p>
     </div>
   </div>
+  <div class="st-modal" id="st-inv-modal" hidden>
+    <div class="st-modal-box">
+      <h3 id="st-inv-title">دعوة إلى بطولة</h3>
+      <div id="st-inv-list"></div>
+      <button class="btn btn-ghost" id="st-inv-close" type="button">إغلاق</button>
+    </div>
+  </div>
   <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
-    /* Formation dot maps on a 100x62 pitch (GK left, attack right). The
-       profile form offers exactly these formations, so a set formation
-       always has a map; anything else falls back to a text block. */
+    /* Formation dot maps on a 100x62 pitch (GK left, attack right) with a
+       position label per dot, drawn as mini player chips like the game's
+       squad screen. The profile form offers exactly these formations. */
     const fanFormations = {
       "4-3-3":   [[6,31],[22,8],[20,24],[20,38],[22,54],[42,16],[38,31],[42,46],[66,10],[72,31],[66,52]],
       "4-2-1-3": [[6,31],[22,8],[20,24],[20,38],[22,54],[36,20],[36,42],[50,31],[68,10],[74,31],[68,52]],
@@ -142,8 +222,19 @@
       "5-3-2":   [[6,31],[24,5],[20,20],[18,31],[20,42],[24,57],[44,16],[42,31],[44,46],[70,20],[70,42]],
       "4-5-1":   [[6,31],[22,8],[20,24],[20,38],[22,54],[44,6],[42,20],[38,31],[42,42],[44,56],[72,31]]
     };
+    const fanLabels = {
+      "4-3-3":   ["GK","LB","CB","CB","RB","CMF","DMF","CMF","LWF","CF","RWF"],
+      "4-2-1-3": ["GK","LB","CB","CB","RB","DMF","DMF","AMF","LWF","CF","RWF"],
+      "4-4-2":   ["GK","LB","CB","CB","RB","LM","CMF","CMF","RM","CF","CF"],
+      "3-5-2":   ["GK","CB","CB","CB","LMF","CMF","DMF","CMF","RMF","CF","CF"],
+      "4-1-2-3": ["GK","LB","CB","CB","RB","DMF","CMF","CMF","LWF","CF","RWF"],
+      "3-4-3":   ["GK","CB","CB","CB","LMF","CMF","CMF","RMF","LWF","CF","RWF"],
+      "5-3-2":   ["GK","LB","CB","CB","RB","CMF","DMF","CMF","CF","CF"],
+      "4-5-1":   ["GK","LB","CB","CB","RB","LMF","CMF","DMF","CMF","RMF","CF"]
+    };
     const stTitleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
-    const stInitials = (name) => escapeHtml((name || "EA").trim().slice(0, 2).toUpperCase());
+    const stPersonSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`;
+    const stAvatarHtml = (p) => p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="" />` : stPersonSvg;
 
     function stSquadHtml(p) {
       if (!p.formation) {
@@ -151,37 +242,53 @@
           ? `<div class="st-squad-empty"><span>لم تضف تشكيلتك بعد — <a href="/app/profile.html">أضفها من ملفك الشخصي</a></span></div>`
           : `<div class="st-squad-empty">لا توجد تشكيلة بعد — هذا اللاعب لم يضف تشكيلته</div>`;
       }
-      const strength = p.squad_strength != null ? ` · القوة الجماعية ${p.squad_strength}` : "";
       const dots = fanFormations[p.formation];
       if (!dots) {
-        return `<div class="st-squad-text"><div><b>${escapeHtml(p.formation)}</b><span>تشكيلة اللاعب${strength}</span></div></div>`;
+        return `<div class="st-squad-text"><div><b>${escapeHtml(p.formation)}</b><span>تشكيلة اللاعب${p.squad_strength != null ? ` · القوة الجماعية ${p.squad_strength}` : ""}</span></div></div>`;
       }
-      const circles = dots.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.4" fill="#a3ff12" stroke="#052e10" stroke-width="0.8"/>`).join("");
+      const labels = fanLabels[p.formation] || [];
+      const chips = dots.map(([x, y], i) => {
+        const gk = i === 0;
+        return `<g><rect x="${x - 6}" y="${y - 3.3}" width="12" height="6.6" rx="1.8" fill="${gk ? "#3a2f05" : "#0c1c30"}" stroke="${gk ? "#ffd21f" : "rgba(163,255,18,.65)"}" stroke-width="0.5"/><text x="${x}" y="${y + 1.4}" text-anchor="middle" font-size="3.4" font-weight="700" fill="#ffffff" font-family="Cairo, sans-serif">${labels[i] || ""}</text></g>`;
+      }).join("");
       return `<div class="st-squad">
-        <div class="cap"><span>تشكيلتي</span><span class="form">${escapeHtml(p.formation)}${strength}</span></div>
-        <svg viewBox="0 0 100 62" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-          <rect x="1" y="1" width="98" height="60" rx="4" fill="#0e2f1a" stroke="rgba(255,255,255,.28)"/>
-          <line x1="50" y1="1" x2="50" y2="61" stroke="rgba(255,255,255,.28)"/>
-          <circle cx="50" cy="31" r="9" fill="none" stroke="rgba(255,255,255,.28)"/>
-          ${circles}
-        </svg></div>`;
+        <div class="st-squad-main">
+          <div class="st-strip"><div class="ph">${stAvatarHtml(p)}</div><span class="lbl">القوة الجماعية</span><span class="val">${p.squad_strength != null ? p.squad_strength : "—"}</span></div>
+          <div class="st-pitch"><svg viewBox="0 0 100 62" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <rect x="1" y="1" width="98" height="60" rx="4" fill="#0e2f1a" stroke="rgba(255,255,255,.28)"/>
+            <line x1="50" y1="1" x2="50" y2="61" stroke="rgba(255,255,255,.28)"/>
+            <circle cx="50" cy="31" r="9" fill="none" stroke="rgba(255,255,255,.28)"/>
+            ${chips}
+          </svg></div>
+        </div>
+        <div class="st-squad-cap">تشكيلة ${escapeHtml(p.formation)}</div>
+      </div>`;
     }
 
     function stCardHtml(p, idx) {
       const winRate = p.matches_played ? Math.round((p.wins / p.matches_played) * 100) : 0;
       const meta = [p.country, p.efootball_ign ? "@" + p.efootball_ign : null].filter(Boolean).join(" · ") || "لاعب جديد في الساحة";
-      const avatar = p.avatar_url
-        ? `<img src="${escapeHtml(p.avatar_url)}" alt="" />`
-        : stInitials(p.display_name);
+      const badge = p.is_verified
+        ? `<span class="st-verified">✓ لاعب موثّق</span>`
+        : (p.is_me ? `<span class="st-me">أنت</span>` : "");
+      const invites = p.is_me
+        ? `<button class="st-inv primary" type="button" data-act="share" data-uid="${p.user_id}"><span class="ic">↗</span>مشاركة بطاقتي</button>
+           <a class="st-inv ghost" href="/app/dashboard.html"><span class="ic">✎</span>تعديل الهوية</a>`
+        : `<button class="st-inv primary" type="button" data-act="invite-match" data-uid="${p.user_id}"><span class="ic">⚔</span>دعوة مباراة</button>
+           <button class="st-inv ghost" type="button" data-act="invite-tournament" data-uid="${p.user_id}"><span class="ic">🏆</span>دعوة بطولة</button>`;
       const like = p.is_me
         ? `<span class="st-mini static">♡ <span>${p.likes_count}</span> · بطاقتك</span>`
         : `<button class="st-mini${p.liked_by_me ? " liked" : ""}" type="button" data-act="like" data-uid="${p.user_id}">${p.liked_by_me ? "♥" : "♡"} <span>${p.likes_count}</span></button>`;
-      return `<span class="st-ghost">${String(idx + 1).padStart(2, "0")}</span>
-      <div class="st-idrow"><span>ARENA ID #${p.arena_no}</span>${p.is_verified ? `<span class="st-verified">لاعب موثّق</span>` : ""}${p.is_me ? `<span class="st-me">أنت</span>` : ""}</div>
-      <div class="st-head"><div class="st-avatar">${avatar}</div>
-        <div><div class="st-name"><a href="/app/profile.html?user=${encodeURIComponent(p.user_id)}">${escapeHtml(p.display_name)}</a></div>
-        <div class="st-title">${stTitleFor(p.rating)}</div>
-        <div class="st-meta">${escapeHtml(meta)}</div></div></div>
+      return `
+      <div class="st-idrow"><span>ARENA ID #${p.arena_no}</span>${badge}</div>
+      <div class="st-head">
+        <div class="st-headtx">
+          <div class="st-name"><a href="/app/profile.html?user=${encodeURIComponent(p.user_id)}">${escapeHtml(p.display_name)}</a></div>
+          <div class="st-title">${stTitleFor(p.rating)}</div>
+          <div class="st-meta">${escapeHtml(meta)}</div>
+        </div>
+        <div class="st-avatar">${stAvatarHtml(p)}</div>
+      </div>
       <div class="st-divider"></div>
       <div class="st-stats">
         <div class="st-stat"><b>${p.matches_played}</b><span>مباراة</span></div>
@@ -189,9 +296,14 @@
         <div class="st-stat"><b class="elo">${p.rating}</b><span>تقييم ELO</span></div>
       </div>
       <div class="st-divider"></div>
+      <div class="st-squad-head">تشكيلتي</div>
       ${stSquadHtml(p)}
-      <div class="st-cups">🏆 <span class="n">${String(p.cups).padStart(2, "0")}</span> <span class="lbl">بطولات فاز بها</span></div>
-      <div class="st-actions">
+      <div class="st-cups">🏆 <span class="n">${String(p.cups).padStart(2, "0")}</span><span class="lbl">بطولات فاز بها</span></div>
+      <div class="st-invites">
+        ${invites}
+        <button class="st-next-circle" type="button" data-act="next" aria-label="البطاقة التالية"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16m0 0 6-6m-6 6-6-6"/></svg></button>
+      </div>
+      <div class="st-bottom">
         <button class="st-mini" type="button" data-act="share" data-uid="${p.user_id}">↗ مشاركة البطاقة</button>
         ${like}
       </div>`;
@@ -233,6 +345,51 @@
       }, 180);
     }
 
+    function stShare(title, text, url) {
+      if (navigator.share) {
+        navigator.share({ title, text, url }).catch(() => {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(`${text}\n${url}`)
+          .then(() => toast("تم نسخ نص الدعوة — أرسله للاعب"))
+          .catch(() => toast(url));
+      } else {
+        toast(url);
+      }
+    }
+    const stMyCard = () => stCards.find((c) => c.is_me);
+
+    const invModal = el("st-inv-modal"), invList = el("st-inv-list"), invTitle = el("st-inv-title");
+    async function stOpenInviteModal(card) {
+      const me = stMyCard();
+      invTitle.textContent = `دعوة ${card.display_name} إلى بطولة`;
+      invList.innerHTML = `<p class="muted">جارٍ التحميل…</p>`;
+      invModal.hidden = false;
+      try {
+        const list = await apiFetch("/tournaments");
+        const mine = (list || []).filter((t) => me && t.created_by === me.user_id && t.status === "registration_open");
+        if (!mine.length) {
+          invList.innerHTML = `<p class="muted">لا تنظم أي بطولة مفتوحة للتسجيل حاليًا.</p><a class="btn btn-primary" href="/app/tournaments.html">إنشاء بطولة</a>`;
+          return;
+        }
+        invList.innerHTML = "";
+        mine.forEach((t) => {
+          const b = document.createElement("button");
+          b.className = "st-modal-item";
+          b.type = "button";
+          b.innerHTML = `<span>${escapeHtml(t.name)}</span><span class="cnt">${(t.participants || []).length}/${t.max_participants} لاعبًا</span>`;
+          b.addEventListener("click", () => {
+            invModal.hidden = true;
+            stShare("دعوة بطولة", `🏆 ${me.display_name} يدعوك للانضمام إلى بطولة «${t.name}» في eFootball Arena — سجّل الآن!`, `${location.origin}/app/tournament.html?id=${t.id}`);
+          });
+          invList.appendChild(b);
+        });
+      } catch (err) {
+        invList.innerHTML = `<p class="muted">${escapeHtml(err.detail || "تعذر تحميل البطولات")}</p>`;
+      }
+    }
+    el("st-inv-close").addEventListener("click", () => { invModal.hidden = true; });
+    invModal.addEventListener("click", (e) => { if (e.target === invModal) invModal.hidden = true; });
+
     const deckEl = el("st-deck");
     let stSwallow = false;
     deckEl.addEventListener("click", async (e) => {
@@ -240,6 +397,7 @@
       if (e.target.closest("a")) return;
       const btn = e.target.closest("button");
       if (!btn) { stCycle(1); return; }
+      if (btn.dataset.act === "next") { stCycle(1); return; }
       const card = stCards.find((c) => c.user_id === btn.dataset.uid);
       if (!card) return;
       if (btn.dataset.act === "like") {
@@ -262,12 +420,13 @@
         btn.disabled = false;
       } else if (btn.dataset.act === "share") {
         const url = `${location.origin}/app/arena-star.html?player=${card.user_id}`;
-        if (navigator.share) {
-          navigator.share({ title: "بطاقة " + card.display_name, text: `بطاقة اللاعب ${card.display_name} — ELO ${card.rating} في eFootball Arena`, url }).catch(() => {});
-        } else {
-          try { await navigator.clipboard.writeText(url); toast("تم نسخ رابط البطاقة"); }
-          catch { toast(url); }
-        }
+        stShare("بطاقة " + card.display_name, `بطاقة اللاعب ${card.display_name} — ELO ${card.rating} في eFootball Arena`, url);
+      } else if (btn.dataset.act === "invite-match") {
+        const me = stMyCard();
+        const url = me ? `${location.origin}/app/arena-star.html?player=${me.user_id}` : `${location.origin}/app/arena-star.html`;
+        stShare("دعوة مباراة", `⚔️ ${me ? me.display_name : "لاعب"} يتحدّاك في مباراة eFootball على الساحة! شوف البطاقة وردّ التحدي`, url);
+      } else if (btn.dataset.act === "invite-tournament") {
+        stOpenInviteModal(card);
       }
     });
     el("st-next").addEventListener("click", () => stCycle(1));
@@ -323,15 +482,14 @@
         deckEl.appendChild(article);
         return article;
       });
-      stOrder = stCards.map((_, i) => i);
       const wanted = new URLSearchParams(location.search).get("player");
-      if (wanted) {
-        const wi = stCards.findIndex((c) => c.user_id === wanted);
-        if (wi > 0) stOrder = stOrder.slice(wi).concat(stOrder.slice(0, wi));
-      }
+      const startAt = wanted ? stCards.findIndex((c) => c.user_id === wanted) : -1;
+      const first = startAt >= 0 ? startAt : 0;
+      stOrder = stCards.map((_, i) => i);
+      if (first > 0) { stOrder = stOrder.slice(first).concat(stOrder.slice(0, first)); }
       stLayout();
-      if (stCards.length === 1 && stCards[0].is_me) {
-        toast("أنت النجم الوحيد هنا حتى الآن — ادعُ لاعبين لتنضم بطاقاتهم إلى الكومة", "info", 6000);
+      if (stCards.length === 1) {
+        toast("أنت النجم الوحيد هنا حتى الآن — شارك بطاقتك ودعُ أصدقاءك للانضمام⭐");
       }
     })();
   </script>

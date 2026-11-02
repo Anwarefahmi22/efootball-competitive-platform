@@ -944,6 +944,12 @@
     "تشكيلة بطاقة أرينا ستار": { fr: "Formation de la carte Arena Star", en: "Arena Star card formation" },
     "— بدون تشكيلة —": { fr: "— Aucune formation —", en: "— No formation —" },
     "القوة الجماعية للتشكيلة": { fr: "Force collective de l'équipe", en: "Squad collective strength" },
-    "تظهر التشكيلة وقوتها على بطاقتك في صفحة أرينا ستار.": { fr: "Votre formation et sa force apparaissent sur votre carte sur la page Arena Star.", en: "Your formation and its strength appear on your card on the Arena Star page." }
+    "تظهر التشكيلة وقوتها على بطاقتك في صفحة أرينا ستار.": { fr: "Votre formation et sa force apparaissent sur votre carte sur la page Arena Star.", en: "Your formation and its strength appear on your card on the Arena Star page." },
+    "دعوة مباراة": { fr: "Inviter à un match", en: "Invite Match" },
+    "دعوة بطولة": { fr: "Inviter à un tournoi", en: "Invite Tournament" },
+    "دعوة إلى بطولة": { fr: "Invitation à un tournoi", en: "Tournament invitation" },
+    "مشاركة بطاقتي": { fr: "Partager ma carte", en: "Share my card" },
+    "لا تنظم أي بطولة مفتوحة للتسجيل حاليًا.": { fr: "Vous n'organisez aucun tournoi ouvert aux inscriptions pour le moment.", en: "You are not organizing any tournament open for registration right now." },
+    "تم نسخ نص الدعوة — أرسله للاعب": { fr: "Texte d'invitation copié — envoyez-le au joueur", en: "Invite text copied — send it to the player" }
   });
 })();

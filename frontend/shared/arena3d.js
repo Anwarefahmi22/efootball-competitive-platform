@@ -1,4 +1,4 @@
-/* arena3d.js v3 — hand-rolled WebGL renderer for the dashboard's football
+/* arena3d.js v7 — hand-rolled WebGL renderer for the dashboard's football
    and arena cup, shaded to a photographic standard (user's bar: the landing
    page's real ball and a real 🏆). No framework, no CDN (CSP script-src
    'self'). Round-3 lessons baked in:
@@ -128,7 +128,7 @@
     "}",
     "float ballHeight(vec3 p) {",
     "  vec2 fA = voro(p * 17.0);",
-    "  float peb = smoothstep(0.05, 0.6, clamp((fA.y - fA.x) * 2.4, 0.0, 1.0)) * 0.12;",
+    "  float peb = smoothstep(0.05, 0.6, clamp((fA.y - fA.x) * 2.4, 0.0, 1.0)) * 0.05;",
     "  vec3 bf = ballField(p);",
     "  float sd = bf.x - bf.y;",
     "  float gw = max(0.0, 1.0 - sd / 0.016);",

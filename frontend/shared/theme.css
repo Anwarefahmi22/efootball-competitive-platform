@@ -35,7 +35,7 @@ h1, h2, h3 { margin: 0 0 .5em; }
 .mono, .num { font-family: "Orbitron", monospace; }
 
 .navbar {
-  position: sticky; top: 0; z-index: 50;
+  position: sticky; top: 0; z-index: 150;
   display: flex; align-items: center; gap: 18px;
   padding: 14px 22px;
   background: rgba(8, 19, 10, .82);
@@ -479,6 +479,9 @@ table.table tr:hover td { background: rgba(163, 255, 18, .04); }
   .navbar.menu-open .nav-menu { display: flex; }
   .nav-menu .spacer { display: none; }
   .nav-menu .nav-link, .nav-menu .user-chip, .nav-menu .btn { width: 100%; text-align: center; justify-content: center; }
+  .navbar.menu-open { background: #08130a; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 18px 34px rgba(0, 0, 0, .5); }
+  .nav-menu .nav-bell { align-self: center; width: auto; padding: 8px 14px; }
+  .nav-menu .language-picker { width: 100%; justify-content: center; }
   .next-action { align-items: stretch; flex-direction: column; }
   .next-action .btn { width: 100%; }
   .profile-cover { padding: 24px 20px 18px; }

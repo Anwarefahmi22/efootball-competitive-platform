@@ -20,6 +20,7 @@ class PlayerCardRead(BaseModel):
     cups: int
     formation: str | None
     squad_strength: int | None
+    squad_image_url: str | None
     likes_count: int
     liked_by_me: bool
     is_me: bool

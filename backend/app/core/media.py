@@ -92,3 +92,73 @@ def save_avatar_image(user_id: str, file_bytes: bytes, extension: str) -> str:
     with open(path, "wb") as f:
         f.write(file_bytes)
     return str(path)
+
+
+SQUAD_MEDIA_ROOT = Path(__file__).resolve().parent.parent.parent / "storage" / "squads"
+ALLOWED_SQUAD_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+# Screenshots are wide (the standard eFootball squad shot is ~2048x930);
+# 1600px keeps every rating legible while the WebP re-encode cuts the
+# stored size by roughly two thirds at a quality the eye cannot tell
+# apart on a phone-sized card.
+SQUAD_MAX_WIDTH = 1600
+SQUAD_WEBP_QUALITY = 85
+
+
+def process_squad_image(file_bytes: bytes) -> bytes:
+    """Re-encode an uploaded squad screenshot to compact WebP bytes.
+
+    Raises ValueError for anything that is not a decodable image.
+    Pillow is imported lazily so module import never depends on it.
+    """
+    import io
+
+    from PIL import Image, ImageOps
+
+    try:
+        with Image.open(io.BytesIO(file_bytes)) as image:
+            image = ImageOps.exif_transpose(image)
+            image = image.convert("RGB")
+            if image.width > SQUAD_MAX_WIDTH:
+                height = round(image.height * SQUAD_MAX_WIDTH / image.width)
+                image = image.resize((SQUAD_MAX_WIDTH, height), Image.LANCZOS)
+            out = io.BytesIO()
+            image.save(out, "WEBP", quality=SQUAD_WEBP_QUALITY, method=6)
+            return out.getvalue()
+    except Exception as exc:  # PIL raises many exception types on bad input
+        raise ValueError("Undecodable image") from exc
+
+
+async def save_squad_image_db(
+    db: AsyncSession, file_bytes: bytes, content_type: str
+) -> str:
+    media = await _save_media_db(db, file_bytes, content_type)
+    return str(media.id)
+
+
+def save_squad_image(user_id: str, file_bytes: bytes) -> str:
+    SQUAD_MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+    filename = f"{user_id}.webp"
+    path = SQUAD_MEDIA_ROOT / filename
+    with open(path, "wb") as f:
+        f.write(file_bytes)
+    return str(path)
+
+
+def media_id_from_url(url: str | None) -> str | None:
+    """Extract the media_files id from a stored '/media/<id>?v=...' URL."""
+    if not url or not url.startswith("/media/"):
+        return None
+    tail = url[len("/media/"):].split("?")[0].split("/")[0]
+    try:
+        return str(UUID(tail))
+    except (ValueError, AttributeError):
+        return None
+
+
+async def delete_media_db(db: AsyncSession, media_id: str | None) -> None:
+    if not media_id:
+        return
+    media = await get_media_file(db, media_id)
+    if media is not None:
+        await db.delete(media)
+        await db.flush()

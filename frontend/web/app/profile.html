@@ -95,6 +95,7 @@
             <div><span>المتابعون</span><strong id="followers-count">${fstats?.followers_count ?? 0}</strong></div>
             <div><span>أتابع</span><strong id="following-count">${fstats?.following_count ?? 0}</strong></div>
           </div>
+          ${p.squad_image_url ? `<section class="profile-panel" style="margin-bottom:14px"><div class="section-heading"><h2>تشكيلة اللاعب</h2>${p.formation ? `<span class="badge open">${escapeHtml(p.formation)}${p.squad_strength ? ` · القوة ${p.squad_strength}` : ""}</span>` : ""}</div><img src="${escapeHtml(p.squad_image_url)}" alt="تشكيلة اللاعب" loading="lazy" style="width:100%;border-radius:12px;display:block" /></section>` : ""}
           <div class="profile-panels">
             <section class="profile-panel">
               <div class="section-heading"><h2>مؤشر الثقة</h2><span class="badge open">${trustScore >= 80 ? "موثوق" : trustScore >= 50 ? "مقبول" : "جديد"}</span></div>

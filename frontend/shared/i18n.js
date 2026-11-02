@@ -950,6 +950,12 @@
     "دعوة إلى بطولة": { fr: "Invitation à un tournoi", en: "Tournament invitation" },
     "مشاركة بطاقتي": { fr: "Partager ma carte", en: "Share my card" },
     "لا تنظم أي بطولة مفتوحة للتسجيل حاليًا.": { fr: "Vous n'organisez aucun tournoi ouvert aux inscriptions pour le moment.", en: "You are not organizing any tournament open for registration right now." },
-    "تم نسخ نص الدعوة — أرسله للاعب": { fr: "Texte d'invitation copié — envoyez-le au joueur", en: "Invite text copied — send it to the player" }
+    "تم نسخ نص الدعوة — أرسله للاعب": { fr: "Texte d'invitation copié — envoyez-le au joueur", en: "Invite text copied — send it to the player" },
+    "صورة التشكيلة (لقطة eFootball)": { fr: "Photo de l'équipe (capture eFootball)", en: "Squad image (eFootball screenshot)" },
+    "ارفع لقطة تشكيلتك القياسية من اللعبة — تُضغط تلقائيًا (WebP) دون فرق ملحوظ في الجودة، وتظهر في بطاقتك في أرينا ستار وملفك الشخصي.": { fr: "Importez la capture standard de votre équipe depuis le jeu — elle est compressée automatiquement (WebP) sans perte visible de qualité et apparaît sur votre carte Arena Star et votre profil.", en: "Upload your standard squad screenshot from the game — it is compressed automatically (WebP) with no visible quality loss and appears on your Arena Star card and your profile." },
+    "إزالة صورة التشكيلة": { fr: "Retirer la photo de l'équipe", en: "Remove squad image" },
+    "لم تضف صورة تشكيلتك بعد": { fr: "Vous n'avez pas encore ajouté la photo de votre équipe", en: "You have not added your squad image yet" },
+    "أضفها من تعديل الهوية": { fr: "Ajoutez-la depuis l'édition d'identité", en: "Add it from the identity editor" },
+    "لا توجد صورة تشكيلة بعد — هذا اللاعب لم يضف لقطة تشكيلته": { fr: "Pas encore de photo d'équipe — ce joueur n'a pas ajouté la capture de la sienne", en: "No squad image yet — this player has not added their squad screenshot" }
   });
 })();

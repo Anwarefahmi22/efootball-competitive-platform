@@ -51,6 +51,9 @@ class Profile(Base):
     # formation label (e.g. "4-3-3") and the squad's collective strength.
     formation: Mapped[str | None] = mapped_column(String(16), nullable=True)
     squad_strength: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Uploaded eFootball squad screenshot (migration 018), stored like the
+    # avatar: a /media/<id> URL on the DB track, a storage path on fs.
+    squad_image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

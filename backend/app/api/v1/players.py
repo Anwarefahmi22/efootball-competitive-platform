@@ -84,6 +84,7 @@ async def player_cards(
                 cups=cups.get(user.id, 0),
                 formation=profile.formation if profile else None,
                 squad_strength=profile.squad_strength if profile else None,
+                squad_image_url=profile.squad_image_url if profile else None,
                 likes_count=likes.get(user.id, 0),
                 liked_by_me=user.id in liked_by_me,
                 is_me=user.id == current_user.id,

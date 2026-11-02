@@ -14,6 +14,7 @@ class ProfileRead(BaseModel):
     efootball_ign: str | None
     formation: str | None
     squad_strength: int | None
+    squad_image_url: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -50,6 +51,7 @@ class PublicProfileRead(BaseModel):
     efootball_ign: str | None
     formation: str | None
     squad_strength: int | None
+    squad_image_url: str | None
     created_at: datetime
 
 

@@ -27,7 +27,7 @@
       /* min-height = the card's true content minimum (fixed rows ~440px
          + squad min 108px): the squad zone flexes, nothing ever clips;
          on short viewports the page scrolls instead. */
-      max-height: calc(100dvh - 272px); min-height: 550px;
+      max-height: calc(100dvh - 272px); min-height: 530px;
     }
     .st-card {
       position: absolute; inset: 0; border-radius: 20px; overflow: hidden;
@@ -75,26 +75,13 @@
     .st-squad-head { font-size: 1.02rem; font-weight: 800; flex: none; }
     .st-squad {
       flex: 1 1 auto; min-height: 108px; display: flex; flex-direction: column; gap: 8px;
-      background: linear-gradient(180deg, #0a2013, #071a0f);
+      background: linear-gradient(180deg, #0a2013, #071a0f); justify-content: center;
       border: 1px solid rgba(163, 255, 18, .28); border-radius: 16px; padding: 10px;
     }
-    .st-squad-main { display: flex; gap: 10px; flex: 1 1 auto; min-height: 0; }
-    .st-strip {
-      width: 84px; flex: none; border-radius: 10px; padding: 8px 4px;
-      background: linear-gradient(180deg, #12402a, #081c10);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 5px; text-align: center;
+    .st-squad-img {
+      width: 100%; height: auto; max-height: 230px; object-fit: contain;
+      border-radius: 10px; display: block; background: #04140a; flex: none;
     }
-    .st-strip .ph {
-      width: 52px; height: 52px; border-radius: 10px; overflow: hidden; flex: none;
-      display: grid; place-items: center; color: var(--neon); background: #0d2c1a;
-    }
-    .st-strip .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .st-strip .ph svg { width: 30px; height: 30px; }
-    .st-strip .lbl { font-size: .6rem; color: #b9c9d6; font-weight: 700; line-height: 1.3; }
-    .st-strip .val { color: #ffd21f; font-size: 1.28rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
-    .st-pitch { flex: 1 1 auto; min-width: 0; display: flex; }
-    .st-pitch svg { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; display: block; }
     .st-squad-cap { text-align: center; color: var(--neon); font-weight: 800; font-size: .92rem; flex: none; }
     .st-squad-text {
       flex: 1 1 auto; min-height: 108px; border: 1px solid rgba(163, 255, 18, .28); border-radius: 16px;
@@ -162,7 +149,7 @@
     }
     .st-modal-item .cnt { color: var(--muted); font-size: .78rem; font-weight: 700; }
     @media (max-height: 760px) {
-      .st-deck { min-height: 476px; }
+      .st-deck { min-height: 465px; }
       .st-squad, .st-squad-text, .st-squad-empty { min-height: 96px; }
       .st-card { gap: 7px; padding: 13px 13px 10px; }
       .st-avatar { width: 66px; height: 66px; }
@@ -171,9 +158,6 @@
       .st-title { font-size: .92rem; }
       .st-stat b { font-size: 1.5rem; }
       .st-inv { min-height: 54px; padding: 7px 6px 6px; }
-      .st-strip { width: 72px; }
-      .st-strip .ph { width: 42px; height: 42px; }
-      .st-strip .val { font-size: 1.1rem; }
     }
   </style>
 </head>
@@ -209,60 +193,20 @@
   <script src="/shared/nav.js"></script>
   <script>
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
-    /* Formation dot maps on a 100x62 pitch (GK left, attack right) with a
-       position label per dot, drawn as mini player chips like the game's
-       squad screen. The profile form offers exactly these formations. */
-    const fanFormations = {
-      "4-3-3":   [[6,31],[22,8],[20,24],[20,38],[22,54],[42,16],[38,31],[42,46],[66,10],[72,31],[66,52]],
-      "4-2-1-3": [[6,31],[22,8],[20,24],[20,38],[22,54],[36,20],[36,42],[50,31],[68,10],[74,31],[68,52]],
-      "4-4-2":   [[6,31],[22,8],[20,24],[20,38],[22,54],[44,8],[42,24],[42,38],[44,54],[70,20],[70,42]],
-      "3-5-2":   [[6,31],[20,14],[18,31],[20,48],[46,6],[40,20],[38,31],[40,42],[46,56],[70,20],[70,42]],
-      "4-1-2-3": [[6,31],[22,8],[20,24],[20,38],[22,54],[36,31],[48,18],[48,44],[68,10],[74,31],[68,52]],
-      "3-4-3":   [[6,31],[20,14],[18,31],[20,48],[44,6],[42,22],[42,40],[44,56],[68,10],[74,31],[68,52]],
-      "5-3-2":   [[6,31],[24,5],[20,20],[18,31],[20,42],[24,57],[44,16],[42,31],[44,46],[70,20],[70,42]],
-      "4-5-1":   [[6,31],[22,8],[20,24],[20,38],[22,54],[44,6],[42,20],[38,31],[42,42],[44,56],[72,31]]
-    };
-    const fanLabels = {
-      "4-3-3":   ["GK","LB","CB","CB","RB","CMF","DMF","CMF","LWF","CF","RWF"],
-      "4-2-1-3": ["GK","LB","CB","CB","RB","DMF","DMF","AMF","LWF","CF","RWF"],
-      "4-4-2":   ["GK","LB","CB","CB","RB","LM","CMF","CMF","RM","CF","CF"],
-      "3-5-2":   ["GK","CB","CB","CB","LMF","CMF","DMF","CMF","RMF","CF","CF"],
-      "4-1-2-3": ["GK","LB","CB","CB","RB","DMF","CMF","CMF","LWF","CF","RWF"],
-      "3-4-3":   ["GK","CB","CB","CB","LMF","CMF","CMF","RMF","LWF","CF","RWF"],
-      "5-3-2":   ["GK","LB","CB","CB","RB","CMF","DMF","CMF","CF","CF"],
-      "4-5-1":   ["GK","LB","CB","CB","RB","LMF","CMF","DMF","CMF","RMF","CF"]
-    };
     const stTitleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
     const stPersonSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`;
     const stAvatarHtml = (p) => p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="" />` : stPersonSvg;
 
     function stSquadHtml(p) {
-      if (!p.formation) {
-        return p.is_me
-          ? `<div class="st-squad-empty"><span>لم تضف تشكيلتك بعد — <a href="/app/profile.html">أضفها من ملفك الشخصي</a></span></div>`
-          : `<div class="st-squad-empty">لا توجد تشكيلة بعد — هذا اللاعب لم يضف تشكيلته</div>`;
+      if (p.squad_image_url) {
+        const bits = [];
+        if (p.formation) bits.push(`تشكيلة ${escapeHtml(p.formation)}`);
+        if (p.squad_strength != null) bits.push(`القوة الجماعية ${p.squad_strength}`);
+        return `<div class="st-squad"><img class="st-squad-img" src="${escapeHtml(p.squad_image_url)}" alt="تشكيلة اللاعب" loading="lazy" />${bits.length ? `<div class="st-squad-cap">${bits.join(" · ")}</div>` : ""}</div>`;
       }
-      const dots = fanFormations[p.formation];
-      if (!dots) {
-        return `<div class="st-squad-text"><div><b>${escapeHtml(p.formation)}</b><span>تشكيلة اللاعب${p.squad_strength != null ? ` · القوة الجماعية ${p.squad_strength}` : ""}</span></div></div>`;
-      }
-      const labels = fanLabels[p.formation] || [];
-      const chips = dots.map(([x, y], i) => {
-        const gk = i === 0;
-        return `<g><rect x="${x - 6}" y="${y - 3.3}" width="12" height="6.6" rx="1.8" fill="${gk ? "#3a2f05" : "#0c1c30"}" stroke="${gk ? "#ffd21f" : "rgba(163,255,18,.65)"}" stroke-width="0.5"/><text x="${x}" y="${y + 1.4}" text-anchor="middle" font-size="3.4" font-weight="700" fill="#ffffff" font-family="Cairo, sans-serif">${labels[i] || ""}</text></g>`;
-      }).join("");
-      return `<div class="st-squad">
-        <div class="st-squad-main">
-          <div class="st-strip"><div class="ph">${stAvatarHtml(p)}</div><span class="lbl">القوة الجماعية</span><span class="val">${p.squad_strength != null ? p.squad_strength : "—"}</span></div>
-          <div class="st-pitch"><svg viewBox="0 0 100 62" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-            <rect x="1" y="1" width="98" height="60" rx="4" fill="#0e2f1a" stroke="rgba(255,255,255,.28)"/>
-            <line x1="50" y1="1" x2="50" y2="61" stroke="rgba(255,255,255,.28)"/>
-            <circle cx="50" cy="31" r="9" fill="none" stroke="rgba(255,255,255,.28)"/>
-            ${chips}
-          </svg></div>
-        </div>
-        <div class="st-squad-cap">تشكيلة ${escapeHtml(p.formation)}</div>
-      </div>`;
+      return p.is_me
+        ? `<div class="st-squad-empty"><span>لم تضف صورة تشكيلتك بعد — <a href="/app/dashboard.html">أضفها من تعديل الهوية</a></span></div>`
+        : `<div class="st-squad-empty">لا توجد صورة تشكيلة بعد — هذا اللاعب لم يضف لقطة تشكيلته</div>`;
     }
 
     function stCardHtml(p, idx) {

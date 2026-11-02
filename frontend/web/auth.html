@@ -144,6 +144,49 @@
       .tabs { margin: 12px 0 16px; }
       form { gap: 11px; }
     }
+    /* Lamp-cone password reveal (approved demo v3, integrated 2026-11-02):
+       eye at the password field's inline-end; on reveal the card goes
+       black and the v8 cone (inline SVG, radial gradients — no CSS
+       filter/mask/clip-path in the light path) lights the password,
+       whose text turns dark so it reads only inside the light. RTL:
+       the cone is flipped with scaleX(-1), apex on the eye centre. */
+    .pw-wrap { position: relative; }
+    .pw-wrap .field {
+      padding-inline-end: 46px; position: relative; z-index: 1;
+      transition: border-color .15s ease, box-shadow .15s ease, background-color .3s ease, color .3s ease;
+    }
+    #cone {
+      position: absolute; z-index: 0; pointer-events: none;
+      width: 600px; height: 220px;
+      top: 50%; inset-inline-end: 21px;
+      transform: translateY(-50%) scaleX(-1);
+      opacity: 0; transition: opacity .35s ease;
+    }
+    .pw-eye {
+      position: absolute; inset-inline-end: 5px; top: 50%; transform: translateY(-50%);
+      width: 32px; height: 32px; padding: 0; border: none; background: transparent;
+      color: var(--muted); cursor: pointer; z-index: 2; display: grid; place-items: center;
+    }
+    .pw-eye svg { width: 21px; height: 21px; display: block; position: relative; }
+    .pw-eye::before {
+      content: ""; position: absolute; left: 50%; top: 50%;
+      width: 92px; height: 92px; border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle,
+        rgba(255, 246, 205, .98) 0%,
+        rgba(255, 220, 120, .65) 30%,
+        rgba(255, 196, 74, .28) 55%,
+        rgba(255, 180, 60, 0) 72%);
+      opacity: 0; transition: opacity .35s ease;
+      pointer-events: none;
+    }
+    .pw-wrap.show-password #cone { opacity: 1; }
+    .pw-wrap.show-password .pw-eye { color: #fff6d8; }
+    .pw-wrap.show-password .pw-eye::before { opacity: 1; }
+    .pw-wrap.show-password .field { background: transparent; color: #081309; caret-color: #081309; }
+    .pw-wrap.show-password .field::placeholder { color: rgba(8, 19, 9, .5); }
+    .auth-card.card-dark { background: #000000; }
+    #form-login .field-row:not(.pw-row), #form-login .btn, #form-login .hint, #form-login .err { position: relative; z-index: 1; }
   </style>
 </head>
 <body>
@@ -206,9 +249,36 @@
         <label class="lbl" for="login-email">البريد الإلكتروني</label>
         <input class="field" id="login-email" name="email" type="email" autocomplete="email" spellcheck="false" required placeholder="player@arena.gg" />
       </div>
-      <div class="field-row">
+      <div class="field-row pw-row">
         <label class="lbl" for="login-password">كلمة المرور</label>
-        <input class="field" id="login-password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
+        <div class="pw-wrap" id="pw-wrap">
+          <svg id="cone" viewBox="0 0 600 220" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <radialGradient id="coneGrad" gradientUnits="userSpaceOnUse" cx="600" cy="110" r="600">
+                <stop offset="0" stop-color="#fff8dc" stop-opacity="1"/>
+                <stop offset="0.25" stop-color="#ffe58f" stop-opacity="0.9"/>
+                <stop offset="0.52" stop-color="#ffd261" stop-opacity="0.62"/>
+                <stop offset="0.75" stop-color="#ffc44d" stop-opacity="0.28"/>
+                <stop offset="0.92" stop-color="#ffb63e" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="coneCore" gradientUnits="userSpaceOnUse" cx="600" cy="110" r="600">
+                <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+                <stop offset="0.3" stop-color="#fff3c4" stop-opacity="0.75"/>
+                <stop offset="0.6" stop-color="#ffe58f" stop-opacity="0.35"/>
+                <stop offset="0.85" stop-color="#ffdf80" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <polygon points="600,110 0,0 0,220" fill="url(#coneGrad)"/>
+            <polygon points="600,110 0,46 0,174" fill="url(#coneCore)"/>
+          </svg>
+          <input class="field" id="login-password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
+          <button class="pw-eye" id="pw-eye" type="button" aria-label="إظهار كلمة المرور">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 12C5 5.8 8.8 3.2 12 3.2C15.2 3.2 19 5.8 22 12C19 18.2 15.2 20.8 12 20.8C8.8 20.8 5 18.2 2 12Z"/>
+              <circle cx="12" cy="12" r="3.2"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="err" id="login-err" role="alert"></div>
       <button class="btn btn-primary" id="btn-login" type="submit">دخول الملعب ⚽</button>
@@ -273,6 +343,21 @@
     }
     tabLogin.addEventListener("click", () => setTab("login"));
     tabRegister.addEventListener("click", () => setTab("register"));
+
+    // Lamp-cone password reveal: toggle the state class on the wrap, the
+    // black card in sync, flip the input type, refocus — the original
+    // handler shape from the approved demo.
+    const pwWrap = document.getElementById("pw-wrap");
+    const pwEye = document.getElementById("pw-eye");
+    const pwInput = document.getElementById("login-password");
+    const authCard = document.querySelector(".auth-card");
+    pwEye.addEventListener("click", (e) => {
+      e.preventDefault();
+      pwWrap.classList.toggle("show-password");
+      authCard.classList.toggle("card-dark", pwWrap.classList.contains("show-password"));
+      pwInput.type = pwInput.type === "password" ? "text" : "password";
+      pwInput.focus();
+    });
 
     const showErr = (id, msg) => { const e = el(id); e.textContent = msg; e.style.display = "block"; };
 

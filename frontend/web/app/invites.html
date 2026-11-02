@@ -134,28 +134,63 @@
       return `<div class="inv-item">${avaHtml(opp)}<div class="inv-main"><div class="inv-name">أنت × ${playerLine(opp)}</div><div class="inv-sub">تحدٍّ محسوب في التصنيف · ${when(ch.created_at)}</div></div>${chip(CH_STATUS, ch.status)}${play}</div>`;
     }
 
+    // One automatic retry per call: on a very slow mobile link a single
+    // dropped/timed-out request must not dead-end the whole page.
+    async function fetchRetry(path) {
+      try { return await apiFetch(path); }
+      catch (firstErr) {
+        await new Promise((r) => setTimeout(r, 1200));
+        return apiFetch(path);
+      }
+    }
+
     async function load() {
       const state = el("inv-state");
+      state.hidden = false;
+      state.textContent = "جارٍ التحميل…";
+      const failures = [];
       try {
-        const me = await apiFetch("/auth/me");
+        const me = await fetchRetry("/auth/me");
         myId = me.id;
-        const [inbox, challenges] = await Promise.all([apiFetch("/invites"), apiFetch("/challenges")]);
-        const fill = (secId, listId, rows, render) => {
-          el(secId).hidden = false;
-          el(listId).innerHTML = rows.length ? rows.map(render).join("") : `<div class="inv-empty">لا شيء هنا بعد.</div>`;
-        };
-        fill("sec-challenges", "list-challenges", challenges, challengeHtml);
-        fill("sec-match-received", "list-match-received", inbox.match_received, matchReceivedHtml);
-        fill("sec-tour-received", "list-tour-received", inbox.tournament_received, tourReceivedHtml);
-        const sent = [
-          ...inbox.match_sent.map((i) => sentHtml(i, "match")),
-          ...inbox.tournament_sent.map((i) => sentHtml(i, "tournament"))
-        ];
-        el("sec-sent").hidden = false;
-        el("list-sent").innerHTML = sent.length ? sent.join("") : `<div class="inv-empty">لا شيء هنا بعد.</div>`;
-        state.hidden = true;
       } catch (err) {
-        state.textContent = err.detail || "تعذر تحميل الدعوات";
+        state.innerHTML = `${(err && (err.detail || err.message)) || "تعذر تحميل الدعوات"} <button type="button" id="inv-retry" class="btn small" style="margin-inline-start:8px">إعادة المحاولة</button>`;
+        el("inv-retry").addEventListener("click", () => load());
+        return;
+      }
+      const fill = (secId, listId, rows, render) => {
+        el(secId).hidden = false;
+        el(listId).innerHTML = rows.length ? rows.map(render).join("") : `<div class="inv-empty">لا شيء هنا بعد.</div>`;
+        const h = el(secId).querySelector("h2, h3");
+        if (h) {
+          let badge = h.querySelector(".inv-count");
+          if (!badge) { badge = document.createElement("span"); badge.className = "inv-count"; h.appendChild(badge); }
+          badge.textContent = rows.length ? ` (${rows.length})` : "";
+        }
+      };
+      // Invites and challenges load independently: whichever arrives is
+      // rendered; a failure is named on the state line with a retry button
+      // instead of blanking the whole page.
+      const jobs = [
+        fetchRetry("/invites").then((inbox) => {
+          fill("sec-match-received", "list-match-received", inbox.match_received, matchReceivedHtml);
+          fill("sec-tour-received", "list-tour-received", inbox.tournament_received, tourReceivedHtml);
+          const sent = [
+            ...inbox.match_sent.map((i) => sentHtml(i, "match")),
+            ...inbox.tournament_sent.map((i) => sentHtml(i, "tournament"))
+          ];
+          el("sec-sent").hidden = false;
+          el("list-sent").innerHTML = sent.length ? sent.join("") : `<div class="inv-empty">لا شيء هنا بعد.</div>`;
+        }).catch((err) => failures.push(`الدعوات: ${(err && (err.detail || err.message)) || "خطأ"}`)),
+        fetchRetry("/challenges").then((challenges) => {
+          fill("sec-challenges", "list-challenges", challenges, challengeHtml);
+        }).catch((err) => failures.push(`التحديات: ${(err && (err.detail || err.message)) || "خطأ"}`))
+      ];
+      await Promise.all(jobs);
+      if (failures.length) {
+        state.innerHTML = `تعذر تحميل ${failures.join(" · ")} <button type="button" id="inv-retry" class="btn small" style="margin-inline-start:8px">إعادة المحاولة</button>`;
+        el("inv-retry").addEventListener("click", () => load());
+      } else {
+        state.hidden = true;
       }
     }
 

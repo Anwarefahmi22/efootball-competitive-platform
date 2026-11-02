@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.api.v1.auth import get_current_user
 from app.core.media import (
     MAX_UPLOAD_BYTES,
+    delete_media_db,
     get_media_file,
     is_media_ref,
     media_backend,
@@ -21,6 +22,7 @@ from app.core.media import (
     save_post_image,
     save_post_image_db,
 )
+from app.core.permissions import is_admin
 from app.core.throttle import enforce_quota
 from app.db.session import get_db
 from app.models.match import Match
@@ -162,6 +164,53 @@ async def get_post_image(post_id: UUID, db: AsyncSession = Depends(get_db)):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
         return Response(content=media.data, media_type=media.content_type)
     return FileResponse(post.image_path)
+
+
+@router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_post(
+    post_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """AUD-08: the author — or an admin moderating — can delete a post.
+
+    Comments and likes cascade (ORM delete-orphan + FK CASCADE); a
+    stored image row is removed with the post.
+    """
+    post = (
+        await db.execute(select(Post).where(Post.id == post_id))
+    ).scalar_one_or_none()
+    if post is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+    if post.author_id != current_user.id and not await is_admin(db, current_user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your post")
+    if post.image_path and is_media_ref(post.image_path):
+        await delete_media_db(db, parse_media_ref(post.image_path))
+    await db.delete(post)
+    await db.commit()
+
+
+@router.delete(
+    "/{post_id}/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_comment(
+    post_id: UUID,
+    comment_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """AUD-08: the comment's author — or an admin — can delete it."""
+    comment = (
+        await db.execute(
+            select(Comment).where(Comment.id == comment_id, Comment.post_id == post_id)
+        )
+    ).scalar_one_or_none()
+    if comment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+    if comment.author_id != current_user.id and not await is_admin(db, current_user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your comment")
+    await db.delete(comment)
+    await db.commit()
 
 
 @router.post("/{post_id}/like", status_code=status.HTTP_204_NO_CONTENT)

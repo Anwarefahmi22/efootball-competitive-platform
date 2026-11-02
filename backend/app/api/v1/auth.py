@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -231,5 +231,15 @@ async def logout(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) ->
 
 
 @router.get("/me", response_model=UserRead)
-async def me(current_user: User = Depends(get_current_user)) -> User:
-    return current_user
+async def me(
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> UserRead:
+    # is_admin is a database column outside the ORM model (see
+    # core/permissions.py); surface it so clients can show admin
+    # affordances. Authorization never relies on this flag client-side.
+    row = await db.execute(
+        text("SELECT is_admin FROM users WHERE id = :uid"), {"uid": str(current_user.id)}
+    )
+    data = UserRead.model_validate(current_user)
+    data.is_admin = bool(row.scalar())
+    return data

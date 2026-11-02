@@ -41,6 +41,10 @@ class UserRead(BaseModel):
     display_name: str
     is_active: bool
     is_verified: bool
+    # Not a column on the ORM model: populated by /auth/me from the
+    # is_admin database column so clients can render admin affordances
+    # (the backend still authorizes every admin action independently).
+    is_admin: bool = False
     created_at: datetime
     updated_at: datetime
     profile: ProfileRead | None = None
@@ -74,3 +78,11 @@ class UserRegister(BaseModel):
                 "Password is too long (maximum 72 bytes when UTF-8 encoded)"
             )
         return value
+
+
+class AdminVerifyRead(BaseModel):
+    """AUD-07: result of an admin verify/unverify action."""
+
+    user_id: UUID
+    display_name: str
+    is_verified: bool

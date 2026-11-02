@@ -32,7 +32,14 @@ class CollusionCandidate(BaseModel):
     player_a_name: str
     player_b_id: UUID
     player_b_name: str
+    # AUD-28: totals across BOTH competitive surfaces (tournament
+    # matches and challenge matches), with the win split so a human
+    # reviewer can see one-sidedness at a glance. Signal only.
     matches_together: int
+    challenges_together: int = 0
+    a_wins: int = 0
+    b_wins: int = 0
+    draws: int = 0
 
 
 class DisputeQueueItem(BaseModel):

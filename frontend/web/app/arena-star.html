@@ -20,7 +20,8 @@
        two invite buttons with the circular next button on their seam,
        and a quiet share/like bottom row.
        Classes are st- prefixed: theme.css owns .card/.btn/.avatar names. */
-    .st-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; overflow: hidden; }
+    html, body { overflow-x: hidden; overflow-x: clip; }
+    .st-wrap { display: flex; flex-direction: column; align-items: center; }
     .st-deck {
       position: relative; margin-top: 20px;
       width: min(94vw, 400px); aspect-ratio: 0.54;
@@ -261,15 +262,10 @@
     }
 
     let stCards = [], stEls = [], stOrder = [];
-    // The fan sweeps toward the reading-end side: negative angles in LTR,
-    // mirrored positive in RTL — and the stage clips its tail, so the deck
-    // stays centered in every language.
-    const stFanSign = () => (document.documentElement.dir === "rtl" ? 1 : -1);
     function stPosStyle(pos) {
-      const s = stFanSign();
       if (pos === 0) return { t: "rotate(0deg) translate(0px, 0px) scale(1)", z: 100, o: 1 };
-      if (pos <= 4) return { t: `rotate(${s * pos * 5}deg) translate(${s * pos * 5}px, ${pos * 3}px) scale(${1 - pos * 0.015})`, z: 100 - pos, o: 1 };
-      return { t: `rotate(${s * 25}deg) translate(${s * 25}px, 15px) scale(.92)`, z: 0, o: 0 };
+      if (pos <= 4) return { t: `rotate(${-pos * 5}deg) translate(${-pos * 5}px, ${pos * 3}px) scale(${1 - pos * 0.015})`, z: 100 - pos, o: 1 };
+      return { t: "rotate(-25deg) translate(-25px, 15px) scale(.92)", z: 0, o: 0 };
     }
     function stLayout() {
       stOrder.forEach((pi, pos) => {
@@ -289,7 +285,7 @@
       if (stGliding) return;
       stGliding = true;
       const front = stEls[stOrder[0]];
-      front.style.transform = `translateX(${stFanSign() * 135}%) rotate(${stFanSign() * 9}deg)`;
+      front.style.transform = "translateX(-135%) rotate(-9deg)";
       front.style.opacity = "0.9";
       setTimeout(() => {
         front.style.transition = "none";

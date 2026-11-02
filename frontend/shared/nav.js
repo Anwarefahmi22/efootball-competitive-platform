@@ -39,11 +39,19 @@ function renderNav() {
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "فتح قائمة التنقل");
   };
+  let menuOpenScrollY = null;
   toggle.addEventListener("click", () => {
     const isOpen = nav.classList.toggle("menu-open");
     toggle.setAttribute("aria-expanded", String(isOpen));
     toggle.setAttribute("aria-label", isOpen ? "إغلاق قائمة التنقل" : "فتح قائمة التنقل");
+    menuOpenScrollY = isOpen ? window.scrollY : null;
   });
+  // Scrolling the page with the menu open collapses it: the sticky bar
+  // must hand the viewport back to the page instead of following along.
+  window.addEventListener("scroll", () => {
+    if (menuOpenScrollY === null || !nav.classList.contains("menu-open")) return;
+    if (Math.abs(window.scrollY - menuOpenScrollY) > 40) { closeMenu(); menuOpenScrollY = null; }
+  }, { passive: true });
   // Choosing a destination closes the menu immediately (before the new
   // page loads), and a page restored from the back/forward cache must
   // never come back with the menu still open.

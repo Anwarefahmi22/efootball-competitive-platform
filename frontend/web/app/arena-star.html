@@ -24,10 +24,10 @@
     .st-deck {
       position: relative; margin-top: 20px;
       width: min(94vw, 400px); aspect-ratio: 0.54;
-      /* min-height = the card's true content minimum (fixed rows ~440px
-         + squad min 108px): the squad zone flexes, nothing ever clips;
+      /* min-height = the card's true content minimum (fixed rows ~433px
+         + the framed squad-image slot 140px): nothing clips or overlaps;
          on short viewports the page scrolls instead. */
-      max-height: calc(100dvh - 272px); min-height: 530px;
+      max-height: calc(100dvh - 272px); min-height: 575px;
     }
     .st-card {
       position: absolute; inset: 0; border-radius: 20px; overflow: hidden;
@@ -72,17 +72,18 @@
     .st-stat b { display: block; font-size: 1.9rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
     .st-stat b.elo { color: var(--neon); }
     .st-stat span { color: #8fa6bb; font-size: .72rem; font-weight: 700; }
-    .st-squad-head { font-size: 1.02rem; font-weight: 800; flex: none; }
+    .st-squad-head { font-size: 1.02rem; font-weight: 800; flex: none; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .st-squad-meta { color: var(--neon); font-size: .84rem; font-weight: 800; white-space: nowrap; }
     .st-squad {
-      flex: 1 1 auto; min-height: 108px; display: flex; flex-direction: column; gap: 8px;
+      flex: 1 1 auto; min-height: 140px; display: flex; flex-direction: column;
       background: linear-gradient(180deg, #0a2013, #071a0f); justify-content: center;
       border: 1px solid rgba(163, 255, 18, .28); border-radius: 16px; padding: 10px;
+      overflow: hidden;
     }
     .st-squad-img {
-      width: 100%; height: auto; max-height: 230px; object-fit: contain;
+      width: 100%; height: 120px; object-fit: contain;
       border-radius: 10px; display: block; background: #04140a; flex: none;
     }
-    .st-squad-cap { text-align: center; color: var(--neon); font-weight: 800; font-size: .92rem; flex: none; }
     .st-squad-text {
       flex: 1 1 auto; min-height: 108px; border: 1px solid rgba(163, 255, 18, .28); border-radius: 16px;
       background: #0a2013; display: grid; place-items: center; text-align: center; padding: 14px 8px;
@@ -149,8 +150,10 @@
     }
     .st-modal-item .cnt { color: var(--muted); font-size: .78rem; font-weight: 700; }
     @media (max-height: 760px) {
-      .st-deck { min-height: 465px; }
-      .st-squad, .st-squad-text, .st-squad-empty { min-height: 96px; }
+      .st-deck { min-height: 520px; }
+      .st-squad { min-height: 120px; }
+      .st-squad-img { height: 100px; }
+      .st-squad-text, .st-squad-empty { min-height: 96px; }
       .st-card { gap: 7px; padding: 13px 13px 10px; }
       .st-avatar { width: 66px; height: 66px; }
       .st-avatar svg { width: 36px; height: 36px; }
@@ -197,12 +200,15 @@
     const stPersonSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`;
     const stAvatarHtml = (p) => p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="" />` : stPersonSvg;
 
+    function stSquadMetaHtml(p) {
+      const bits = [];
+      if (p.formation) bits.push(escapeHtml(p.formation));
+      if (p.squad_strength != null) bits.push(`القوة الجماعية ${p.squad_strength}`);
+      return bits.length ? `<span class="st-squad-meta">${bits.join(" · ")}</span>` : "";
+    }
     function stSquadHtml(p) {
       if (p.squad_image_url) {
-        const bits = [];
-        if (p.formation) bits.push(`تشكيلة ${escapeHtml(p.formation)}`);
-        if (p.squad_strength != null) bits.push(`القوة الجماعية ${p.squad_strength}`);
-        return `<div class="st-squad"><img class="st-squad-img" src="${escapeHtml(p.squad_image_url)}" alt="تشكيلة اللاعب" loading="lazy" />${bits.length ? `<div class="st-squad-cap">${bits.join(" · ")}</div>` : ""}</div>`;
+        return `<div class="st-squad"><img class="st-squad-img" src="${escapeHtml(p.squad_image_url)}" alt="تشكيلة اللاعب" loading="lazy" /></div>`;
       }
       return p.is_me
         ? `<div class="st-squad-empty"><span>لم تضف صورة تشكيلتك بعد — <a href="/app/dashboard.html">أضفها من تعديل الهوية</a></span></div>`
@@ -240,7 +246,7 @@
         <div class="st-stat"><b class="elo">${p.rating}</b><span>تقييم ELO</span></div>
       </div>
       <div class="st-divider"></div>
-      <div class="st-squad-head">تشكيلتي</div>
+      <div class="st-squad-head">تشكيلتي${stSquadMetaHtml(p)}</div>
       ${stSquadHtml(p)}
       <div class="st-cups">🏆 <span class="n">${String(p.cups).padStart(2, "0")}</span><span class="lbl">بطولات فاز بها</span></div>
       <div class="st-invites">

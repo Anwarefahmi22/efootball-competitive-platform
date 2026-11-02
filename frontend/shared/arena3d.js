@@ -83,37 +83,57 @@
     "  return vec2(sqrt(f1), sqrt(f2));",
     "}",
     "vec3 studioEnv(vec3 r) {",
-    "  float h = clamp(r.y * 0.5 + 0.5, 0.0, 1.0);",
-    "  vec3 c = mix(vec3(0.006, 0.014, 0.009), vec3(0.07, 0.12, 0.085), pow(h, 1.5));",
-    "  c += vec3(1.1, 1.05, 0.9) * pow(max(dot(r, normalize(vec3(0.25, 0.9, 0.35))), 0.0), 40.0) * 1.7;",
-    "  c += vec3(0.85, 0.93, 1.0) * pow(max(dot(r, normalize(vec3(-0.85, 0.18, 0.42))), 0.0), 55.0) * 0.95;",
-    "  c += vec3(1.0, 0.88, 0.66) * pow(max(dot(r, normalize(vec3(0.82, -0.02, -0.45))), 0.0), 48.0) * 0.85;",
-    "  c += vec3(0.55, 0.75, 0.35) * pow(max(dot(r, normalize(vec3(-0.2, -0.85, -0.4))), 0.0), 8.0) * 0.22;",
+    "  vec3 c = vec3(0.010, 0.020, 0.013);",
+    "  c += vec3(1.10, 1.02, 0.86) * smoothstep(0.20, 0.0, abs(r.y - 0.55)) * 1.25;",
+    "  c += vec3(0.80, 0.90, 1.00) * smoothstep(0.11, 0.0, abs(r.y - 0.05)) * 0.65;",
+    "  c += vec3(0.50, 0.70, 0.32) * smoothstep(0.18, 0.0, abs(r.y + 0.45)) * 0.30;",
+    "  c += vec3(1.05, 1.00, 0.90) * pow(max(dot(r, normalize(vec3(0.3, 0.75, 0.55))), 0.0), 60.0) * 1.6;",
     "  return c;",
     "}",
-    "float ballField(vec3 p) {",
-    "  float md = 0.0;",
-    "  md = max(md, dot(p, vec3(0.0, 0.5257, 0.8507)));",
-    "  md = max(md, dot(p, vec3(0.0, 0.5257, -0.8507)));",
-    "  md = max(md, dot(p, vec3(0.0, -0.5257, 0.8507)));",
-    "  md = max(md, dot(p, vec3(0.0, -0.5257, -0.8507)));",
-    "  md = max(md, dot(p, vec3(0.5257, 0.8507, 0.0)));",
-    "  md = max(md, dot(p, vec3(0.5257, -0.8507, 0.0)));",
-    "  md = max(md, dot(p, vec3(-0.5257, 0.8507, 0.0)));",
-    "  md = max(md, dot(p, vec3(-0.5257, -0.8507, 0.0)));",
-    "  md = max(md, dot(p, vec3(0.8507, 0.0, 0.5257)));",
-    "  md = max(md, dot(p, vec3(0.8507, 0.0, -0.5257)));",
-    "  md = max(md, dot(p, vec3(-0.8507, 0.0, 0.5257)));",
-    "  md = max(md, dot(p, vec3(-0.8507, 0.0, -0.5257)));",
-    "  return md;",
+    "vec3 ballField(vec3 p) {",
+    "  float d1 = 0.0; float d2 = 0.0; float dP = 0.0;",
+    "  { float dd = dot(p, vec3(0.0000, 0.5257, 0.8507)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(0.5257, 0.8507, 0.0000)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(0.8507, 0.0000, 0.5257)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(0.0000, 0.5257, -0.8507)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(0.5257, -0.8507, 0.0000)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(0.8507, 0.0000, -0.5257)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(0.0000, -0.5257, 0.8507)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(-0.5257, 0.8507, 0.0000)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(-0.8507, 0.0000, 0.5257)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(0.0000, -0.5257, -0.8507)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(-0.5257, -0.8507, 0.0000)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(-0.8507, 0.0000, -0.5257)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } if (dd > dP) dP = dd; }",
+    "  { float dd = dot(p, vec3(0.5774, 0.5774, 0.5774)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.0000, 0.9342, 0.3568)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.3568, 0.0000, 0.9342)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(-0.3568, 0.0000, 0.9342)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(-0.5774, 0.5774, 0.5774)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.9342, 0.3568, 0.0000)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.5774, 0.5774, -0.5774)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.0000, 0.9342, -0.3568)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.9342, -0.3568, 0.0000)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.5774, -0.5774, 0.5774)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.3568, 0.0000, -0.9342)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(-0.5774, 0.5774, -0.5774)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(-0.3568, 0.0000, -0.9342)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.5774, -0.5774, -0.5774)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.0000, -0.9342, 0.3568)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(0.0000, -0.9342, -0.3568)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(-0.5774, -0.5774, 0.5774)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(-0.9342, 0.3568, 0.0000)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(-0.9342, -0.3568, 0.0000)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  { float dd = dot(p, vec3(-0.5774, -0.5774, -0.5774)); if (dd > d1) { d2 = d1; d1 = dd; } else if (dd > d2) { d2 = dd; } }",
+    "  return vec3(d1, d2, dP);",
     "}",
     "float ballHeight(vec3 p) {",
     "  vec2 fA = voro(p * 17.0);",
-    "  vec2 fB = voro(p * 38.0);",
-    "  float peb = clamp((fA.y - fA.x) * 2.4, 0.0, 1.0) * 0.7 + clamp((fB.y - fB.x) * 2.4, 0.0, 1.0) * 0.3;",
-    "  float md = ballField(p);",
-    "  float gw = max(0.0, 1.0 - abs(md - 0.922) / 0.016);",
-    "  float puff = clamp(abs(md - 0.922) / 0.05, 0.0, 1.0);",
+    "  vec2 fB = voro(p * 30.0);",
+    "  float peb = clamp((fA.y - fA.x) * 2.4, 0.0, 1.0) * 0.75 + clamp((fB.y - fB.x) * 2.4, 0.0, 1.0) * 0.18;",
+    "  vec3 bf = ballField(p);",
+    "  float sd = bf.x - bf.y;",
+    "  float gw = max(0.0, 1.0 - sd / 0.016);",
+    "  float puff = clamp(sd / 0.045, 0.0, 1.0);",
     "  return peb + puff * 0.5 - gw * gw * 1.35;",
     "}",
     "void main() {",
@@ -131,16 +151,17 @@
     "    float h0 = ballHeight(p);",
     "    float hx = ballHeight(normalize(p + t1 * e));",
     "    float hy = ballHeight(normalize(p + t2 * e));",
-    "    vec3 bn = normalize(n - (t1 * (hx - h0) + t2 * (hy - h0)) * 2.6);",
-    "    float md = ballField(p);",
-    "    float panel = smoothstep(0.906, 0.938, md);",
+    "    vec3 bn = normalize(n - (t1 * (hx - h0) + t2 * (hy - h0)) * 1.4);",
+    "    vec3 bf = ballField(p);",
+    "    float sd = bf.x - bf.y;",
+    "    float panel = smoothstep(0.906, 0.938, bf.z);",
     "    vec3 albedo = mix(vec3(0.96, 0.965, 0.95), vec3(0.045, 0.05, 0.065), panel);",
-    "    albedo *= 0.90 + 0.16 * clamp(h0 + 0.35, 0.0, 1.0);",
-    "    float groove = 1.0 - smoothstep(0.0, 0.013, abs(md - 0.922));",
+    "    albedo *= 0.955 + 0.075 * clamp(h0 + 0.35, 0.0, 1.0);",
+    "    float groove = 1.0 - smoothstep(0.0, 0.016, sd);",
     "    albedo = mix(albedo, vec3(0.015, 0.015, 0.02), groove * 0.85);",
     "    float stitch = groove * step(0.72, vnoise(p * 300.0));",
-    "    albedo = mix(albedo, vec3(0.72, 0.70, 0.62), stitch * 0.55);",
-    "    float aoBand = 1.0 - smoothstep(0.0, 0.055, abs(md - 0.922));",
+    "    albedo = mix(albedo, vec3(0.72, 0.70, 0.62), stitch * 0.45);",
+    "    float aoBand = 1.0 - smoothstep(0.0, 0.07, sd);",
     "    float d1w = pow(clamp((dot(bn, l1) + 0.35) / 1.35, 0.0, 1.0), 1.3);",
     "    float d2 = max(dot(bn, l2), 0.0);",
     "    vec3 base = albedo * (0.30 + d1w * 0.95 + d2 * 0.30) * (1.0 - aoBand * 0.16);",
@@ -283,7 +304,8 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  /* flattened sphere: the winner's medallion on the cup's front */
+  /* curved plaque: a medallion wrapped onto the cup's flared bowl —
+     z follows the bowl (flares with y, curves back at the sides) */
   function disc(cx, cy, cz, r, sz, color) {
     var pos = [], norm = [], col = [], idx = [];
     var W = 20, H = 14;
@@ -292,7 +314,8 @@
       for (var i = 0; i <= W; i++) {
         var u = i / W, ph = u * Math.PI * 2;
         var x = Math.sin(th) * Math.cos(ph), y = Math.cos(th), z = Math.sin(th) * Math.sin(ph);
-        pos.push(cx + x * r, cy + y * r, cz + z * r * sz);
+        var lx = x * r, ly = y * r;
+        pos.push(cx + lx, cy + ly, cz + z * r * sz + 0.48 * ly - 0.55 * lx * lx);
         norm.push(x, y, z);
         col.push(color[0], color[1], color[2]);
       }
@@ -314,7 +337,7 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  var GOLD = [0.93, 0.72, 0.28], DEEPGOLD = [0.72, 0.50, 0.15];
+  var GOLD = [0.93, 0.72, 0.28], DEEPGOLD = [0.72, 0.50, 0.15], MEDAL = [1.0, 0.84, 0.42];
   function buildTrophy() {
     var profile = [
       [0.0, 0.0], [0.52, 0.0], [0.56, 0.05], [0.56, 0.13], [0.32, 0.19], [0.21, 0.28],
@@ -325,10 +348,11 @@
       lathe(profile, 80, GOLD),
       torus(0.50, 1.40, 0, 0.30, 0.06, -Math.PI * 0.46, Math.PI * 0.46, false, GOLD),
       torus(-0.50, 1.40, 0, 0.30, 0.06, Math.PI * 0.54, Math.PI * 1.46, true, GOLD),
-      torus(0, 1.34, 0.615, 0.175, 0.018, 0, Math.PI * 2, false, GOLD),
+
       ringY(1.90, 0.715, 0.030, GOLD),
       ringY(0.62, 0.178, 0.020, GOLD),
-      disc(0, 1.34, 0.583, 0.17, 0.38, DEEPGOLD)
+      disc(0, 1.30, 0.575, 0.26, 0.42, DEEPGOLD),
+      disc(0, 1.30, 0.615, 0.185, 0.5, MEDAL)
     ]);
   }
 
@@ -395,7 +419,7 @@
       this.rotX += Math.sin(t * 0.0006) * 0.00012 * auto;
     } else {
       this.rotY += 0.5 * dt * auto;
-      rockX = Math.sin(t * 0.00045) * 0.07 * auto;
+      rockX = Math.sin(t * 0.00045) * 0.13 * auto;
     }
     var bob = this.kind === "ball" ? Math.sin(t * 0.0011) * 0.055 * auto : 0;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);

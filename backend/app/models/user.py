@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Identity, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,6 +18,11 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Public sequential player number shown on the Arena Star card
+    # (ARENA ID #1001+). Database identity column — see migration 017.
+    arena_no: Mapped[int] = mapped_column(
+        BigInteger, Identity(start=1001), unique=True, nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -42,6 +47,10 @@ class Profile(Base):
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     country: Mapped[str | None] = mapped_column(String(64), nullable=True)
     efootball_ign: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # Arena Star card squad block (drawn, not an uploaded image): the
+    # formation label (e.g. "4-3-3") and the squad's collective strength.
+    formation: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    squad_strength: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

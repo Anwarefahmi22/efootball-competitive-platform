@@ -37,6 +37,8 @@ async def get_public_profile(user_id: UUID, db: AsyncSession = Depends(get_db)) 
         bio=profile.bio if profile else None,
         country=profile.country if profile else None,
         efootball_ign=profile.efootball_ign if profile else None,
+        formation=profile.formation if profile else None,
+        squad_strength=profile.squad_strength if profile else None,
         created_at=user.created_at,
     )
 
@@ -67,6 +69,8 @@ async def update_own_profile(
         bio=profile.bio,
         country=profile.country,
         efootball_ign=profile.efootball_ign,
+        formation=profile.formation,
+        squad_strength=profile.squad_strength,
         created_at=current_user.created_at,
     )
 
@@ -103,5 +107,7 @@ async def upload_avatar(
         bio=profile.bio,
         country=profile.country,
         efootball_ign=profile.efootball_ign,
+        formation=profile.formation,
+        squad_strength=profile.squad_strength,
         created_at=current_user.created_at,
     )

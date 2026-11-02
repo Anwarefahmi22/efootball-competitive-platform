@@ -5,7 +5,7 @@ from app.models.match import Match
 from app.models.media_file import MediaFile
 from app.models.rating import PlayerRating
 from app.models.season import Season
-from app.models.social import Comment, Follow, Post, PostLike
+from app.models.social import Comment, Follow, PlayerLike, Post, PostLike
 from app.models.tournament import Tournament, TournamentParticipant
 from app.models.trust import PlayerTrust, TrustEvent, TrustEventType
 from app.models.user import Profile, User
@@ -15,7 +15,7 @@ from app.models.user import Profile, User
 # (unmodified) migrations.
 __all__ = [
     "User", "Profile", "Tournament", "TournamentParticipant", "Match", "PlayerRating",
-    "MatchEvidence", "PlayerTrust", "Post", "Comment", "PostLike", "Follow",
+    "MatchEvidence", "PlayerTrust", "Post", "Comment", "PostLike", "Follow", "PlayerLike",
     "Season", "Group",
     "TrustEvent", "TrustEventType",
     "MediaFile",

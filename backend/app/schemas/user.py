@@ -12,6 +12,8 @@ class ProfileRead(BaseModel):
     bio: str | None
     country: str | None
     efootball_ign: str | None
+    formation: str | None
+    squad_strength: int | None
     created_at: datetime
     updated_at: datetime
 
@@ -22,6 +24,8 @@ class ProfileUpdate(BaseModel):
     bio: str | None = None
     country: str | None = None
     efootball_ign: str | None = None
+    formation: str | None = Field(default=None, max_length=16)
+    squad_strength: int | None = Field(default=None, ge=0, le=4000)
 
 
 class UserRead(BaseModel):
@@ -44,6 +48,8 @@ class PublicProfileRead(BaseModel):
     bio: str | None
     country: str | None
     efootball_ign: str | None
+    formation: str | None
+    squad_strength: int | None
     created_at: datetime
 
 

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1e13" />
+  <title>أرينا ستار — eFootball Arena</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/shared/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/shared/favicon-192.png" />
+  <link rel="apple-touch-icon" href="/shared/favicon-192.png" />
+  <style>
+    /* Arena Star fan deck — mechanic approved in the standalone v2 demo:
+       cards pivot from the bottom in a fan, the front card glides out
+       sideways, then the deck reshuffles once (.5s cubic-bezier(.4,0,.2,1)).
+       Classes are st- prefixed: theme.css owns .card/.btn/.avatar names. */
+    .st-wrap { display: flex; flex-direction: column; align-items: center; }
+    .st-deck {
+      position: relative; margin-top: 20px;
+      width: min(94vw, 400px); aspect-ratio: 0.58;
+      max-height: calc(100dvh - 330px); min-height: 430px;
+    }
+    .st-card {
+      position: absolute; inset: 0; border-radius: 18px; overflow: hidden;
+      background: linear-gradient(168deg, #132c1e 0%, #0b1e13 58%, #08170d 100%);
+      border: 1px solid rgba(163, 255, 18, .30);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
+      padding: 14px 15px; display: flex; flex-direction: column; gap: 8px;
+      transform-origin: 50% 106%;
+      transition: transform .5s cubic-bezier(.4, 0, .2, 1), opacity .3s ease;
+      user-select: none; -webkit-user-select: none; touch-action: pan-y;
+      pointer-events: none; will-change: transform;
+    }
+    .st-card.front { pointer-events: auto; }
+    .st-ghost {
+      position: absolute; top: 8px; inset-inline-end: 14px;
+      font-size: .8rem; font-weight: 800; color: var(--neon); letter-spacing: .08em;
+    }
+    .st-idrow { display: flex; align-items: center; gap: 8px; font-size: .72rem; color: var(--muted); font-weight: 700; }
+    .st-verified { color: #08130a; background: var(--neon); border-radius: 999px; padding: 2px 9px; font-size: .66rem; font-weight: 800; }
+    .st-me { color: var(--neon); border: 1px solid var(--neon-dim); border-radius: 999px; padding: 1px 9px; font-size: .66rem; font-weight: 800; }
+    .st-head { display: flex; align-items: center; gap: 12px; }
+    .st-avatar {
+      width: 60px; height: 60px; border-radius: 50%; flex: none; overflow: hidden;
+      display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; color: var(--neon);
+      background: radial-gradient(circle at 35% 30%, #1d4a2e, #0e2415);
+      border: 2px solid rgba(163, 255, 18, .55);
+    }
+    .st-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .st-name { font-size: 1.24rem; font-weight: 800; line-height: 1.15; }
+    .st-name a { color: inherit; text-decoration: none; }
+    .st-title { color: var(--neon); font-weight: 800; font-size: .9rem; }
+    .st-meta { color: var(--muted); font-size: .76rem; }
+    .st-divider { height: 1px; background: var(--line); flex: none; }
+    .st-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; }
+    .st-stat b { display: block; font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .st-stat b.elo { color: var(--neon); }
+    .st-stat span { color: var(--muted); font-size: .7rem; font-weight: 700; }
+    .st-squad {
+      flex: 1 1 auto; min-height: 104px; display: flex; flex-direction: column;
+      background: #0d2417; border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px;
+    }
+    .st-squad .cap { display: flex; justify-content: space-between; font-size: .74rem; font-weight: 800; flex: none; margin-bottom: 4px; }
+    .st-squad .cap .form { color: var(--neon); }
+    .st-squad svg { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; display: block; }
+    .st-squad-text {
+      flex: 1 1 auto; min-height: 104px; border: 1px solid var(--line); border-radius: 14px;
+      background: #0d2417; display: grid; place-items: center; text-align: center; padding: 14px 8px;
+    }
+    .st-squad-text b { color: var(--neon); font-size: 1.5rem; display: block; }
+    .st-squad-empty {
+      flex: 1 1 auto; min-height: 104px; border: 1.5px dashed var(--line); border-radius: 14px;
+      color: var(--muted); display: grid; place-items: center;
+      font-size: .82rem; font-weight: 700; padding: 16px 8px; text-align: center;
+    }
+    .st-squad-empty a { color: var(--neon); }
+    .st-cups { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: .95rem; flex: none; }
+    .st-cups .n { color: var(--neon); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+    .st-cups .lbl { color: var(--muted); font-size: .74rem; font-weight: 700; }
+    .st-actions { display: flex; justify-content: space-between; align-items: center; flex: none; }
+    .st-mini {
+      background: none; border: none; color: var(--muted); font: inherit; font-size: .85rem;
+      font-weight: 700; cursor: pointer; display: flex; gap: 6px; align-items: center;
+      padding: 8px 4px; min-height: 40px;
+    }
+    .st-mini.liked { color: #ff5d7a; }
+    .st-mini.static { cursor: default; }
+    .st-controls { display: flex; align-items: center; gap: 16px; margin-top: 18px; }
+    .st-nav-btn {
+      width: 46px; height: 46px; border-radius: 50%; border: 1.5px solid var(--neon);
+      background: transparent; color: var(--neon); font-size: 1.05rem; cursor: pointer;
+      display: grid; place-items: center; flex: none;
+    }
+    .st-counter { color: var(--muted); font-size: .85rem; font-weight: 700; min-width: 128px; text-align: center; }
+    .st-counter b { color: var(--text); }
+    .st-hint { color: var(--muted); font-size: .74rem; margin-top: 8px; text-align: center; }
+    .st-state { text-align: center; color: var(--muted); padding: 48px 16px; font-weight: 700; }
+    @media (max-height: 700px) {
+      .st-card { gap: 6px; padding: 12px 13px; }
+      .st-avatar { width: 50px; height: 50px; font-size: 1.02rem; }
+      .st-name { font-size: 1.08rem; }
+      .st-stat b { font-size: 1.18rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="page-heading">
+      <div>
+        <span class="eyebrow">ساحة المنافسة</span>
+        <h1 class="page-title">⭐ أرينا ستار</h1>
+        <p class="muted">كومة بطاقات اللاعبين — مرّر لتكتشف نجوم الساحة، وأعجب بمن يلفت نظرك.</p>
+      </div>
+    </div>
+    <div id="st-state" class="st-state">جارٍ تحميل البطاقات…</div>
+    <div class="st-wrap" id="st-wrap" hidden>
+      <div class="st-deck" id="st-deck"></div>
+      <div class="st-controls">
+        <button class="st-nav-btn" id="st-prev" type="button" aria-label="البطاقة السابقة">→</button>
+        <div class="st-counter" id="st-counter"></div>
+        <button class="st-nav-btn" id="st-next" type="button" aria-label="البطاقة التالية">←</button>
+      </div>
+      <p class="st-hint">انقر على الكومة أو اسحب أفقيًا لتدويرها — البطاقة الأمامية فقط تفاعلية</p>
+    </div>
+  </div>
+  <script src="/shared/i18n.js"></script>
+  <script src="/shared/api.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script>
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+    /* Formation dot maps on a 100x62 pitch (GK left, attack right). The
+       profile form offers exactly these formations, so a set formation
+       always has a map; anything else falls back to a text block. */
+    const fanFormations = {
+      "4-3-3":   [[6,31],[22,8],[20,24],[20,38],[22,54],[42,16],[38,31],[42,46],[66,10],[72,31],[66,52]],
+      "4-2-1-3": [[6,31],[22,8],[20,24],[20,38],[22,54],[36,20],[36,42],[50,31],[68,10],[74,31],[68,52]],
+      "4-4-2":   [[6,31],[22,8],[20,24],[20,38],[22,54],[44,8],[42,24],[42,38],[44,54],[70,20],[70,42]],
+      "3-5-2":   [[6,31],[20,14],[18,31],[20,48],[46,6],[40,20],[38,31],[40,42],[46,56],[70,20],[70,42]],
+      "4-1-2-3": [[6,31],[22,8],[20,24],[20,38],[22,54],[36,31],[48,18],[48,44],[68,10],[74,31],[68,52]],
+      "3-4-3":   [[6,31],[20,14],[18,31],[20,48],[44,6],[42,22],[42,40],[44,56],[68,10],[74,31],[68,52]],
+      "5-3-2":   [[6,31],[24,5],[20,20],[18,31],[20,42],[24,57],[44,16],[42,31],[44,46],[70,20],[70,42]],
+      "4-5-1":   [[6,31],[22,8],[20,24],[20,38],[22,54],[44,6],[42,20],[38,31],[42,42],[44,56],[72,31]]
+    };
+    const stTitleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
+    const stInitials = (name) => escapeHtml((name || "EA").trim().slice(0, 2).toUpperCase());
+
+    function stSquadHtml(p) {
+      if (!p.formation) {
+        return p.is_me
+          ? `<div class="st-squad-empty"><span>لم تضف تشكيلتك بعد — <a href="/app/profile.html">أضفها من ملفك الشخصي</a></span></div>`
+          : `<div class="st-squad-empty">لا توجد تشكيلة بعد — هذا اللاعب لم يضف تشكيلته</div>`;
+      }
+      const strength = p.squad_strength != null ? ` · القوة الجماعية ${p.squad_strength}` : "";
+      const dots = fanFormations[p.formation];
+      if (!dots) {
+        return `<div class="st-squad-text"><div><b>${escapeHtml(p.formation)}</b><span>تشكيلة اللاعب${strength}</span></div></div>`;
+      }
+      const circles = dots.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.4" fill="#a3ff12" stroke="#052e10" stroke-width="0.8"/>`).join("");
+      return `<div class="st-squad">
+        <div class="cap"><span>تشكيلتي</span><span class="form">${escapeHtml(p.formation)}${strength}</span></div>
+        <svg viewBox="0 0 100 62" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <rect x="1" y="1" width="98" height="60" rx="4" fill="#0e2f1a" stroke="rgba(255,255,255,.28)"/>
+          <line x1="50" y1="1" x2="50" y2="61" stroke="rgba(255,255,255,.28)"/>
+          <circle cx="50" cy="31" r="9" fill="none" stroke="rgba(255,255,255,.28)"/>
+          ${circles}
+        </svg></div>`;
+    }
+
+    function stCardHtml(p, idx) {
+      const winRate = p.matches_played ? Math.round((p.wins / p.matches_played) * 100) : 0;
+      const meta = [p.country, p.efootball_ign ? "@" + p.efootball_ign : null].filter(Boolean).join(" · ") || "لاعب جديد في الساحة";
+      const avatar = p.avatar_url
+        ? `<img src="${escapeHtml(p.avatar_url)}" alt="" />`
+        : stInitials(p.display_name);
+      const like = p.is_me
+        ? `<span class="st-mini static">♡ <span>${p.likes_count}</span> · بطاقتك</span>`
+        : `<button class="st-mini${p.liked_by_me ? " liked" : ""}" type="button" data-act="like" data-uid="${p.user_id}">${p.liked_by_me ? "♥" : "♡"} <span>${p.likes_count}</span></button>`;
+      return `<span class="st-ghost">${String(idx + 1).padStart(2, "0")}</span>
+      <div class="st-idrow"><span>ARENA ID #${p.arena_no}</span>${p.is_verified ? `<span class="st-verified">لاعب موثّق</span>` : ""}${p.is_me ? `<span class="st-me">أنت</span>` : ""}</div>
+      <div class="st-head"><div class="st-avatar">${avatar}</div>
+        <div><div class="st-name"><a href="/app/profile.html?user=${encodeURIComponent(p.user_id)}">${escapeHtml(p.display_name)}</a></div>
+        <div class="st-title">${stTitleFor(p.rating)}</div>
+        <div class="st-meta">${escapeHtml(meta)}</div></div></div>
+      <div class="st-divider"></div>
+      <div class="st-stats">
+        <div class="st-stat"><b>${p.matches_played}</b><span>مباراة</span></div>
+        <div class="st-stat"><b>${winRate}%</b><span>نسبة الفوز</span></div>
+        <div class="st-stat"><b class="elo">${p.rating}</b><span>تقييم ELO</span></div>
+      </div>
+      <div class="st-divider"></div>
+      ${stSquadHtml(p)}
+      <div class="st-cups">🏆 <span class="n">${String(p.cups).padStart(2, "0")}</span> <span class="lbl">بطولات فاز بها</span></div>
+      <div class="st-actions">
+        <button class="st-mini" type="button" data-act="share" data-uid="${p.user_id}">↗ مشاركة البطاقة</button>
+        ${like}
+      </div>`;
+    }
+
+    let stCards = [], stEls = [], stOrder = [];
+    function stPosStyle(pos) {
+      if (pos === 0) return { t: "rotate(0deg) translate(0px, 0px) scale(1)", z: 100, o: 1 };
+      if (pos <= 4) return { t: `rotate(${-pos * 5}deg) translate(${-pos * 5}px, ${pos * 3}px) scale(${1 - pos * 0.015})`, z: 100 - pos, o: 1 };
+      return { t: "rotate(-25deg) translate(-25px, 15px) scale(.92)", z: 0, o: 0 };
+    }
+    function stLayout() {
+      stOrder.forEach((pi, pos) => {
+        const elm = stEls[pi], s = stPosStyle(pos);
+        elm.style.transform = s.t;
+        elm.style.zIndex = s.z;
+        elm.style.opacity = s.o;
+        elm.classList.toggle("front", pos === 0);
+      });
+      const f = stCards[stOrder[0]];
+      el("st-counter").innerHTML = `<b>${escapeHtml(f.display_name)}</b> · ${stOrder[0] + 1} / ${stCards.length}`;
+    }
+    let stGliding = false;
+    function stCycle(dir) {
+      if (stCards.length < 2) return;
+      if (dir < 0) { stOrder.unshift(stOrder.pop()); stLayout(); return; }
+      if (stGliding) return;
+      stGliding = true;
+      const front = stEls[stOrder[0]];
+      front.style.transform = "translateX(-135%) rotate(-9deg)";
+      front.style.opacity = "0.9";
+      setTimeout(() => {
+        front.style.transition = "none";
+        stOrder.push(stOrder.shift());
+        stLayout();
+        void front.offsetWidth;
+        front.style.transition = "";
+        stGliding = false;
+      }, 180);
+    }
+
+    const deckEl = el("st-deck");
+    let stSwallow = false;
+    deckEl.addEventListener("click", async (e) => {
+      if (stSwallow) { stSwallow = false; return; }
+      if (e.target.closest("a")) return;
+      const btn = e.target.closest("button");
+      if (!btn) { stCycle(1); return; }
+      const card = stCards.find((c) => c.user_id === btn.dataset.uid);
+      if (!card) return;
+      if (btn.dataset.act === "like") {
+        const span = btn.querySelector("span");
+        btn.disabled = true;
+        try {
+          if (card.liked_by_me) {
+            await apiFetch(`/players/${card.user_id}/like`, { method: "DELETE" });
+            card.liked_by_me = false; card.likes_count--;
+          } else {
+            await apiFetch(`/players/${card.user_id}/like`, { method: "POST" });
+            card.liked_by_me = true; card.likes_count++;
+          }
+          btn.classList.toggle("liked", card.liked_by_me);
+          btn.firstChild.textContent = card.liked_by_me ? "♥ " : "♡ ";
+          span.textContent = card.likes_count;
+        } catch (err) {
+          toast(err.detail || "تعذر تنفيذ الإعجاب", "error");
+        }
+        btn.disabled = false;
+      } else if (btn.dataset.act === "share") {
+        const url = `${location.origin}/app/arena-star.html?player=${card.user_id}`;
+        if (navigator.share) {
+          navigator.share({ title: "بطاقة " + card.display_name, text: `بطاقة اللاعب ${card.display_name} — ELO ${card.rating} في eFootball Arena`, url }).catch(() => {});
+        } else {
+          try { await navigator.clipboard.writeText(url); toast("تم نسخ رابط البطاقة"); }
+          catch { toast(url); }
+        }
+      }
+    });
+    el("st-next").addEventListener("click", () => stCycle(1));
+    el("st-prev").addEventListener("click", () => stCycle(-1));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") stCycle(1);
+      if (e.key === "ArrowRight") stCycle(-1);
+    });
+    let stDragX = null, stDragMoved = false;
+    deckEl.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("button") || e.target.closest("a")) return;
+      stDragX = e.clientX; stDragMoved = false;
+      stEls[stOrder[0]].style.transition = "none";
+      deckEl.setPointerCapture(e.pointerId);
+    });
+    deckEl.addEventListener("pointermove", (e) => {
+      if (stDragX === null) return;
+      const dx = e.clientX - stDragX;
+      if (Math.abs(dx) > 8) stDragMoved = true;
+      if (stDragMoved) stEls[stOrder[0]].style.transform = `translateX(${dx * 0.45}px) rotate(${dx * 0.04}deg)`;
+    });
+    deckEl.addEventListener("pointerup", (e) => {
+      if (stDragX === null) return;
+      const dx = e.clientX - stDragX;
+      stDragX = null;
+      stSwallow = true;
+      const front = stEls[stOrder[0]];
+      front.style.transition = "";
+      if (!stDragMoved) stCycle(1);
+      else if (Math.abs(dx) > 55) stCycle(dx < 0 ? 1 : -1);
+      else stLayout();
+    });
+    deckEl.addEventListener("pointercancel", () => { stDragX = null; stLayout(); });
+
+    (async () => {
+      if (!(await requireAuthOrRedirect())) return;
+      try {
+        stCards = await apiFetch("/players/cards");
+      } catch (err) {
+        el("st-state").textContent = err.detail || "تعذر تحميل البطاقات";
+        return;
+      }
+      if (!stCards.length) {
+        el("st-state").textContent = "لا توجد بطاقات بعد.";
+        return;
+      }
+      el("st-state").hidden = true;
+      el("st-wrap").hidden = false;
+      stEls = stCards.map((p, i) => {
+        const article = document.createElement("article");
+        article.className = "st-card";
+        article.innerHTML = stCardHtml(p, i);
+        deckEl.appendChild(article);
+        return article;
+      });
+      stOrder = stCards.map((_, i) => i);
+      const wanted = new URLSearchParams(location.search).get("player");
+      if (wanted) {
+        const wi = stCards.findIndex((c) => c.user_id === wanted);
+        if (wi > 0) stOrder = stOrder.slice(wi).concat(stOrder.slice(0, wi));
+      }
+      stLayout();
+      if (stCards.length === 1 && stCards[0].is_me) {
+        toast("أنت النجم الوحيد هنا حتى الآن — ادعُ لاعبين لتنضم بطاقاتهم إلى الكومة", "info", 6000);
+      }
+    })();
+  </script>
+</body>
+</html>

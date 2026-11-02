@@ -13,6 +13,7 @@ function renderNav() {
       <a class="nav-link ${currentPath.endsWith("/dashboard.html") ? "active" : ""}" href="/app/dashboard.html">لوحتي</a>
       <a class="nav-link ${currentPath.endsWith("/ratings.html") ? "active" : ""}" href="/app/ratings.html">التصنيف</a>
       <a class="nav-link ${currentPath.endsWith("/community.html") ? "active" : ""}" href="/app/community.html">المجتمع</a>
+      <a class="nav-link ${currentPath.endsWith("/arena-star.html") ? "active" : ""}" href="/app/arena-star.html">أرينا ستار</a>
       <button class="user-chip" id="nav-user" type="button" title="لوحة اللاعب">⚽ <span>حسابي</span></button>
       <button class="btn btn-ghost" type="button" id="nav-logout" style="padding:8px 14px">خروج</button>
     ` : `

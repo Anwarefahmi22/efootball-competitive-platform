@@ -914,4 +914,36 @@
     "كرة قدم ثلاثية الأبعاد — اسحبها لتدويرها": { fr: "Ballon de football 3D — faites-le glisser pour le faire tourner", en: "3D football — drag to spin it" },
     "كأس الساحة ثلاثي الأبعاد": { fr: "Coupe de l'arène en 3D", en: "3D Arena Cup" }
   });
+
+  Object.assign(translations, {
+    "أرينا ستار": { fr: "Arena Star", en: "Arena Star" },
+    "أرينا ستار — eFootball Arena": { fr: "Arena Star — eFootball Arena", en: "Arena Star — eFootball Arena" },
+    "محترف": { fr: "Pro", en: "Pro" },
+    "محترف الساحة": { fr: "Pro de l'arène", en: "Arena Pro" },
+    "تشكيلتي": { fr: "Mon équipe", en: "My squad" },
+    "القوة الجماعية": { fr: "Force collective", en: "Collective strength" },
+    "بطاقتك": { fr: "Votre carte", en: "Your card" },
+    "مشاركة البطاقة": { fr: "Partager la carte", en: "Share card" },
+    "لاعب موثّق": { fr: "Joueur vérifié", en: "Verified player" },
+    "لاعب جديد في الساحة": { fr: "Nouveau joueur dans l'arène", en: "New player in the arena" },
+    "بطولات فاز بها": { fr: "Tournois remportés", en: "Tournaments won" },
+    "كومة بطاقات اللاعبين — مرّر لتكتشف نجوم الساحة، وأعجب بمن يلفت نظرك.": { fr: "Un paquet de cartes de joueurs — glissez pour découvrir les stars de l'arène et aimez celles qui vous plaisent.", en: "A deck of player cards — swipe to discover the Arena's stars and like the ones who catch your eye." },
+    "جارٍ تحميل البطاقات…": { fr: "Chargement des cartes…", en: "Loading cards…" },
+    "انقر على الكومة أو اسحب أفقيًا لتدويرها — البطاقة الأمامية فقط تفاعلية": { fr: "Touchez le paquet ou glissez latéralement pour le faire défiler — seule la carte de devant est interactive", en: "Tap the deck or swipe sideways to cycle it — only the front card is interactive" },
+    "البطاقة السابقة": { fr: "Carte précédente", en: "Previous card" },
+    "البطاقة التالية": { fr: "Carte suivante", en: "Next card" },
+    "لا توجد تشكيلة بعد — هذا اللاعب لم يضف تشكيلته": { fr: "Pas encore d'équipe — ce joueur n'a pas ajouté la sienne", en: "No squad yet — this player has not added theirs" },
+    "لم تضف تشكيلتك بعد": { fr: "Vous n'avez pas encore ajouté votre équipe", en: "You have not added your squad yet" },
+    "أضفها من ملفك الشخصي": { fr: "Ajoutez-la depuis votre profil", en: "Add it from your profile" },
+    "تشكيلة اللاعب": { fr: "Formation du joueur", en: "Player's formation" },
+    "تم نسخ رابط البطاقة": { fr: "Lien de la carte copié", en: "Card link copied" },
+    "تعذر تنفيذ الإعجاب": { fr: "Impossible d'enregistrer votre j'aime", en: "Could not register your like" },
+    "تعذر تحميل البطاقات": { fr: "Impossible de charger les cartes", en: "Could not load the cards" },
+    "لا توجد بطاقات بعد.": { fr: "Aucune carte pour le moment.", en: "No cards yet." },
+    "أنت النجم الوحيد هنا حتى الآن — ادعُ لاعبين لتنضم بطاقاتهم إلى الكومة": { fr: "Vous êtes la seule star ici pour l'instant — invitez des joueurs pour que leurs cartes rejoignent le paquet", en: "You are the only star here so far — invite players so their cards join the deck" },
+    "تشكيلة بطاقة أرينا ستار": { fr: "Formation de la carte Arena Star", en: "Arena Star card formation" },
+    "— بدون تشكيلة —": { fr: "— Aucune formation —", en: "— No formation —" },
+    "القوة الجماعية للتشكيلة": { fr: "Force collective de l'équipe", en: "Squad collective strength" },
+    "تظهر التشكيلة وقوتها على بطاقتك في صفحة أرينا ستار.": { fr: "Votre formation et sa force apparaissent sur votre carte sur la page Arena Star.", en: "Your formation and its strength appear on your card on the Arena Star page." }
+  });
 })();

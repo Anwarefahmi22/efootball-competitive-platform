@@ -113,6 +113,21 @@
       <label class="lbl" for="edit-avatar-file">الصورة الشخصية</label>
       <input class="field" id="edit-avatar-file" name="avatar" type="file" accept="image/jpeg,image/png" />
       <small class="muted">PNG أو JPG — الحد الأقصى 5MB</small>
+      <label class="lbl" for="edit-formation">تشكيلة بطاقة أرينا ستار</label>
+      <select class="field" id="edit-formation" name="formation">
+        <option value="">— بدون تشكيلة —</option>
+        <option>4-3-3</option>
+        <option>4-2-1-3</option>
+        <option>4-4-2</option>
+        <option>3-5-2</option>
+        <option>4-1-2-3</option>
+        <option>3-4-3</option>
+        <option>5-3-2</option>
+        <option>4-5-1</option>
+      </select>
+      <label class="lbl" for="edit-squad-strength">القوة الجماعية للتشكيلة</label>
+      <input class="field" id="edit-squad-strength" name="squad_strength" type="number" min="0" max="4000" step="1" placeholder="3073" />
+      <small class="muted">تظهر التشكيلة وقوتها على بطاقتك في صفحة أرينا ستار.</small>
       <div class="avatar-preview" id="avatar-preview">EA</div>
       <div class="form-error" id="profile-form-error" role="alert" hidden></div>
       <div class="dialog-actions"><button class="btn btn-primary" type="submit" id="save-profile">حفظ التغييرات</button><button class="btn btn-ghost" type="button" id="cancel-profile">إلغاء</button></div>
@@ -188,6 +203,8 @@
         el("player-email").textContent = me.email || "";
         el("profile-link").href = "/app/profile.html?user=" + encodeURIComponent(uid);
         el("edit-display-name").value = me.display_name || "";
+        el("edit-formation").value = me.profile?.formation || "";
+        el("edit-squad-strength").value = me.profile?.squad_strength ?? "";
         renderPreview(me.display_name, me.profile?.avatar_url);
         const [board, tournaments, seasons, trust, myRating] = await Promise.all([apiFetch("/ratings/leaderboard"), apiFetch("/tournaments"), apiFetch("/seasons").catch(() => []), apiFetch("/trust/" + uid).catch(() => null), apiFetch("/ratings/" + uid).catch(() => null)]);
         // The leaderboard only lists players who already have a rating row
@@ -224,7 +241,7 @@
     el("cancel-profile").addEventListener("click", () => el("profile-editor").close());
     el("edit-display-name").addEventListener("input", (event) => renderPreview(event.target.value, ""));
     el("edit-avatar-file").addEventListener("change", (event) => { const file = event.target.files[0]; if (file) renderPreview(el("edit-display-name").value, URL.createObjectURL(file)); });
-    el("profile-form").addEventListener("submit", async (event) => { event.preventDefault(); const error = el("profile-form-error"); const save = el("save-profile"); error.hidden = true; save.disabled = true; try { await apiFetch("/users/me/profile", { method: "PATCH", body: JSON.stringify({ display_name: el("edit-display-name").value.trim() }) }); const file = el("edit-avatar-file").files[0]; if (file) { const form = new FormData(); form.append("image", file); await apiFetch("/users/me/avatar", { method: "POST", body: form }); } el("profile-editor").close(); toast("تم تحديث الهوية بنجاح.", "success"); setTimeout(() => location.reload(), 1400); } catch (err) { error.textContent = err.detail || "تعذر حفظ التغييرات."; error.hidden = false; } finally { save.disabled = false; } });
+    el("profile-form").addEventListener("submit", async (event) => { event.preventDefault(); const error = el("profile-form-error"); const save = el("save-profile"); error.hidden = true; save.disabled = true; try { await apiFetch("/users/me/profile", { method: "PATCH", body: JSON.stringify({ display_name: el("edit-display-name").value.trim(), formation: el("edit-formation").value || null, squad_strength: el("edit-squad-strength").value === "" ? null : Number(el("edit-squad-strength").value) }) }); const file = el("edit-avatar-file").files[0]; if (file) { const form = new FormData(); form.append("image", file); await apiFetch("/users/me/avatar", { method: "POST", body: form }); } el("profile-editor").close(); toast("تم تحديث الهوية بنجاح.", "success"); setTimeout(() => location.reload(), 1400); } catch (err) { error.textContent = err.detail || "تعذر حفظ التغييرات."; error.hidden = false; } finally { save.disabled = false; } });
     if (window.EyesLoader) EyesLoader.wait(el("loading"), { label: "جارٍ تجهيز مركزك التنافسي…" });
     load();
   </script>

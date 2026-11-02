@@ -93,3 +93,22 @@ class Follow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class PlayerLike(Base):
+    """A like on a player's Arena Star card. `player_id` is the player
+    being liked, `user_id` is the liker — same convention as PostLike."""
+
+    __tablename__ = "player_likes"
+    __table_args__ = (UniqueConstraint("player_id", "user_id", name="uq_player_like"),)
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    player_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

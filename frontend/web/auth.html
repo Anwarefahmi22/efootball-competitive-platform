@@ -173,15 +173,15 @@
       width: 92px; height: 92px; border-radius: 50%;
       transform: translate(-50%, -50%);
       background: radial-gradient(circle,
-        rgba(255, 246, 205, .98) 0%,
-        rgba(255, 220, 120, .65) 30%,
-        rgba(255, 196, 74, .28) 55%,
-        rgba(255, 180, 60, 0) 72%);
+        rgba(246, 255, 217, .98) 0%,
+        rgba(198, 255, 94, .65) 30%,
+        rgba(163, 255, 18, .28) 55%,
+        rgba(163, 255, 18, 0) 72%);
       opacity: 0; transition: opacity .35s ease;
       pointer-events: none;
     }
     .pw-wrap.show-password #cone { opacity: 1; }
-    .pw-wrap.show-password .pw-eye { color: #fff6d8; }
+    .pw-wrap.show-password .pw-eye { color: #eaffb0; }
     .pw-wrap.show-password .pw-eye::before { opacity: 1; }
     .pw-wrap.show-password .field { background: transparent; color: #081309; -webkit-text-fill-color: #081309; caret-color: #081309; }
 
@@ -256,17 +256,17 @@
           <svg id="cone" viewBox="0 0 600 220" preserveAspectRatio="none" aria-hidden="true">
             <defs>
               <radialGradient id="coneGrad" gradientUnits="userSpaceOnUse" cx="600" cy="110" r="600">
-                <stop offset="0" stop-color="#fff8dc" stop-opacity="1"/>
-                <stop offset="0.25" stop-color="#ffe58f" stop-opacity="0.9"/>
-                <stop offset="0.52" stop-color="#ffd261" stop-opacity="0.62"/>
-                <stop offset="0.75" stop-color="#ffc44d" stop-opacity="0.28"/>
-                <stop offset="0.92" stop-color="#ffb63e" stop-opacity="0"/>
+                <stop offset="0" stop-color="#f6ffd9" stop-opacity="1"/>
+                <stop offset="0.25" stop-color="#d8ff7a" stop-opacity="0.9"/>
+                <stop offset="0.52" stop-color="#a3ff12" stop-opacity="0.62"/>
+                <stop offset="0.75" stop-color="#7ed40a" stop-opacity="0.28"/>
+                <stop offset="0.92" stop-color="#6dcc0a" stop-opacity="0"/>
               </radialGradient>
               <radialGradient id="coneCore" gradientUnits="userSpaceOnUse" cx="600" cy="110" r="600">
                 <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
-                <stop offset="0.3" stop-color="#fff3c4" stop-opacity="0.75"/>
-                <stop offset="0.6" stop-color="#ffe58f" stop-opacity="0.35"/>
-                <stop offset="0.85" stop-color="#ffdf80" stop-opacity="0"/>
+                <stop offset="0.3" stop-color="#f2ffd0" stop-opacity="0.75"/>
+                <stop offset="0.6" stop-color="#d8ff7a" stop-opacity="0.35"/>
+                <stop offset="0.85" stop-color="#b8ff45" stop-opacity="0"/>
               </radialGradient>
             </defs>
             <polygon points="600,110 0,0 0,220" fill="url(#coneGrad)"/>

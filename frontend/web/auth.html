@@ -184,11 +184,7 @@
     .pw-wrap.show-password .pw-eye { color: #fff6d8; }
     .pw-wrap.show-password .pw-eye::before { opacity: 1; }
     .pw-wrap.show-password .field { background: transparent; color: #081309; -webkit-text-fill-color: #081309; caret-color: #081309; }
-    /* Real-use fix: browser autofill paints glyphs via -webkit-text-fill-color,
-       which `color` alone does not override — the revealed password stayed
-       white on the light. Force the dark fill, and paint over the autofill
-       background with the (black, in this state) card colour. */
-    .pw-wrap.show-password .field:-webkit-autofill { -webkit-text-fill-color: #081309; box-shadow: 0 0 0 1000px #000000 inset; }
+
     .pw-wrap.show-password .field::placeholder { color: rgba(8, 19, 9, .5); }
     .auth-card.card-dark { background: #000000; }
     #form-login .field-row:not(.pw-row), #form-login .btn, #form-login .hint, #form-login .err { position: relative; z-index: 1; }

@@ -78,28 +78,28 @@ Status vocabulary: NOT STARTED · IN PROGRESS · FIXED AND VERIFIED · FIXED BUT
 | AUD-01 | P1 | 3 | `backend/tests/` (new), `.github/workflows/ci.yml` (new), `backend/app/**` (subjects) | — | NOT STARTED |
 | AUD-02 | P1 | 7 | Runbook in final decisions pack (operations only) | — | OWNER DECISION REQUIRED |
 | AUD-03 | P2 | 6 | `backend/app/api/v1/players.py`, `backend/app/schemas/player.py`, `frontend/web/app/arena-star.html` | — | NOT STARTED |
-| AUD-04 | P2 | 2 | `backend/alembic/versions/020_*.py` (new) | **020** | NOT STARTED |
+| AUD-04 | P2 | 2 | `backend/alembic/versions/020_*.py` (new) | **020** | FIXED AND VERIFIED (Stage 2 — migration 020 upgrade/downgrade/upgrade on PostgreSQL 16; 19 indexes present) |
 | AUD-05 | P2 | 6 | `backend/app/api/v1/invites.py` (`_brief`, inbox, challenge reads) | — | NOT STARTED |
-| AUD-06 | P2 | 2 | `backend/app/api/v1/tournaments.py` (join), `backend/app/api/v1/invites.py` (tournament accept) | — | NOT STARTED |
+| AUD-06 | P2 | 2 | `backend/app/api/v1/tournaments.py` (join), `backend/app/api/v1/invites.py` (tournament accept) | — | FIXED AND VERIFIED (Stage 2 — row locks + concurrent PostgreSQL tests pass) |
 | AUD-07 | P2 | 5 | `backend/app/api/v1/admin.py`, `backend/app/schemas/admin.py` (verify schemas), `frontend/web/app/admin.html` | — (is_verified column exists) | NOT STARTED |
 | AUD-08 | P2 | 5 | `backend/app/api/v1/posts.py`, `frontend/web/app/community.html` | — (cascades exist) | NOT STARTED |
 | AUD-09 | P2 | 1 | `frontend/web/app/invites.html` (error render paths ~L157, L184–191) | — | FIXED AND VERIFIED (Stage 1) |
 | AUD-10 | P2 | 4 | `backend/app/core/security.py`, `backend/app/api/v1/auth.py`, new refresh-session model + migration, `frontend/shared/api.js` | **021** (planned, Stage 4) | NOT STARTED |
 | AUD-11 | P2 | 1 | `backend/app/core/throttle.py` (`client_ip`), `backend/app/core/config.py` (trusted-proxy setting) | — | FIXED AND VERIFIED (Stage 1) |
-| AUD-12 | P2 | 1 | Upload handlers: `api/v1/users.py`, `api/v1/posts.py`, `api/v1/matches.py`, `api/v1/invites.py`; shared helper in `backend/app/core/storage.py` | — | FIXED BUT NOT FULLY VERIFIED (Stage 1 — helper-level tests pass; endpoint integration tests in Stage 3 suite) |
-| AUD-13 | P2 | 2 | Migration 020 (canonical pair index), `backend/app/api/v1/invites.py` (send path) | **020** | NOT STARTED |
+| AUD-12 | P2 | 1 | Upload handlers: `api/v1/users.py`, `api/v1/posts.py`, `api/v1/matches.py`, `api/v1/invites.py`; shared helper in `backend/app/core/storage.py` | — | FIXED BUT NOT FULLY VERIFIED (Stage 1 — endpoint integration tests join the Stage 3 suite) |
+| AUD-13 | P2 | 2 | Migration 020 (canonical pair index), `backend/app/api/v1/invites.py` (send path) | **020** | FIXED AND VERIFIED (Stage 2 — canonical pair index in 020 + 409 translation; concurrent test passes) |
 | AUD-14 | P2 | 7 | Proposal only (public card vs. authenticated) — no code change without approval | — | OWNER DECISION REQUIRED |
-| AUD-15 | P3 | 1+2 | `backend/app/api/v1/invites.py` (accept), `backend/app/api/v1/players.py` (like), `posts.py` (like) | — | FIXED BUT NOT FULLY VERIFIED (Stage 1 portion — accept/like paths; concurrency proof in Stage 2/3) |
-| AUD-16 | P3 | 1 | `backend/app/core/media.py` (decode/re-encode helpers), avatar/post/evidence handlers | — | FIXED BUT NOT FULLY VERIFIED (Stage 1 — normalize helper verified; endpoint integration in Stage 3 suite) |
+| AUD-15 | P3 | 1+2 | `backend/app/api/v1/invites.py` (accept), `backend/app/api/v1/players.py` (like), `posts.py` (like) | — | FIXED AND VERIFIED (Stages 1–2 — double-accept concurrency test passes) |
+| AUD-16 | P3 | 1 | `backend/app/core/media.py` (decode/re-encode helpers), avatar/post/evidence handlers | — | FIXED BUT NOT FULLY VERIFIED (Stage 1 — endpoint integration tests join the Stage 3 suite) |
 | AUD-17 | P3 | 1 | `backend/app/schemas/user.py` (ProfileUpdate), `backend/app/api/v1/users.py` | — | FIXED AND VERIFIED (Stage 1) |
 | AUD-18 | P3 | 1 | `backend/app/api/v1/auth.py` (login dummy verify) | — | FIXED AND VERIFIED (Stage 1) |
 | AUD-19 | P3 | 4 | `backend/app/core/throttle.py` (policy), `backend/app/api/v1/auth.py` | — | NOT STARTED |
-| AUD-20 | P3 | 2 | `backend/app/core/throttle.py` (atomic upsert), `backend/app/models/auth_throttle.py` | — | NOT STARTED |
+| AUD-20 | P3 | 2 | `backend/app/core/throttle.py` (atomic upsert), `backend/app/models/auth_throttle.py` | — | FIXED AND VERIFIED (Stage 2 — atomic upsert; 30-way concurrent count test passes) |
 | AUD-21 | P3 | 4 | New per-user write quotas (posts/tournaments/follows create paths), config in `core/config.py` | — | NOT STARTED |
 | AUD-22 | P3 | 4 | `backend/app/main.py` (header middleware, dedupe vs. vercel.json), `vercel.json` untouched | — | NOT STARTED |
 | AUD-23 | P3 | 4+7 | Ops checklist (this doc §5); `backend/app/api/v1/internal.py` guard already sound | — | NOT STARTED |
 | AUD-24 | P3 | 4 | `backend/requirements.txt` + root `requirements.txt` (PyJWT), `backend/app/core/security.py`, password byte-length policy in `schemas/user.py`/`schemas/auth.py` | — | NOT STARTED |
-| AUD-25 | P3 | 1 | `backend/app/api/v1/matches.py`, `backend/app/api/v1/invites.py` (submit paths), shared `MAX_SCORE` constant | — | FIXED BUT NOT FULLY VERIFIED (Stage 1 — cap wired in both submit paths; boundary API tests in Stage 3 suite) |
+| AUD-25 | P3 | 1 | `backend/app/api/v1/matches.py`, `backend/app/api/v1/invites.py` (submit paths), shared `MAX_SCORE` constant | — | FIXED BUT NOT FULLY VERIFIED (Stage 1 — boundary API tests join the Stage 3 suite) |
 | AUD-26 | P3 | 7 | Documented policy (public match reads) — no change without approval | — | DEFERRED (documented) |
 | AUD-27 | P3 | 6 | `frontend/web/app/ratings.html` (criteria subtitle), `frontend/web/app/arena-star.html`, docs note in this file §6 | — | NOT STARTED |
 | AUD-28 | P3 | 5 | `backend/app/api/v1/fraud.py`, `frontend/web/app/admin.html` (signal visibility) — human review only, never auto-penalty | — | NOT STARTED |
@@ -152,3 +152,9 @@ Stage 1 test note: full PostgreSQL concurrency/integration tests are Stage 2–3
 ## 7. Stage 1 completion note (2026-11-03)
 
 Implemented on `remediation/audit-2026-11-03`: AUD-09, AUD-11, AUD-12, AUD-15 (Stage-1 portion), AUD-16, AUD-17, AUD-18, AUD-25, AUD-32, AUD-34 (critical portions). New shared pieces: `core/competition.py` (MAX_SCORE=30), `core/media.py::read_upload_limited` (streamed cap, HTTP 413) + `normalize_image` (Pillow decode → WebP) + `evidence_media_type`; `frontend/shared/api.js` now owns the single `escapeHtml` global and `forceReauth()` on dead sessions. Oversize uploads now answer **413** (previously 400 after full buffering). Verification: compile OK, app import OK (85 routes), pyflakes back at the pre-existing baseline of 10 (AUD-31 scope), unit checks for every new helper PASS, JS syntax 10/10 edited pages PASS, XSS payload renders as text. PostgreSQL-level integration/concurrency verification for AUD-12/15/16/25 is scheduled in the Stage 2/3 suite (no local PostgreSQL exists on this workstation — see §1).
+
+---
+
+## 8. Stage 2 completion note (2026-11-03)
+
+Implemented: AUD-06 (tournament row lock in join + tournament-invite accept, reusing the existing `for_update` loader pattern), AUD-13 (migration 020 rebuilds `uq_match_invite_pending_pair` on LEAST/GREATEST; send-path IntegrityError → 409), AUD-20 (`record_hit` is now one atomic INSERT … ON CONFLICT DO UPDATE — identical window/lock semantics), AUD-04 (migration **020_fk_indexes_pair_invite**, parent 019: 19 new FK indexes; columns already leading an existing unique index were not duplicated). Test infrastructure: a self-contained **PostgreSQL 16.15** was installed via conda-forge (micromamba) at `/opt/pg-test/pg16`, running as user `pgtest` on 127.0.0.1:55432 with a disposable `arena_test` database — no production infrastructure was touched. The full migration chain 001→019 was first proven on real PostgreSQL, then 020 upgrade → downgrade → upgrade. New tests in `backend/tests/` (seed of the Stage 3 suite): **6/6 pass** — throttle atomicity (30 concurrent hits counted exactly), lock/window semantics, join capacity race, invite-accept capacity race, opposite-direction invite race, double-accept exactly-one-challenge.

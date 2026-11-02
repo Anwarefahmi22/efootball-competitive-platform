@@ -20,7 +20,8 @@ frontend localizes it through the i18n reverse dictionary.
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Request
-from sqlalchemy import delete, select
+from sqlalchemy import case, delete, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.auth_throttle import AuthThrottle
@@ -85,19 +86,39 @@ async def record_hit(
     window: timedelta,
     lock_for: timedelta,
 ) -> None:
-    """Count one hit in the sliding window; lock when the limit is hit."""
+    """Count one hit in the sliding window; lock when the limit is hit.
+
+    AUD-20: this is a single atomic INSERT ... ON CONFLICT DO UPDATE.
+    The previous read-modify-write version lost counts whenever two
+    requests raced the same key (both read count N, both wrote N+1);
+    the upsert takes the row lock inside the statement, so concurrent
+    hits serialize and every hit is counted. Window/lock semantics are
+    unchanged: an expired window restarts the count at 1 and clears any
+    stale lock; reaching the limit (re)locks for ``lock_for``.
+    """
     now = _now()
-    row = await _get(db, key)
-    if row is None:
-        row = AuthThrottle(key=key, fail_count=0, window_started_at=now)
-        db.add(row)
-    if now - row.window_started_at > window:
-        row.fail_count = 0
-        row.window_started_at = now
-        row.locked_until = None
-    row.fail_count += 1
-    if row.fail_count >= limit:
-        row.locked_until = now + lock_for
+    expired = AuthThrottle.window_started_at < now - window
+    new_count = case((expired, 1), else_=AuthThrottle.fail_count + 1)
+    lock_value = now + lock_for
+    first_lock = lock_value if limit <= 1 else None
+    stmt = pg_insert(AuthThrottle).values(
+        key=key, fail_count=1, window_started_at=now, locked_until=first_lock
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[AuthThrottle.key],
+        set_={
+            "fail_count": new_count,
+            "window_started_at": case(
+                (expired, now), else_=AuthThrottle.window_started_at
+            ),
+            "locked_until": case(
+                (expired, first_lock),
+                (new_count >= limit, lock_value),
+                else_=AuthThrottle.locked_until,
+            ),
+        },
+    )
+    await db.execute(stmt)
     await db.commit()
 
 

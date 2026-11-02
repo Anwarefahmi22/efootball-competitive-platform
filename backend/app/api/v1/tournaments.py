@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -238,7 +239,11 @@ async def get_groups(tournament_id: UUID, db: AsyncSession = Depends(get_db)) ->
 async def join_tournament(
     tournament_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> TournamentRead:
-    tournament = await _load_tournament(db, tournament_id)
+    # AUD-06: lock the tournament row for the whole check-and-insert.
+    # Without it, two simultaneous joins could both pass the capacity
+    # check and take the last seat twice. The row lock serializes joins
+    # (and invite-accepts, which lock the same row) per tournament.
+    tournament = await _load_tournament(db, tournament_id, for_update=True)
     if tournament is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
     if tournament.status != TournamentStatus.REGISTRATION_OPEN:
@@ -249,7 +254,13 @@ async def join_tournament(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tournament is full")
     initial_status = "pending" if tournament.requires_approval else "approved"
     db.add(TournamentParticipant(tournament_id=tournament.id, user_id=current_user.id, status=initial_status))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Defense in depth (uq_tournament_user): a same-user duplicate
+        # that somehow raced the check above is a controlled 400.
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already joined this tournament")
     loaded = await _load_tournament(db, tournament.id)
     assert loaded is not None
     return _to_read(loaded)

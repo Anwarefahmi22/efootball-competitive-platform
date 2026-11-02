@@ -268,7 +268,13 @@ async def send_match_invite(
     await _check_pair_can_play(db, current_user.id, payload.opponent_id)
     invite = MatchInvite(challenger_id=current_user.id, opponent_id=payload.opponent_id)
     db.add(invite)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # AUD-13: the canonical pair index (migration 020) fired — a
+        # simultaneous invite in the opposite direction won the race.
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="توجد دعوة معلّقة بينكما بالفعل")
     await db.refresh(invite)
     return await _match_invite_read(db, invite)
 
@@ -412,7 +418,13 @@ async def accept_tournament_invite(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تم الرد على هذه الدعوة من قبل")
     if invite.created_at < _now() - TOURNAMENT_INVITE_TTL:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="انتهت صلاحية هذه الدعوة")
-    tournament = await db.get(Tournament, invite.tournament_id)
+    # AUD-06: lock the tournament row (same lock join_tournament takes)
+    # so the capacity re-check below and the participant insert are
+    # atomic against concurrent joins and accepts.
+    locked = await db.execute(
+        select(Tournament).where(Tournament.id == invite.tournament_id).with_for_update()
+    )
+    tournament = locked.scalar_one_or_none()
     if tournament is None or tournament.status != TournamentStatus.REGISTRATION_OPEN:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="التسجيل في هذه البطولة لم يعد مفتوحًا")
     participants = await db.execute(
@@ -429,7 +441,11 @@ async def accept_tournament_invite(
     db.add(TournamentParticipant(tournament_id=tournament.id, user_id=current_user.id, status="approved"))
     invite.status = InviteStatus.ACCEPTED
     invite.responded_at = _now()
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="أنت مسجّل في هذه البطولة بالفعل")
     await db.refresh(invite)
     return await _tournament_invite_read(db, invite)
 

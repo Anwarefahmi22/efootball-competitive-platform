@@ -50,7 +50,7 @@
           <div><span>الترتيب العالمي</span><strong class="num" id="identity-rank">—</strong></div>
           <div><span>اللقب التنافسي</span><strong id="identity-title-rank">—</strong></div>
         </div>
-        <div class="identity-trophy"><span class="stage3d stage3d--trophy stage3d--photo"><i class="stage3d__shadow" aria-hidden="true"></i><span class="trophyHero" id="trophyHero"><img class="trophyHero__img" src="/shared/trophy-frames/f0.webp?v=4" alt="كأس الساحة" width="476" height="648"><img class="trophyHero__img trophyHero__layer--top" src="/shared/trophy-frames/f1.webp?v=4" alt="" aria-hidden="true" width="476" height="648"><span class="trophyHero__reflWrap" aria-hidden="true"><img class="trophyHero__refl" src="/shared/trophy-frames/f0.webp?v=4" alt="" width="476" height="648"><img class="trophyHero__refl trophyHero__layer--top" src="/shared/trophy-frames/f1.webp?v=4" alt="" width="476" height="648"></span></span></span><span>كأس الساحة</span></div>
+        <div class="identity-trophy"><span class="stage3d stage3d--trophy stage3d--photo"><i class="stage3d__shadow" aria-hidden="true"></i><span class="trophyHero" id="trophyHero"><img class="trophyHero__img" src="/shared/ucl-trophy-360-fluid.webp?v=1" alt="كأس الساحة" width="476" height="648"><span class="trophyHero__reflWrap" aria-hidden="true"><img class="trophyHero__refl" src="/shared/ucl-trophy-360-fluid.webp?v=1" alt="" width="476" height="648"></span></span></span><span>كأس الساحة</span></div>
       </section>
 
       <section class="journey card" id="journey" hidden aria-labelledby="journey-title">
@@ -146,44 +146,18 @@
   <script src="/shared/nav.js"></script>
   <script src="/shared/arena3d.js?v=11"></script>
   <script>
-    /* Trophy rotator: steps through 30 rendered angles (mostly 11.25
-       degrees apart) with a brief 0.25s blend inside each 0.4s step —
-       dense enough that the motion reads as a continuous fluid turn
-       with no lingering ghost images. A full revolution takes 12s.
-       Falls back to the static render on error or for
-       prefers-reduced-motion. */
+    /* Trophy: the approved fluid model (30 real angles, one-direction
+       360 in 12s) embedded directly as a single animated WebP — the
+       exact file the owner approved. Reduced-motion users and any
+       load error get the static render instead. */
     (function () {
       var hero = document.getElementById("trophyHero");
       if (!hero) return;
       var STATIC = "/shared/ucl-trophy.webp?v=4";
-      var mains = hero.querySelectorAll(".trophyHero__img");
-      var refls = hero.querySelectorAll(".trophyHero__refl");
       var all = Array.prototype.slice.call(hero.querySelectorAll("img"));
-      var timer = null;
-      function fail() {
-        if (timer) clearInterval(timer);
-        all.forEach(function (im) { im.style.transition = "none"; im.style.opacity = "1"; im.src = STATIC; });
-      }
-      all.forEach(function (im) { im.addEventListener("error", fail); });
-      if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        all.forEach(function (im) { im.src = STATIC; });
-        return;
-      }
-      var FRAMES = 30, STEP = 400, idx = 0, showSecond = true;
-      function src(i) { return "/shared/trophy-frames/f" + i + ".webp?v=4"; }
-      for (var i = 0; i < FRAMES; i++) { var p = new Image(); p.src = src(i); }
-      timer = setInterval(function () {
-        idx = (idx + 1) % FRAMES;
-        var mShow = showSecond ? mains[1] : mains[0];
-        var mHide = showSecond ? mains[0] : mains[1];
-        var rShow = showSecond ? refls[1] : refls[0];
-        var rHide = showSecond ? refls[0] : refls[1];
-        mShow.src = src(idx); rShow.src = src(idx);
-        void mShow.offsetWidth;
-        mShow.style.opacity = "1"; rShow.style.opacity = "1";
-        mHide.style.opacity = "0"; rHide.style.opacity = "0";
-        showSecond = !showSecond;
-      }, STEP);
+      function still() { all.forEach(function (im) { im.src = STATIC; }); }
+      all.forEach(function (im) { im.addEventListener("error", still); });
+      if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) still();
     })();
   </script>
   <script src="/shared/eyes-loader.js"></script>

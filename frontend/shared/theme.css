@@ -742,6 +742,9 @@ tr.is-me td:first-child { border-inline-start: 3px solid var(--neon); }
 .trophyHero__img { position: absolute; left: 50%; top: 1%; transform: translateX(-50%); height: 75%; width: auto; display: block; filter: drop-shadow(0 5px 8px rgba(0,0,0,.5)); }
 .trophyHero__reflWrap { position: absolute; left: 50%; top: 77%; transform: translateX(-50%); height: 75%; display: block; opacity: .26; -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0) 52%); mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0) 52%); }
 .trophyHero__refl { height: 100%; width: auto; display: block; transform: scaleY(-1); }
+.trophyHero__img, .trophyHero__refl { transition: opacity 2s linear; }
+.trophyHero__layer--top { opacity: 0; }
+.trophyHero__refl.trophyHero__layer--top { position: absolute; left: 0; top: 0; }
 .identity-trophy { display: grid; justify-items: center; align-content: center; gap: 6px; color: var(--muted); font-size: .85rem; text-align: center; }
 @media (min-width: 981px) { .identity-card { grid-template-columns: 200px 1fr 1.3fr 158px; } .identity-facts { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 560px) { .identity-facts { grid-template-columns: repeat(2, 1fr); } .identity-facts > div:nth-child(3) { border-inline-start: 0; } .stage3d--ball { width: 168px; height: 168px; } }

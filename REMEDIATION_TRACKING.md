@@ -189,11 +189,10 @@ Suite now **50 tests, all passing** (3 new in `tests/test_stage6_perf.py`), and 
 
 All seven stages are complete. Final state of the audit's 35 findings:
 
-- **FIXED AND VERIFIED — 26:** AUD-01, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 28, 31, 33, 34.
+- **FIXED AND VERIFIED — 28:** AUD-01, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 28, 31, 32, 33, 34.
 - **DOCUMENTED / PROPOSAL READY — 5:** AUD-02 (runbook), AUD-26 (retain public reads), AUD-29 (economy cleanup), AUD-30 (branch dispositions), AUD-35 (storage assessment).
-- **OWNER DECISION REQUIRED — 3:** AUD-14 (public cards), AUD-23 (MIGRATION_SECRET), plus the owner-side halves of AUD-29/AUD-30 executions and the AUD-01 branch-protection toggle.
-- **PARTIALLY FIXED — 1:** AUD-23's preparation half (its final decision is the owner item above).
-- AUD-32 is counted inside the FIXED set via Stage 1 (shared escapeHtml) — the table row carries its own status text.
+- **OWNER DECISION REQUIRED — 2:** AUD-14 (public cards), AUD-23 (MIGRATION_SECRET; its preparation half is complete and the endpoint is verified fail-closed). The executions inside AUD-29/AUD-30 and the AUD-01 branch-protection toggle are also owner actions, listed below.
+- Total: 28 + 5 + 2 = 35 — every audit finding is accounted for.
 
 Verification totals: **50 automated tests, all passing** on real PostgreSQL (suite also reproduced 34/34 from a clean venv at Stage 3 and re-run in full at every stage); **pyflakes: 0 findings**; migrations 020 + 021 each proven upgrade → downgrade → upgrade on real PostgreSQL. Production was never touched: no deploy, no production migration, no production data change. The remediation branch (`remediation/audit-2026-11-03`, 8 commits: Stages 0–7) is ready for the owner's review and merge decision.
 

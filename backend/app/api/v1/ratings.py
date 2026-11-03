@@ -44,6 +44,9 @@ async def leaderboard(
             PlayerRating.goals_for.desc(),
             PlayerRating.rating.desc(),
             PlayerRating.wins.desc(),
+            # AUD-27: fully-tied rows need a deterministic final key,
+            # or identical requests can reshuffle them.
+            PlayerRating.user_id,
         )
         .limit(limit)
         .offset(offset)

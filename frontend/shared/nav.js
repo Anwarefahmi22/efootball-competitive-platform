@@ -83,7 +83,11 @@ function renderNav() {
       }).catch(() => { if (!isRetry) setTimeout(() => updateInviteBadge(true), 3000); });
     };
     updateInviteBadge(false);
-    setInterval(() => updateInviteBadge(true), 30000);
+    // AUD-34: keep the timer handle and stop it when the page goes
+    // away — a leaked interval keeps firing (and fetching) for the
+    // whole session on pages restored from the back/forward cache.
+    const badgeTimer = setInterval(() => updateInviteBadge(true), 30000);
+    window.addEventListener("pagehide", () => clearInterval(badgeTimer));
   }
 }
 document.addEventListener("DOMContentLoaded", renderNav);

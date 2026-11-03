@@ -148,7 +148,6 @@
   <script src="/shared/eyes-loader.js"></script>
   <script>
     const numberFormat = new Intl.NumberFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current());
-    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
     const statusText = { registration_open: "التسجيل مفتوح", registration_closed: "التسجيل مغلق", in_progress: "جارية", completed: "منتهية", cancelled: "ملغاة", waiting: "بانتظار المنافس", ready: "جاهزة", in_progress: "جارية" };
     const formatDate = (value) => value ? new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "الموعد غير محدد";
     const stateEmpty = (message) => `<div class="state-empty">${escapeHtml(message)}</div>`;
@@ -184,7 +183,7 @@
       target.innerHTML = list.map((tournament) => {
         const participant = tournament.participants.find((item) => item.user_id === uid);
         const pct = tournament.max_participants ? Math.round(tournament.participant_count * 100 / tournament.max_participants) : 0;
-        return `<article class="tournament-hub-item card"><div class="tournament-card__head"><div><span class="badge ${tournament.status}">${statusText[tournament.status] || tournament.status}</span><h3>${escapeHtml(tournament.name)}</h3></div><span class="tournament-stage">${participant?.seed ? `بذرة #${participant.seed}` : tournament.created_by === uid ? "منظم البطولة" : "المرحلة غير متاحة"}</span></div><div class="tournament-card__meta"><span>${numberFormat.format(tournament.participant_count)}/${numberFormat.format(tournament.max_participants)} مشارك</span><span>${participant?.status === "approved" ? "مشارك مؤكد" : tournament.created_by === uid ? "أنت منظم البطولة" : "حالة المشاركة غير محسومة"}</span></div><div class="progress" role="progressbar" aria-label="نسبة اكتمال البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div><a class="btn btn-ghost" href="/app/tournament.html?id=${encodeURIComponent(tournament.id)}">فتح البطولة</a></article>`;
+        return `<article class="tournament-hub-item card"><div class="tournament-card__head"><div><span class="badge ${escapeHtml(tournament.status)}">${statusText[tournament.status] || tournament.status}</span><h3>${escapeHtml(tournament.name)}</h3></div><span class="tournament-stage">${participant?.seed ? `بذرة #${participant.seed}` : tournament.created_by === uid ? "منظم البطولة" : "المرحلة غير متاحة"}</span></div><div class="tournament-card__meta"><span>${numberFormat.format(tournament.participant_count)}/${numberFormat.format(tournament.max_participants)} مشارك</span><span>${participant?.status === "approved" ? "مشارك مؤكد" : tournament.created_by === uid ? "أنت منظم البطولة" : "حالة المشاركة غير محسومة"}</span></div><div class="progress" role="progressbar" aria-label="نسبة اكتمال البطولة" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div><a class="btn btn-ghost" href="/app/tournament.html?id=${encodeURIComponent(tournament.id)}">فتح البطولة</a></article>`;
       }).join("");
     }
     function renderSeason(seasons, board, uid) {

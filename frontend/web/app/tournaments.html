@@ -74,9 +74,6 @@
   <script>
     const fmtLabel = { single_elimination: "خروج المغلوب", league: "دوري", group_knockout: "مجموعات وإقصائيات" };
     const numberFormat = new Intl.NumberFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current());
-    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
-    }[char]));
 
     const FORMAT_ICON = {
       single_elimination: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h3v4H4z"/><path d="M4 15h3v4H4z"/><path d="M17 10h3v4h-3z"/><path d="M7 7h4v5"/><path d="M7 17h4v-5"/><path d="M11 12h6"/></svg>',
@@ -97,10 +94,10 @@
             ? `<span class="membership-status is-pending">◷ قيد المراجعة</span>` : "";
       return `
       <article class="card hoverable tournament-card">
-        <div class="tcard-band st-${t.status}">
+        <div class="tcard-band st-${escapeHtml(t.status)}">
           <span class="tcard-band__icon">${FORMAT_ICON[t.format] || ""}</span>
           <span class="tcard-band__fmt">${fmtLabel[t.format] || escapeHtml(t.format)}</span>
-          ${t.status === "registration_open" && isFull ? `<span class="badge full">ممتلئة</span>` : `<span class="badge ${t.status}">${statusLabel(t.status)}</span>`}
+          ${t.status === "registration_open" && isFull ? `<span class="badge full">ممتلئة</span>` : `<span class="badge ${escapeHtml(t.status)}">${statusLabel(t.status)}</span>`}
         </div>
         <div class="tournament-card__head">
           <h2>${escapeHtml(t.name)}</h2>

@@ -26,6 +26,17 @@ const Auth = {
     return !!localStorage.getItem(TOKEN_KEY);
   },
   logout() {
+    // AUD-10: revoke the session server-side (best effort — local
+    // cleanup proceeds whatever the network does).
+    const refresh = localStorage.getItem(REFRESH_KEY);
+    if (refresh) {
+      fetch(API_BASE + "/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refresh }),
+        keepalive: true,
+      }).catch(() => {});
+    }
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
@@ -74,7 +85,13 @@ async function refreshAccessToken() {
       if (!res.ok) return false;
       const body = await readResponseBody(res);
       if (!body || !body.access_token) return false;
-      Auth.save({ access_token: body.access_token, refresh_token: refresh });
+      // AUD-10: the server rotates the refresh token on every refresh —
+      // store the new one when it is returned (older servers that only
+      // return an access token keep the existing refresh token).
+      Auth.save({
+        access_token: body.access_token,
+        refresh_token: body.refresh_token || refresh,
+      });
       return true;
     }).finally(() => {
       refreshPromise = null;
@@ -101,6 +118,7 @@ async function apiFetch(path, options = {}) {
       headers["Authorization"] = "Bearer " + Auth.token();
       res = await fetchWithTimeout(API_BASE + path, Object.assign({}, requestOptions, { headers }));
     }
+    if (res.status === 401) forceReauth();
   }
 
   if (!res.ok) {
@@ -120,9 +138,12 @@ async function apiFetchFile(path, options = {}) {
   const requestOptions = Object.assign({}, options, { headers });
   delete requestOptions.noAuth;
   let res = await fetchWithTimeout(API_BASE + path, requestOptions);
-  if (res.status === 401 && !options.noAuth && await refreshAccessToken()) {
-    headers["Authorization"] = "Bearer " + Auth.token();
-    res = await fetchWithTimeout(API_BASE + path, Object.assign({}, requestOptions, { headers }));
+  if (res.status === 401 && !options.noAuth) {
+    if (await refreshAccessToken()) {
+      headers["Authorization"] = "Bearer " + Auth.token();
+      res = await fetchWithTimeout(API_BASE + path, Object.assign({}, requestOptions, { headers }));
+    }
+    if (res.status === 401) forceReauth();
   }
   if (!res.ok) {
     const body = await readResponseBody(res);
@@ -171,6 +192,32 @@ function toast(message, type = "info", ttlMs = 4200) {
 
 function el(id) {
   return document.getElementById(id);
+}
+
+/* The one shared HTML escaper (AUD-32). Every page used to carry its own
+   copy of this function — nine definitions, two of them declared after
+   the code that used them, and the invites page once shipped without
+   one at all. Pages must use this global and never redefine it. */
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }[char]));
+}
+
+/* AUD-34: a 401 that survives a refresh attempt means the session is
+   dead (expired/revoked refresh token). Clear it and return to the
+   login page instead of leaving the user stranded on a broken screen. */
+function forceReauth() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+  localStorage.removeItem(USER_KEY);
+  if (!location.pathname.endsWith("/auth.html")) {
+    location.href = "/auth.html?next=" + encodeURIComponent(location.pathname + location.search);
+  }
 }
 
 function statusLabel(status) {

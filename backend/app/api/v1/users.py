@@ -11,13 +11,14 @@ from app.api.v1.auth import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.core.media import (
-    ALLOWED_CONTENT_TYPES,
     ALLOWED_SQUAD_CONTENT_TYPES,
     MAX_UPLOAD_BYTES,
     delete_media_db,
     media_backend,
     media_id_from_url,
+    normalize_image,
     process_squad_image,
+    read_upload_limited,
     save_avatar_image,
     save_avatar_image_db,
     save_squad_image,
@@ -90,13 +91,18 @@ async def upload_avatar(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PublicProfileRead:
-    content_type = image.content_type or mimetypes.guess_type(image.filename or "")[0]
-    if content_type not in ALLOWED_CONTENT_TYPES:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only JPEG or PNG images accepted")
-    file_bytes = await image.read()
-    if len(file_bytes) > MAX_AVATAR_BYTES:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Avatar image exceeds 5MB limit")
-    extension = ".png" if content_type == "image/png" else ".jpg"
+    # AUD-12/AUD-16: stream with a hard cap, then let Pillow — never the
+    # declared content type — decide whether this is really an image.
+    raw_bytes = await read_upload_limited(image, MAX_AVATAR_BYTES)
+    try:
+        file_bytes = normalize_image(raw_bytes, max_width=512)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded file is not a valid image",
+        )
+    content_type = "image/webp"
+    extension = ".webp"
     if media_backend() == "db":
         media_id = await save_avatar_image_db(db, file_bytes, content_type)
     else:
@@ -135,12 +141,7 @@ async def upload_squad_image(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only JPEG, PNG or WebP images accepted",
         )
-    file_bytes = await image.read()
-    if len(file_bytes) > MAX_UPLOAD_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Squad image exceeds 8MB limit",
-        )
+    file_bytes = await read_upload_limited(image, MAX_UPLOAD_BYTES)
     try:
         webp_bytes = process_squad_image(file_bytes)
     except ValueError:

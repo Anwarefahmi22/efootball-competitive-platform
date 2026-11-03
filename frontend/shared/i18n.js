@@ -723,12 +723,26 @@
     "GOLD • إصدار البطل": { fr: "GOLD • Édition champion", en: "GOLD • Champion edition" },
   });
 
-  const reverse = {};
-  Object.keys(translations).forEach((source) => {
-    Object.keys(translations[source]).forEach((language) => {
-      reverse[translations[source][language]] = source;
+  // AUD-33: this file appends further dictionary blocks with
+  // Object.assign AFTER this point (page-specific strings added over
+  // time). The reverse map (translated text -> Arabic source) used to
+  // be built exactly once, right here, so every entry assigned later
+  // was missing from it: those strings translated Arabic->French fine
+  // but could never map back, and stayed French when switching
+  // French->English. The map now rebuilds itself whenever the
+  // dictionary has grown since the last build.
+  let reverse = {};
+  let reverseKeyCount = -1;
+  function buildReverse() {
+    reverse = {};
+    Object.keys(translations).forEach((source) => {
+      Object.keys(translations[source]).forEach((language) => {
+        reverse[translations[source][language]] = source;
+      });
     });
-  });
+    reverseKeyCount = Object.keys(translations).length;
+  }
+  buildReverse();
 
   function currentLanguage() {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -736,6 +750,7 @@
   }
 
   function sourceText(value) {
+    if (Object.keys(translations).length !== reverseKeyCount) buildReverse();
     return reverse[value] || value;
   }
 
@@ -804,8 +819,15 @@
     document.dispatchEvent(new CustomEvent("languagechange", { detail: { language } }));
   }
 
+  // AUD-34: DOM bursts (a feed render adds dozens of nodes at once)
+  // used to trigger a full apply() per mutation batch. Coalesce a
+  // burst into one apply on the next animation frame.
+  let applyQueued = false;
   const observer = new MutationObserver((mutations) => {
-    if (mutations.some((mutation) => mutation.addedNodes.length)) apply();
+    if (!mutations.some((mutation) => mutation.addedNodes.length)) return;
+    if (applyQueued) return;
+    applyQueued = true;
+    requestAnimationFrame(() => { applyQueued = false; apply(); });
   });
 
   window.i18n = {
@@ -996,5 +1018,45 @@
     "تم قبول التحدي — المباراة جاهزة في الأعلى": { fr: "Défi accepté — le match est prêt en haut de la page", en: "Challenge accepted — the match is ready at the top" },
     "لديك": { fr: "Vous avez", en: "You have" },
     "دعوة بانتظار الرد — اضغط للعرض": { fr: "invitation(s) en attente de réponse — touchez pour ouvrir", en: "invite(s) awaiting your reply — tap to view" }
+  });
+
+  // AUD-07/08/28 (remediation Stage 5): admin verification, collusion
+  // signals, and post/comment deletion strings. Appended last on
+  // purpose — the AUD-33 lazy reverse-map rebuild covers blocks added
+  // anywhere in this file, including this one.
+  Object.assign(translations, {
+    "توثيق اللاعبين": { fr: "Vérification des joueurs", en: "Player verification" },
+    "شارة التوثيق على بطاقات Arena Star": { fr: "Badge de vérification sur les cartes Arena Star", en: "Verification badge on Arena Star cards" },
+    "بحث بالاسم أو رقم الساحة": { fr: "Recherche par nom ou numéro d'arène", en: "Search by name or Arena number" },
+    "اكتب للتصفية…": { fr: "Tapez pour filtrer…", en: "Type to filter…" },
+    "موثّق ✓": { fr: "Vérifié ✓", en: "Verified ✓" },
+    "غير موثّق": { fr: "Non vérifié", en: "Not verified" },
+    "إلغاء التوثيق": { fr: "Retirer la vérification", en: "Remove verification" },
+    "توثيق الحساب": { fr: "Vérifier le compte", en: "Verify account" },
+    "تم توثيق الحساب.": { fr: "Compte vérifié.", en: "Account verified." },
+    "تم إلغاء التوثيق.": { fr: "Vérification retirée.", en: "Verification removed." },
+    "تعذر تحديث التوثيق.": { fr: "Impossible de mettre à jour la vérification.", en: "Could not update verification." },
+    "لا لاعبين مطابقين.": { fr: "Aucun joueur correspondant.", en: "No matching players." },
+    "تعذر تحميل قائمة اللاعبين.": { fr: "Impossible de charger la liste des joueurs.", en: "Could not load the player list." },
+    "إشارات التواطؤ المحتمل": { fr: "Signaux de collusion possible", en: "Possible collusion signals" },
+    "للمراجعة البشرية فقط — ليست إدانة": { fr: "Examen humain uniquement — pas une condamnation", en: "Human review only — not a finding" },
+    "تعذر تحميل الإشارات.": { fr: "Impossible de charger les signaux.", en: "Could not load the signals." },
+    "لا إشارات حاليًا — لم تصل أي ثنائية إلى 3 مواجهات مكتملة.": { fr: "Aucun signal pour le moment — aucune paire n'a atteint 3 rencontres terminées.", en: "No signals right now — no pair has reached 3 completed meetings." },
+    "حذف المنشور": { fr: "Supprimer la publication", en: "Delete post" },
+    "حذف هذا المنشور نهائيًا؟": { fr: "Supprimer définitivement cette publication ?", en: "Delete this post permanently?" },
+    "تم حذف المنشور.": { fr: "Publication supprimée.", en: "Post deleted." },
+    "تعذر حذف المنشور.": { fr: "Impossible de supprimer la publication.", en: "Could not delete the post." },
+    "حذف": { fr: "Supprimer", en: "Delete" },
+    "حذف هذا التعليق؟": { fr: "Supprimer ce commentaire ?", en: "Delete this comment?" },
+    "تم حذف التعليق.": { fr: "Commentaire supprimé.", en: "Comment deleted." },
+    "تعذر حذف التعليق.": { fr: "Impossible de supprimer le commentaire.", en: "Could not delete the comment." }
+  });
+
+  // AUD-03/27 (remediation Stage 6): paginated deck + explicit
+  // ranking criteria strings.
+  Object.assign(translations, {
+    "عرض المزيد من البطاقات": { fr: "Afficher plus de cartes", en: "Show more cards" },
+    "تعذر تحميل المزيد من البطاقات": { fr: "Impossible de charger plus de cartes", en: "Could not load more cards" },
+    "الترتيب: النقاط أولًا، ثم فارق الأهداف، فالأهداف المسجّلة، فتقييم ELO، فعدد الانتصارات.": { fr: "Classement : d'abord les points, puis la différence de buts, les buts marqués, l'ELO, puis le nombre de victoires.", en: "Ranking: points first, then goal difference, goals scored, ELO rating, then wins." }
   });
 })();

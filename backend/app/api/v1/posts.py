@@ -1,24 +1,29 @@
-import mimetypes
+from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse, Response
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.v1.auth import get_current_user
 from app.core.media import (
-    ALLOWED_CONTENT_TYPES,
     MAX_UPLOAD_BYTES,
+    delete_media_db,
     get_media_file,
     is_media_ref,
     media_backend,
     media_ref,
+    normalize_image,
     parse_media_ref,
+    read_upload_limited,
     save_post_image,
     save_post_image_db,
 )
+from app.core.permissions import is_admin
+from app.core.throttle import enforce_quota
 from app.db.session import get_db
 from app.models.match import Match
 from app.models.social import Comment, Post, PostLike, PostType
@@ -64,6 +69,7 @@ async def create_post(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PostRead:
+    await enforce_quota(db, f"quota:post:{current_user.id}", limit=20, window=timedelta(hours=1), lock_for=timedelta(hours=1))
     if content is not None and not content.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -84,17 +90,18 @@ async def create_post(
     }
     post_type = category_types.get(category, PostType.GENERAL)
     if image is not None:
-        content_type = image.content_type or mimetypes.guess_type(image.filename or "")[0]
-        if content_type not in ALLOWED_CONTENT_TYPES:
+        # AUD-12/AUD-16: stream with a hard cap, then decode-verify and
+        # re-encode — the declared content type is never trusted.
+        raw_bytes = await read_upload_limited(image, MAX_UPLOAD_BYTES)
+        try:
+            file_bytes = normalize_image(raw_bytes, max_width=1600)
+        except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Only JPEG or PNG images accepted"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The uploaded file is not a valid image",
             )
-        file_bytes = await image.read()
-        if len(file_bytes) > MAX_UPLOAD_BYTES:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Image exceeds 8MB limit"
-            )
-        extension = ".png" if content_type == "image/png" else ".jpg"
+        content_type = "image/webp"
+        extension = ".webp"
         if media_backend() == "db":
             media_id = await save_post_image_db(db, file_bytes, content_type)
             image_path = media_ref(media_id)
@@ -159,6 +166,53 @@ async def get_post_image(post_id: UUID, db: AsyncSession = Depends(get_db)):
     return FileResponse(post.image_path)
 
 
+@router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_post(
+    post_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """AUD-08: the author — or an admin moderating — can delete a post.
+
+    Comments and likes cascade (ORM delete-orphan + FK CASCADE); a
+    stored image row is removed with the post.
+    """
+    post = (
+        await db.execute(select(Post).where(Post.id == post_id))
+    ).scalar_one_or_none()
+    if post is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+    if post.author_id != current_user.id and not await is_admin(db, current_user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your post")
+    if post.image_path and is_media_ref(post.image_path):
+        await delete_media_db(db, parse_media_ref(post.image_path))
+    await db.delete(post)
+    await db.commit()
+
+
+@router.delete(
+    "/{post_id}/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_comment(
+    post_id: UUID,
+    comment_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """AUD-08: the comment's author — or an admin — can delete it."""
+    comment = (
+        await db.execute(
+            select(Comment).where(Comment.id == comment_id, Comment.post_id == post_id)
+        )
+    ).scalar_one_or_none()
+    if comment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+    if comment.author_id != current_user.id and not await is_admin(db, current_user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your comment")
+    await db.delete(comment)
+    await db.commit()
+
+
 @router.post("/{post_id}/like", status_code=status.HTTP_204_NO_CONTENT)
 async def like_post(
     post_id: UUID,
@@ -175,7 +229,13 @@ async def like_post(
     if existing.scalar_one_or_none() is not None:
         return
     db.add(PostLike(post_id=post_id, user_id=current_user.id))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # AUD-15: concurrent duplicate like — idempotent endpoint, the
+        # desired end state already exists; resolve silently like the
+        # pre-check above does.
+        await db.rollback()
 
 
 @router.delete("/{post_id}/like", status_code=status.HTTP_204_NO_CONTENT)
@@ -200,6 +260,7 @@ async def add_comment(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CommentRead:
+    await enforce_quota(db, f"quota:comment:{current_user.id}", limit=60, window=timedelta(hours=1), lock_for=timedelta(hours=1))
     post_result = await db.execute(select(Post).where(Post.id == post_id))
     if post_result.scalar_one_or_none() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")

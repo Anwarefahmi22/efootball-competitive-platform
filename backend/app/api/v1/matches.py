@@ -1,4 +1,3 @@
-import mimetypes
 import uuid as uuid_module
 from datetime import datetime, timezone
 from uuid import UUID
@@ -13,7 +12,9 @@ from app.core.bracket import advance_winner
 from app.core.league import compute_standings, is_league_complete
 from app.core.permissions import get_current_admin, is_admin
 from app.core.rating import new_rating, new_rating_draw
-from app.core.storage import ALLOWED_CONTENT_TYPES, MAX_UPLOAD_BYTES
+from app.core.competition import MAX_SCORE
+from app.core.media import evidence_media_type, normalize_image, read_upload_limited
+from app.core.storage import MAX_UPLOAD_BYTES
 from app.core.trust import record_confirmed_match, record_dispute_filed, record_dispute_resolved
 from app.db.session import get_db
 from app.models.evidence import MatchEvidence
@@ -221,6 +222,12 @@ async def submit_result(
         # numbers, so non-negative scores are the established domain rule;
         # a negative score would silently subtract from goals_for.
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Scores cannot be negative")
+    if score_a > MAX_SCORE or score_b > MAX_SCORE:
+        # AUD-25: plausibility cap, validated before any state claim.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Scores cannot exceed {MAX_SCORE}",
+        )
     if match.status not in {MatchStatus.READY, MatchStatus.IN_PROGRESS}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Match is not accepting a new result submission")
 
@@ -230,13 +237,17 @@ async def submit_result(
     if score_a == score_b and not draws_allowed:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Draws are not allowed")
 
-    content_type = image.content_type or mimetypes.guess_type(image.filename or "")[0]
-    if content_type not in ALLOWED_CONTENT_TYPES:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only JPEG or PNG images are accepted")
-    file_bytes = await image.read()
-    if len(file_bytes) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image exceeds 8MB limit")
-    extension = ".png" if content_type == "image/png" else ".jpg"
+    # AUD-12/AUD-16: streamed size cap, then Pillow decode + WebP
+    # re-encode — evidence bytes are normalized like every other image.
+    raw_bytes = await read_upload_limited(image, MAX_UPLOAD_BYTES)
+    try:
+        file_bytes = normalize_image(raw_bytes, max_width=2048, quality=88)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded file is not a valid image",
+        )
+    extension = ".webp"
     # Claim the transition first: two concurrent submissions must not both
     # attach evidence to the same match, because /confirm acts on the latest
     # evidence row and the losing claim would silently become the result.
@@ -282,8 +293,7 @@ async def get_evidence_image(match_id: UUID, evidence_id: UUID, current_user: Us
     evidence = result.scalar_one_or_none()
     if evidence is None or evidence.image_data is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found")
-    media_type = "image/png" if (evidence.image_path or "").endswith(".png") else "image/jpeg"
-    return Response(content=evidence.image_data, media_type=media_type)
+    return Response(content=evidence.image_data, media_type=evidence_media_type(evidence.image_path))
 
 
 @router.post("/{match_id}/confirm", response_model=MatchRead)

@@ -3,6 +3,7 @@ import uuid
 from pathlib import Path
 from uuid import UUID
 
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -94,6 +95,59 @@ def save_avatar_image(user_id: str, file_bytes: bytes, extension: str) -> str:
     return str(path)
 
 
+async def read_upload_limited(upload: UploadFile, max_bytes: int) -> bytes:
+    """Stream an upload into memory, aborting the moment it exceeds the cap.
+
+    AUD-12: the previous handlers did ``await upload.read()`` and only then
+    compared lengths, so an arbitrarily large multipart body was fully
+    buffered in a serverless function's RAM before being rejected. This
+    reader counts chunks as they arrive and fails fast with 413.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await upload.read(64 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="Uploaded file is too large",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def normalize_image(
+    file_bytes: bytes, *, max_width: int | None, quality: int = 85
+) -> bytes:
+    """Decode an uploaded image and re-encode it as WebP (AUD-16).
+
+    The declared content type is never trusted: Pillow must actually
+    decode the bytes. Anything undecodable raises ValueError. The
+    re-encode strips metadata and any payload smuggled inside a valid
+    image container. ``process_squad_image`` below is this same policy
+    with the squad geometry.
+    """
+    import io
+
+    from PIL import Image, ImageOps
+
+    try:
+        with Image.open(io.BytesIO(file_bytes)) as image:
+            image = ImageOps.exif_transpose(image)
+            image = image.convert("RGB")
+            if max_width is not None and image.width > max_width:
+                height = round(image.height * max_width / image.width)
+                image = image.resize((max_width, height), Image.LANCZOS)
+            out = io.BytesIO()
+            image.save(out, "WEBP", quality=quality, method=6)
+            return out.getvalue()
+    except Exception as exc:  # PIL raises many exception types on bad input
+        raise ValueError("Undecodable image") from exc
+
+
 SQUAD_MEDIA_ROOT = Path(__file__).resolve().parent.parent.parent / "storage" / "squads"
 ALLOWED_SQUAD_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 # Screenshots are wide (the standard eFootball squad shot is ~2048x930);
@@ -142,6 +196,21 @@ def save_squad_image(user_id: str, file_bytes: bytes) -> str:
     with open(path, "wb") as f:
         f.write(file_bytes)
     return str(path)
+
+
+def evidence_media_type(image_path: str | None) -> str:
+    """Content type for stored evidence bytes, by stored file extension.
+
+    Legacy rows are .png/.jpg; rows written after the AUD-16 normalization
+    are .webp. Anything else falls back to JPEG, matching the historical
+    behaviour of the two evidence-image endpoints.
+    """
+    path = (image_path or "").lower()
+    if path.endswith(".png"):
+        return "image/png"
+    if path.endswith(".webp"):
+        return "image/webp"
+    return "image/jpeg"
 
 
 def media_id_from_url(url: str | None) -> str | None:

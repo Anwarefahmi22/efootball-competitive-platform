@@ -1,7 +1,8 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -18,12 +19,20 @@ router = APIRouter()
 
 @router.get("/cards", response_model=list[PlayerCardRead])
 async def player_cards(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[PlayerCardRead]:
-    """Every active player's Arena Star card, strongest first (ELO desc,
+    """Active players' Arena Star cards, strongest first (ELO desc,
     arena number as tiebreak). Players with no documented match yet have
-    no PlayerRating row — they default to the starting 1000 / zeros."""
+    no PlayerRating row — they default to the starting 1000 / zeros.
+
+    AUD-03: the response is paginated (limit/offset) — it used to ship
+    every card on the platform in one payload. The deck order above is
+    the pagination order: pages are stable slices of the same sorted
+    list, so a client walking the pages sees every player exactly once.
+    """
     users_result = await db.execute(
         select(User)
         .options(selectinload(User.profile))
@@ -91,7 +100,7 @@ async def player_cards(
             )
         )
     cards.sort(key=lambda card: (-card.rating, card.arena_no))
-    return cards
+    return cards[offset : offset + limit]
 
 
 @router.post("/{user_id}/like", status_code=status.HTTP_204_NO_CONTENT)
@@ -116,7 +125,13 @@ async def like_player(
     if existing.scalar_one_or_none() is not None:
         return
     db.add(PlayerLike(player_id=user_id, user_id=current_user.id))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # AUD-15: a concurrent duplicate like landed first. This endpoint
+        # is idempotent by contract (a pre-existing like is a silent 204),
+        # so the race resolves to the same end state — not an error.
+        await db.rollback()
 
 
 @router.delete("/{user_id}/like", status_code=status.HTTP_204_NO_CONTENT)

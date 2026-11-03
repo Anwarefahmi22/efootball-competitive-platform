@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.permissions import get_current_admin
 from app.db.session import get_db
+from app.schemas.user import AdminVerifyRead
 from app.models.evidence import MatchEvidence
 from app.models.match import Match, MatchStatus
 from app.models.tournament import Tournament
@@ -244,6 +245,45 @@ async def dispute_detail(
         ],
         collusion_matches_together=together,
     )
+
+
+async def _set_verified(db: AsyncSession, user_id: UUID, value: bool) -> AdminVerifyRead:
+    """AUD-07: the admin verify/unverify action.
+
+    The verified badge used to be settable only by direct database
+    access, so the trust signal shown on Arena Star cards had no
+    legitimate path to ever become true. Idempotent: setting the state
+    the profile already has is a 200 no-op, so admin UIs can retry
+    safely.
+    """
+    user = (
+        await db.execute(select(User).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.is_verified = value
+    await db.commit()
+    return AdminVerifyRead(
+        user_id=user.id, display_name=user.display_name, is_verified=value
+    )
+
+
+@router.post("/users/{user_id}/verify", response_model=AdminVerifyRead)
+async def verify_user(
+    user_id: UUID,
+    _admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+) -> AdminVerifyRead:
+    return await _set_verified(db, user_id, True)
+
+
+@router.delete("/users/{user_id}/verify", response_model=AdminVerifyRead)
+async def unverify_user(
+    user_id: UUID,
+    _admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+) -> AdminVerifyRead:
+    return await _set_verified(db, user_id, False)
 
 
 @router.get("/trust/{user_id}/events", response_model=list[TrustEventRead])

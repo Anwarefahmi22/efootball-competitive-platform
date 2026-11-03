@@ -14,7 +14,7 @@
 <body>
   <div class="container">
     <div class="page-heading">
-      <div><span class="eyebrow">ساحة المنافسة</span><h1 class="page-title">📊 التصنيف العام</h1><p class="muted">النقاط أولا، ثم فارق الأهداف والأهداف المسجلة، مع ELO ككاسر تعادل.</p></div>
+      <div><span class="eyebrow">ساحة المنافسة</span><h1 class="page-title">📊 التصنيف العام</h1><p class="muted">الترتيب: النقاط أولًا، ثم فارق الأهداف، فالأهداف المسجّلة، فتقييم ELO، فعدد الانتصارات.</p></div>
       <label class="search-field" id="search-wrap" for="player-search">بحث عن لاعب<input class="field" id="player-search" type="search" placeholder="اكتب اسم اللاعب…" autocomplete="off" /></label>
     </div>
     <div id="my-rank" class="my-rank" hidden></div>
@@ -31,16 +31,22 @@
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
   <script>
-    (async () => {
-      const PODIUM_ART = `<svg class="board-empty__art" viewBox="0 0 200 108" aria-hidden="true"><g fill="none" stroke="#a3ff12" stroke-width="2"><circle cx="55" cy="34" r="13" stroke-opacity=".45" stroke-dasharray="4 5"/><circle cx="100" cy="22" r="15"/><circle cx="145" cy="40" r="12" stroke-opacity=".3" stroke-dasharray="4 5"/></g><g fill="#143325" stroke="#1f4a33"><rect x="76" y="58" width="48" height="42" rx="4"/><rect x="28" y="72" width="44" height="28" rx="4"/><rect x="128" y="78" width="44" height="22" rx="4"/></g><g fill="#a3ff12" font-family="IBM Plex Sans Arabic, sans-serif" font-weight="800" text-anchor="middle"><text x="100" y="86" font-size="17">1</text><text x="50" y="92" font-size="13" fill-opacity=".55">2</text><text x="150" y="95" font-size="12" fill-opacity=".4">3</text></g></svg>`;
-      const titleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف الساحة" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
+    const PODIUM_ART = `<svg class="board-empty__art" viewBox="0 0 200 108" aria-hidden="true"><g fill="none" stroke="#a3ff12" stroke-width="2"><circle cx="55" cy="34" r="13" stroke-opacity=".45" stroke-dasharray="4 5"/><circle cx="100" cy="22" r="15"/><circle cx="145" cy="40" r="12" stroke-opacity=".3" stroke-dasharray="4 5"/></g><g fill="#143325" stroke="#1f4a33"><rect x="76" y="58" width="48" height="42" rx="4"/><rect x="28" y="72" width="44" height="28" rx="4"/><rect x="128" y="78" width="44" height="22" rx="4"/></g><g fill="#a3ff12" font-family="IBM Plex Sans Arabic, sans-serif" font-weight="800" text-anchor="middle"><text x="100" y="86" font-size="17">1</text><text x="50" y="92" font-size="13" fill-opacity=".55">2</text><text x="150" y="95" font-size="12" fill-opacity=".4">3</text></g></svg>`;
+    const titleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف الساحة" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
+    /* AUD-34: named loader with an explicit loading state and a retry
+       path — the page used to be a one-shot IIFE whose failure row
+       offered no way back. */
+    async function loadRatings() {
+      el("body").innerHTML = `<tr><td colspan="11" class="empty"><div class="spinner"></div> جارٍ تحميل التصنيف…</td></tr>`;
       try {
-        const rows = await apiFetch("/ratings/leaderboard");
-        const search = el("player-search");
         // The viewer's id comes from /auth/me directly: the localStorage
         // copy is only written by some pages, so relying on it left the
         // my-rank chip and row highlight missing for most sessions.
-        const me = await apiFetch("/auth/me").catch(() => null);
+        const [rows, me] = await Promise.all([
+          apiFetch("/ratings/leaderboard"),
+          apiFetch("/auth/me").catch(() => null),
+        ]);
+        const search = el("player-search");
         const myId = me?.id;
         const initials = (name) => escapeHtml((name || "EA").trim().slice(0, 2).toUpperCase());
         if (!rows.length) {
@@ -91,10 +97,11 @@
           render(all.filter(({ r }) => r.display_name.toLocaleLowerCase().includes(term)));
         });
       } catch (err) {
-        el("body").innerHTML = `<tr><td colspan="11" class="empty" role="alert">${escapeHtml(err.detail || "تعذر التحميل")}</td></tr>`;
+        el("body").innerHTML = `<tr><td colspan="11" class="empty" role="alert">${escapeHtml(err.detail || "تعذر التحميل")}<br /><button class="btn btn-ghost" type="button" id="retry-ratings" style="margin-top:10px">إعادة المحاولة</button></td></tr>`;
+        el("retry-ratings")?.addEventListener("click", loadRatings);
       }
-    })();
-    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+    }
+    loadRatings();
   </script>
 </body>
 </html>

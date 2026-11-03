@@ -58,7 +58,6 @@
   <script>
     const id = new URLSearchParams(location.search).get("id");
     const labels = { waiting: "بانتظار المباراة", ready: "جاهزة", in_progress: "جارية", result_submitted: "النتيجة مرسلة", disputed: "قيد النزاع", completed: "مكتملة", cancelled: "ملغاة" };
-    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
     const formatDate = (value) => value ? new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "غير محدد";
     const fallbackPlayer = (id, label) => ({ display_name: id ? `${label} · ${String(id).slice(0, 8)}` : "بانتظار التحديد", avatar_url: null, rating: null });
     let currentMatch;
@@ -122,7 +121,7 @@
       const title = context.tournament?.name || "مباراة تنافسية";
       const outcomeA = match.status === "completed" ? (match.winner_id ? (match.winner_id === match.player_a_id ? "winner" : "") : "draw") : "";
       const outcomeB = match.status === "completed" ? (match.winner_id ? (match.winner_id === match.player_b_id ? "winner" : "") : "draw") : "";
-      el("match-summary").innerHTML = `<div class="match-hero-top"><div><span class="eyebrow">غرفة المباراة</span><h1>${escapeHtml(title)}</h1><p class="muted">الجولة ${escapeHtml(match.round_number)} · ${match.scheduled_at ? `موعدها ${formatDate(match.scheduled_at)}` : "الموعد غير محدد"}</p></div><span><span class="badge ${match.status}">${labels[match.status] || escapeHtml(match.status)}</span> <span class="badge">${ROLE_LABELS[state.role]}</span></span></div><div class="match-players">${playerCard(playerA, "a", outcomeA)}<div class="match-versus-mark"><span>VS</span><small>مواجهة</small></div>${playerCard(playerB, "b", outcomeB)}</div><div class="match-hero__score"><span>${match.score_a ?? "—"}</span><b>:</b><span>${match.score_b ?? "—"}</span></div><p class="match-room-note">النتيجة تصبح رسمية بعد مراجعة الطرف الآخر واعتماد الدليل.</p>`;
+      el("match-summary").innerHTML = `<div class="match-hero-top"><div><span class="eyebrow">غرفة المباراة</span><h1>${escapeHtml(title)}</h1><p class="muted">الجولة ${escapeHtml(match.round_number)} · ${match.scheduled_at ? `موعدها ${formatDate(match.scheduled_at)}` : "الموعد غير محدد"}</p></div><span><span class="badge ${escapeHtml(match.status)}">${labels[match.status] || escapeHtml(match.status)}</span> <span class="badge">${ROLE_LABELS[state.role]}</span></span></div><div class="match-players">${playerCard(playerA, "a", outcomeA)}<div class="match-versus-mark"><span>VS</span><small>مواجهة</small></div>${playerCard(playerB, "b", outcomeB)}</div><div class="match-hero__score"><span>${match.score_a ?? "—"}</span><b>:</b><span>${match.score_b ?? "—"}</span></div><p class="match-room-note">النتيجة تصبح رسمية بعد مراجعة الطرف الآخر واعتماد الدليل.</p>`;
     }
 
     // Role-aware visibility for the result / confirmation / dispute controls.

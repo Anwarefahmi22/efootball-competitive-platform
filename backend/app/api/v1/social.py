@@ -5,7 +5,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import get_current_user
+from datetime import timedelta
+
 from app.core.permissions import get_current_user_optional
+from app.core.throttle import enforce_quota
 from app.db.session import get_db
 from app.models.social import Follow
 from app.models.user import User
@@ -20,6 +23,7 @@ async def follow_user(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
+    await enforce_quota(db, f"quota:follow:{current_user.id}", limit=120, window=timedelta(hours=1), lock_for=timedelta(hours=1))
     if user_id == current_user.id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot follow yourself")
     target = await db.execute(select(User).where(User.id == user_id))

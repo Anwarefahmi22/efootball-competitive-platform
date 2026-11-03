@@ -60,6 +60,26 @@
     <section class="card" id="adm-history-panel" hidden>
       <div id="adm-history"></div>
     </section>
+
+    <!-- AUD-07: account verification used to require direct database
+         access. The admin toggles it here; the badge shows on Arena
+         Star cards and public profiles. -->
+    <section class="card" id="adm-verify-panel">
+      <div class="section-heading"><h2>توثيق اللاعبين</h2><span class="muted">شارة التوثيق على بطاقات Arena Star</span></div>
+      <div class="form-grid">
+        <div><label class="lbl" for="adm-verify-q">بحث بالاسم أو رقم الساحة</label>
+          <input class="field" id="adm-verify-q" type="search" placeholder="اكتب للتصفية…" /></div>
+      </div>
+      <div id="adm-verify-list"><p class="muted">جارٍ التحميل…</p></div>
+    </section>
+
+    <!-- AUD-28: collusion signals across tournament AND challenge
+         matches. Human review only — a signal is never a verdict and
+         nothing here applies any penalty. -->
+    <section class="card" id="adm-signals-panel">
+      <div class="section-heading"><h2>إشارات التواطؤ المحتمل</h2><span class="muted">للمراجعة البشرية فقط — ليست إدانة</span></div>
+      <div id="adm-signals"><p class="muted">جارٍ التحميل…</p></div>
+    </section>
   </div>
 
   <script src="/shared/i18n.js"></script>
@@ -85,7 +105,7 @@
     const reasonText = (r) => (r ? REASON_LABELS[r] || r : "—");
     const state = { rows: [], current: null, historyFor: null };
 
-    const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
+    const esc = escapeHtml; // AUD-32: shared escaper from api.js
     const fmt = (n) => new Intl.NumberFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current()).format(n ?? 0);
     const when = (value) => value ? new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "غير محدد";
     const statusText = (s) => STATUS_LABELS[s] || s;
@@ -269,12 +289,74 @@
       }
     }
 
+    /* ---- AUD-07: verification panel ---- */
+    const verifyState = { cards: [] };
+
+    function renderVerifyList() {
+      const q = (el("adm-verify-q").value || "").trim().toLowerCase();
+      const rows = verifyState.cards.filter((c) =>
+        !q || (c.display_name || "").toLowerCase().includes(q) || String(c.arena_no).includes(q));
+      el("adm-verify-list").innerHTML = rows.length ? rows.map((c) => `
+        <div class="draw-chip">
+          <strong><bdi>${esc(c.display_name)}</bdi></strong>
+          <span>ARENA #${fmt(c.arena_no)}</span>
+          <span>${c.is_verified ? "موثّق ✓" : "غير موثّق"}</span>
+          <button class="btn ${c.is_verified ? "btn-ghost" : "btn-primary"}" type="button"
+            data-verify="${esc(c.user_id)}" data-on="${c.is_verified ? "0" : "1"}">${c.is_verified ? "إلغاء التوثيق" : "توثيق الحساب"}</button>
+        </div>`).join("")
+        : `<p class="muted">لا لاعبين مطابقين.</p>`;
+      el("adm-verify-list").querySelectorAll("[data-verify]").forEach((b) =>
+        b.addEventListener("click", () => toggleVerify(b.dataset.verify, b.dataset.on === "1", b)));
+    }
+
+    async function toggleVerify(userId, turnOn, btn) {
+      btn.disabled = true;
+      try {
+        const res = await apiFetch("/admin/users/" + encodeURIComponent(userId) + "/verify", {
+          method: turnOn ? "POST" : "DELETE",
+        });
+        const card = verifyState.cards.find((c) => c.user_id === userId);
+        if (card) card.is_verified = res.is_verified;
+        toast(res.is_verified ? "تم توثيق الحساب." : "تم إلغاء التوثيق.");
+        renderVerifyList();
+      } catch (err) {
+        toast(err?.detail || "تعذر تحديث التوثيق.", "error");
+        btn.disabled = false;
+      }
+    }
+
+    async function loadVerifyPanel() {
+      try {
+        verifyState.cards = await apiFetch("/players/cards?limit=100");
+        renderVerifyList();
+      } catch (err) {
+        el("adm-verify-list").innerHTML = `<p class="muted">${esc(err?.detail || "تعذر تحميل قائمة اللاعبين.")}</p>`;
+      }
+    }
+
+    /* ---- AUD-28: collusion signals panel ---- */
+    async function loadSignals() {
+      try {
+        const rows = await apiFetch("/fraud/collusion-candidates?min_matches=3");
+        el("adm-signals").innerHTML = rows.length ? rows.map((r) => `
+          <div class="draw-chip">
+            <strong><bdi>${esc(r.player_a_name)}</bdi> × <bdi>${esc(r.player_b_name)}</bdi></strong>
+            <span>${fmt(r.matches_together)} مواجهة (${fmt(r.challenges_together)} منها تحديات)</span>
+            <span>فوز الأول ${fmt(r.a_wins)} · فوز الثاني ${fmt(r.b_wins)} · تعادل ${fmt(r.draws)}</span>
+          </div>`).join("")
+          : `<p class="muted">لا إشارات حاليًا — لم تصل أي ثنائية إلى 3 مواجهات مكتملة.</p>`;
+      } catch (err) {
+        el("adm-signals").innerHTML = `<p class="muted">${esc(err?.detail || "تعذر تحميل الإشارات.")}</p>`;
+      }
+    }
+
     el("adm-refresh").addEventListener("click", loadQueue);
     el("adm-state").addEventListener("change", loadQueue);
     el("adm-decide").addEventListener("click", decide);
     el("adm-cancel").addEventListener("click", () => { show("adm-review", false); state.current = null; });
+    el("adm-verify-q").addEventListener("input", renderVerifyList);
 
-    requireAuthOrRedirect().then((ok) => { if (ok) loadQueue(); });
+    requireAuthOrRedirect().then((ok) => { if (ok) { loadQueue(); loadVerifyPanel(); loadSignals(); } });
   </script>
 </body>
 </html>

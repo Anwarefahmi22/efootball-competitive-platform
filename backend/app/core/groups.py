@@ -6,7 +6,6 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.league import build_round_robin_schedule
 from app.models.group import Group

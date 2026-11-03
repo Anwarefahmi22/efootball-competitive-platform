@@ -8,6 +8,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.match import Match
+    from app.models.user import User
+
 
 class TournamentFormat(str, Enum):
     SINGLE_ELIMINATION = "single_elimination"
@@ -66,7 +72,7 @@ class Tournament(Base):
     participants: Mapped[list["TournamentParticipant"]] = relationship(
         back_populates="tournament", cascade="all, delete-orphan"
     )
-    matches: Mapped[list["Match"]] = relationship(back_populates="tournament")  # noqa: F821
+    matches: Mapped[list["Match"]] = relationship(back_populates="tournament")
 
 
 class TournamentParticipant(Base):
@@ -90,4 +96,4 @@ class TournamentParticipant(Base):
     )
 
     tournament: Mapped[Tournament] = relationship(back_populates="participants")
-    user: Mapped["User"] = relationship()  # noqa: F821
+    user: Mapped["User"] = relationship()

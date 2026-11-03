@@ -1,7 +1,11 @@
-/* arena3d.js v10 — hand-rolled WebGL renderer for the dashboard's football
+/* arena3d.js v11 — hand-rolled WebGL renderer for the dashboard's football
    and arena cup, shaded to a photographic standard (user's bar: the landing
    page's real ball and a real 🏆). No framework, no CDN (CSP script-src
-   'self'). Round-3 lessons baked in:
+   'self'). v11: the cup is rebuilt as the UEFA Champions League trophy —
+   a silver amphora body on a stepped plinth with the two giant swept
+   "big ear" handles (tapered, z-flattened sweep tubes), replacing the
+   generic gold chalice + plaque. Animation (spin, rock, orbiting key
+   light, floor reflection) is unchanged. Round-3 lessons baked in:
    - A ball reads as a render when its surface is smooth: v3 gives it a
      true cellular pebble-grain height field (3D Voronoi) used as a bump
      map, and folds the panel seams into the same height field so the
@@ -178,12 +182,15 @@
     "    vec3 r = reflect(-v, n);",
     "    vec3 env = studioEnv(r);",
     "    float brush = vnoise(vec3(vObj.x * 140.0, vObj.y * 10.0, vObj.z * 140.0));",
-    "    vec3 envM = env * (0.90 + 0.16 * brush);",
+    "    vec3 envM = env * vec3(0.90, 0.97, 1.10) * (0.90 + 0.16 * brush);",
+    "    float az = atan(r.x, r.z);",
+    "    envM += vec3(1.10, 1.13, 1.18) * pow(max(0.0, sin(az + 0.7)), 8.0) * 0.55 * smoothstep(0.05, 0.75, r.y * 0.5 + 0.5);",
+    "    envM = mix(envM, envM * envM * 1.4, 0.68);",
     "    col = vCol * envM * 1.5;",
     "    col += vCol * (d1 * 0.18 + d2 * 0.10);",
     "    vec3 hv = normalize(l1 + v);",
-    "    col += vCol * pow(max(dot(n, hv), 0.0), 90.0) * 1.1;",
-    "    col += vec3(1.0, 0.85, 0.55) * pow(max(dot(r, l1), 0.0), 42.0) * 0.4;",
+    "    col += vCol * pow(max(dot(n, hv), 0.0), 90.0) * 0.55;",
+    "    col += vec3(0.95, 0.98, 1.05) * pow(max(dot(r, l1), 0.0), 42.0) * 0.25;",
     "    col *= 0.92 + 0.16 * fres;",
     "  } else {",
     "    float rr = length(vec2(vObj.x, vObj.y - 1.30)) / 0.29;",
@@ -273,26 +280,6 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  function torus(cx, cy, cz, R, tube, arcFrom, arcTo, flip, color) {
-    var pos = [], norm = [], col = [], idx = [];
-    var U = 26, V = 12;
-    for (var j = 0; j <= V; j++) {
-      var vv = (j / V) * Math.PI * 2, cv = Math.cos(vv), sv = Math.sin(vv);
-      for (var i = 0; i <= U; i++) {
-        var uu = arcFrom + (arcTo - arcFrom) * (i / U), cu = Math.cos(uu), su = Math.sin(uu);
-        pos.push(cx + (R + tube * cv) * cu, cy + (R + tube * cv) * su, cz + tube * sv);
-        norm.push(cv * cu, cv * su, sv);
-        col.push(color[0], color[1], color[2]);
-      }
-    }
-    for (var jj = 0; jj < V; jj++) for (var ii = 0; ii < U; ii++) {
-      var a = jj * (U + 1) + ii, b = a + U + 1;
-      if (flip) idx.push(a, b, a + 1, b, b + 1, a + 1);
-      else idx.push(a, a + 1, b, b, a + 1, b + 1);
-    }
-    return { pos: pos, norm: norm, col: col, idx: idx };
-  }
-
   /* ring lying around the Y axis (lip and stem detailing) */
   function ringY(cy, R, tube, color) {
     var pos = [], norm = [], col = [], idx = [];
@@ -313,25 +300,47 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  /* curved plaque: a medallion wrapped onto the cup's flared bowl —
-     z follows the bowl (flares with y, curves back at the sides) */
-  function disc(cx, cy, cz, r, sz, color) {
+  /* Tapered tube swept along a Catmull-Rom curve in the XY plane — the
+     Champions League trophy's "big ears". radiusFn(t) shapes the taper
+     (thick at the forged attachments, slim at the lower sweep); the
+     section is flattened in z (flat < 1) like the real forged handles.
+     Curve endpoints are placed INSIDE the body so the open tube ends
+     are buried in the mesh and need no caps. */
+  function sweepTube(points, radiusFn, flat, color) {
     var pos = [], norm = [], col = [], idx = [];
-    var W = 20, H = 14;
-    for (var j = 0; j <= H; j++) {
-      var v = j / H, th = v * Math.PI;
-      for (var i = 0; i <= W; i++) {
-        var u = i / W, ph = u * Math.PI * 2;
-        var x = Math.sin(th) * Math.cos(ph), y = Math.cos(th), z = Math.sin(th) * Math.sin(ph);
-        var lx = x * r, ly = y * r;
-        pos.push(cx + lx, cy + ly, cz + z * r * sz + 0.48 * ly - 0.55 * lx * lx);
-        norm.push(x * 0.65, y * 0.65, z);
+    var SEG = 56, SIDES = 16;
+    function cr(p0, p1, p2, p3, t) {
+      var t2 = t * t, t3 = t2 * t;
+      return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+    }
+    var centers = [], tangents = [];
+    for (var s = 0; s <= SEG; s++) {
+      var gt = (s / SEG) * (points.length - 1);
+      var seg = Math.min(points.length - 2, Math.floor(gt));
+      var lt = gt - seg;
+      var p0 = points[Math.max(0, seg - 1)], p1 = points[seg], p2 = points[seg + 1], p3 = points[Math.min(points.length - 1, seg + 2)];
+      centers.push([cr(p0[0], p1[0], p2[0], p3[0], lt), cr(p0[1], p1[1], p2[1], p3[1], lt)]);
+    }
+    for (var s2 = 0; s2 <= SEG; s2++) {
+      var ca = centers[Math.max(0, s2 - 1)], cb = centers[Math.min(SEG, s2 + 1)];
+      var tx = cb[0] - ca[0], ty = cb[1] - ca[1], tl = Math.hypot(tx, ty) || 1;
+      tangents.push([tx / tl, ty / tl]);
+    }
+    for (var j = 0; j <= SEG; j++) {
+      var t = j / SEG, r = radiusFn(t);
+      var cx = centers[j][0], cy = centers[j][1];
+      var nx = -tangents[j][1], ny = tangents[j][0];
+      for (var i = 0; i <= SIDES; i++) {
+        var th = (i / SIDES) * Math.PI * 2, ct = Math.cos(th), st = Math.sin(th);
+        pos.push(cx + nx * ct * r, cy + ny * ct * r, st * r * flat);
+        var nl = Math.hypot(ct, st / flat) || 1;
+        norm.push(nx * ct / nl, ny * ct / nl, (st / flat) / nl);
         col.push(color[0], color[1], color[2]);
       }
     }
-    for (var jj = 0; jj < H; jj++) for (var ii = 0; ii < W; ii++) {
-      var a = jj * (W + 1) + ii, b = a + W + 1;
-      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    for (var jj = 0; jj < SEG; jj++) for (var ii = 0; ii < SIDES; ii++) {
+      var a = jj * (SIDES + 1) + ii, b = a + SIDES + 1;
+      idx.push(a, a + 1, b, b, a + 1, b + 1);
     }
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
@@ -346,28 +355,50 @@
     return { pos: pos, norm: norm, col: col, idx: idx };
   }
 
-  var GOLD = [0.93, 0.72, 0.28], DEEPGOLD = [0.72, 0.50, 0.15], MEDAL = [1.0, 0.84, 0.42];
+  /* Polished sterling silver (the Champions League cup is silver, not
+     gold): a cool near-white tint slightly above 1.0 so the env shader
+     keeps bright, defined softbox bands after tonemapping. */
+  var SILVER = [0.90, 0.94, 1.02];
+  function mirrorX(g) {
+    var pos = [], norm = [], col = [], idx = [];
+    for (var i = 0; i < g.pos.length; i += 3) {
+      pos.push(-g.pos[i], g.pos[i + 1], g.pos[i + 2]);
+      norm.push(-g.norm[i], g.norm[i + 1], g.norm[i + 2]);
+      col.push(g.col[i], g.col[i + 1], g.col[i + 2]);
+    }
+    for (var j = 0; j < g.idx.length; j += 3) idx.push(g.idx[j], g.idx[j + 2], g.idx[j + 1]);
+    return { pos: pos, norm: norm, col: col, idx: idx };
+  }
   function buildTrophyParts() {
+    /* Champions League silhouette: stepped plinth → short knopped
+       stem → big amphora body (widest at ~55% height) → narrow neck →
+       flared lip with a rolled rim (profile turns back inside so the
+       rim has real thickness from above). Same 0..1.92 height box as
+       the old cup, so framing, scale and the reflection base are
+       untouched. */
     var profile = [
-      [0.0, 0.0], [0.52, 0.0], [0.56, 0.05], [0.56, 0.13], [0.32, 0.19], [0.21, 0.28],
-      [0.175, 0.52], [0.175, 0.72], [0.28, 0.92], [0.48, 1.16], [0.64, 1.44],
-      [0.72, 1.70], [0.74, 1.88], [0.70, 1.92], [0.665, 1.80]
+      [0.0, 0.0], [0.42, 0.0], [0.465, 0.01], [0.48, 0.05], [0.48, 0.11],
+      [0.445, 0.15], [0.42, 0.17], [0.42, 0.23], [0.365, 0.28], [0.29, 0.315],
+      [0.235, 0.35], [0.222, 0.42], [0.235, 0.48], [0.29, 0.56], [0.385, 0.68],
+      [0.50, 0.84], [0.565, 0.97], [0.585, 1.08], [0.555, 1.20], [0.50, 1.32],
+      [0.435, 1.43], [0.415, 1.50], [0.41, 1.57], [0.45, 1.65], [0.485, 1.75],
+      [0.52, 1.85], [0.53, 1.91], [0.50, 1.93], [0.48, 1.895], [0.47, 1.83]
     ];
+    var earPoints = [
+      [0.40, 1.78], [0.66, 2.00], [0.88, 2.07], [1.02, 1.92], [1.06, 1.55],
+      [1.00, 1.15], [0.85, 0.88], [0.58, 0.75], [0.40, 0.68]
+    ];
+    var earRadius = function (t) {
+      return 0.078 + 0.022 * Math.sin(Math.PI * Math.pow(t, 0.8)) * (1 - 0.35 * t);
+    };
+    var earR = sweepTube(earPoints, earRadius, 0.70, SILVER);
     var body = merge([
-      lathe(profile, 80, GOLD),
-      torus(0.50, 1.40, 0, 0.30, 0.06, -Math.PI * 0.46, Math.PI * 0.46, false, GOLD),
-      torus(-0.50, 1.40, 0, 0.30, 0.06, Math.PI * 0.54, Math.PI * 1.46, true, GOLD),
-      ringY(1.90, 0.715, 0.030, GOLD),
-      ringY(0.62, 0.178, 0.020, GOLD)
+      lathe(profile, 96, SILVER),
+      earR,
+      mirrorX(earR),
+      ringY(0.335, 0.232, 0.016, SILVER)
     ]);
-    var plaque = merge([
-      disc(0, 1.30, 0.665, 0.29, 0.42, [0.16, 0.11, 0.05]),
-      disc(0, 1.30, 0.715, 0.17, 0.5, MEDAL)
-    ]);
-    return [
-      { geom: body, kind: 1.0 },
-      { geom: plaque, kind: 2.0 }
-    ];
+    return [{ geom: body, kind: 1.0 }];
   }
 
   /* ——— stage ——— */
@@ -448,7 +479,7 @@
     var dist = this.kind === "ball" ? 4.0 : 4.35;
     var proj = perspective(0.56, this.aspect, 0.1, 50);
     var view = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -dist, 1]);
-    var scale = this.kind === "ball" ? 1 : 0.86;
+    var scale = this.kind === "ball" ? 1 : 0.76;
     var yOff = this.kind === "ball" ? bob : -0.646;
     var effRotX = this.rotX + rockX;
     var model = modelMatrix(0, yOff, 0, effRotX, this.rotY, scale);

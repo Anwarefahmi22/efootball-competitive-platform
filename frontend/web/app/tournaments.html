@@ -59,6 +59,10 @@
           <label class="lbl" for="t-approval">موافقة المنظم مطلوبة؟</label>
             <select class="field" id="t-approval"><option value="false">لا — انضمام مباشر</option><option value="true">نعم</option></select>
         </div>
+        <div>
+          <label class="lbl" for="t-room">مجموعة البطولة</label>
+            <select class="field" id="t-room"><option value="true" selected>نعم — تُنشأ مع البطولة</option><option value="false">لا — بدون مجموعة</option></select>
+        </div>
         <div class="err muted error-text" id="t-err"></div>
         <div class="form-actions">
           <button class="btn btn-ghost" id="t-cancel" type="button">إلغاء</button>
@@ -203,6 +207,7 @@
         max_participants: maxp,
         entry_fee: 0,
         requires_approval: el("t-approval").value === "true",
+        create_room: el("t-room").value === "true",
       };
       if (isGroupKnockout) {
         // Mirrors the backend rules: num_groups must be a power of 2 and the

@@ -723,6 +723,30 @@
     "GOLD • إصدار البطل": { fr: "GOLD • Édition champion", en: "GOLD • Champion edition" },
   });
 
+  // Tournament rooms («مجموعة البطولة») — create option, room states,
+  // composer, and lifecycle notes.
+  Object.assign(translations, {
+    "مجموعة البطولة": { fr: "Groupe du tournoi", en: "Tournament group" },
+    "نعم — تُنشأ مع البطولة": { fr: "Oui — créé avec le tournoi", en: "Yes — create it with the tournament" },
+    "لا — بدون مجموعة": { fr: "Non — pas de groupe", en: "No — no group" },
+    "نقاش خاص بأعضاء البطولة": { fr: "Discussion réservée aux membres du tournoi", en: "Discussion for tournament members only" },
+    "جارٍ تحميل المجموعة…": { fr: "Chargement du groupe…", en: "Loading the group…" },
+    "لم تُنشأ مجموعة لهذه البطولة بعد.": { fr: "Aucun groupe n'a encore été créé pour ce tournoi.", en: "No group has been created for this tournament yet." },
+    "إنشاء المجموعة": { fr: "Créer le groupe", en: "Create the group" },
+    "هذه المجموعة خاصة بأعضاء البطولة — انضم إلى البطولة للمشاركة في النقاش.": { fr: "Ce groupe est réservé aux membres du tournoi — rejoignez le tournoi pour participer à la discussion.", en: "This group is for tournament members only — join the tournament to take part in the discussion." },
+    "لا توجد رسائل بعد — كن أول من يشارك هدفًا! ⚽": { fr: "Aucun message pour le moment — soyez le premier à partager un but ! ⚽", en: "No messages yet — be the first to share a goal! ⚽" },
+    "اكتب رسالة…": { fr: "Écrivez un message…", en: "Write a message…" },
+    "إرفاق صورة": { fr: "Joindre une photo", en: "Attach a photo" },
+    "إرسال": { fr: "Envoyer", en: "Send" },
+    "حذف الرسالة": { fr: "Supprimer le message", en: "Delete message" },
+    "حذف المجموعة": { fr: "Supprimer le groupe", en: "Delete the group" },
+    "تُحذف المجموعة تلقائيًا عند حذف البطولة أو بعد 7 أيام من الخمول.": { fr: "Le groupe est supprimé automatiquement avec le tournoi ou après 7 jours d'inactivité.", en: "The group is deleted automatically with the tournament or after 7 days of inactivity." },
+    "حذف المجموعة وكل رسائلها نهائيًا؟": { fr: "Supprimer définitivement le groupe et tous ses messages ?", en: "Permanently delete the group and all its messages?" },
+    "تم إنشاء المجموعة!": { fr: "Groupe créé !", en: "Group created!" },
+    "تم حذف المجموعة.": { fr: "Groupe supprimé.", en: "Group deleted." },
+    "صورة مرفقة": { fr: "Photo jointe", en: "Attached photo" },
+  });
+
   // AUD-33: this file appends further dictionary blocks with
   // Object.assign AFTER this point (page-specific strings added over
   // time). The reverse map (translated text -> Arabic source) used to

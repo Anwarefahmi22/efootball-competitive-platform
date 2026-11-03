@@ -17,6 +17,7 @@ class TournamentCreate(BaseModel):
     max_participants: int
     entry_fee: int = 0
     requires_approval: bool = False
+    create_room: bool = True
     num_groups: int | None = None
     season_id: UUID | None = None
     starts_at: datetime | None = None

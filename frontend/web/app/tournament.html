@@ -55,6 +55,11 @@
         <div class="section-heading"><h2>المباريات</h2><span class="muted">حسب الجولة والمكان</span></div>
         <div id="matches"></div>
       </section>
+
+      <section class="card" id="room-section" hidden>
+        <div class="section-heading"><h2>مجموعة البطولة</h2><span class="muted">نقاش خاص بأعضاء البطولة</span></div>
+        <div id="room-body"><div class="empty">جارٍ تحميل المجموعة…</div></div>
+      </section>
     </main>
   </div>
 
@@ -314,6 +319,149 @@
       }
     }
 
+    /* ---- Tournament room («مجموعة البطولة») ---- */
+    const roomImageUrls = new Map();
+    const roomTime = (value) => new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+
+    async function roomImageSrc(messageId) {
+      if (roomImageUrls.has(messageId)) return roomImageUrls.get(messageId);
+      const res = await fetch(`${API_BASE}/tournaments/${id}/room/messages/${messageId}/image`, { headers: { Authorization: `Bearer ${Auth.token()}` } });
+      if (!res.ok) return "";
+      const url = URL.createObjectURL(await res.blob());
+      roomImageUrls.set(messageId, url);
+      return url;
+    }
+
+    function renderRoomMessage(message) {
+      const initials = escapeHtml((message.author_name || "?").trim().slice(0, 2).toUpperCase());
+      const avatar = message.author_avatar_url
+        ? `<img class="room-msg__avatar" src="${escapeHtml(message.author_avatar_url)}" alt="" loading="lazy" />`
+        : `<span class="room-msg__avatar room-msg__avatar--initials" aria-hidden="true">${initials}</span>`;
+      return `<div class="room-msg">${avatar}<div class="room-msg__main"><div class="room-msg__head"><strong>${escapeHtml(message.author_name)}</strong><span class="room-msg__time">${escapeHtml(roomTime(message.created_at))}</span>${message.can_delete ? `<button class="btn btn-ghost room-msg__del" type="button" data-delete-message="${message.id}">حذف الرسالة</button>` : ""}</div>${message.body ? `<div class="room-msg__body">${escapeHtml(message.body)}</div>` : ""}${message.has_image ? `<img class="room-msg__image" data-room-image="${message.id}" alt="صورة مرفقة" />` : ""}</div></div>`;
+    }
+
+    async function loadRoomMessages() {
+      const list = el("room-messages");
+      if (!list) return;
+      const messages = await apiFetch(`/tournaments/${id}/room/messages`);
+      list.innerHTML = messages.length
+        ? messages.map(renderRoomMessage).join("")
+        : `<div class="empty">لا توجد رسائل بعد — كن أول من يشارك هدفًا! ⚽</div>`;
+      list.scrollTop = list.scrollHeight;
+      list.querySelectorAll("[data-room-image]").forEach(async (img) => {
+        const src = await roomImageSrc(img.dataset.roomImage);
+        if (src) img.src = src;
+      });
+    }
+
+    async function createRoom() {
+      try {
+        await apiFetch(`/tournaments/${id}/room`, { method: "POST", noBody: true });
+        toast("تم إنشاء المجموعة!");
+        loadRoom();
+      } catch (error) {
+        toast(error.detail || "تعذر تنفيذ العملية.", "error");
+      }
+    }
+
+    async function deleteRoom() {
+      if (!window.confirm("حذف المجموعة وكل رسائلها نهائيًا؟")) return;
+      try {
+        await apiFetch(`/tournaments/${id}/room`, { method: "DELETE" });
+        toast("تم حذف المجموعة.");
+        loadRoom();
+      } catch (error) {
+        toast(error.detail || "تعذر تنفيذ العملية.", "error");
+      }
+    }
+
+    async function sendRoomMessage(event) {
+      event.preventDefault();
+      const input = el("room-input");
+      const fileInput = el("room-file");
+      const body = input.value.trim();
+      const image = fileInput.files && fileInput.files[0];
+      if (!body && !image) return;
+      const data = new FormData();
+      if (body) data.append("body", body);
+      if (image) data.append("image", image);
+      const button = el("room-send");
+      button.disabled = true;
+      try {
+        await apiFetch(`/tournaments/${id}/room/messages`, { method: "POST", body: data });
+        input.value = "";
+        fileInput.value = "";
+        el("room-file-name").textContent = "";
+        await loadRoomMessages();
+      } catch (error) {
+        toast(error.detail || "تعذر تنفيذ العملية.", "error");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function loadRoom() {
+      const section = el("room-section");
+      const body = el("room-body");
+      let room;
+      try {
+        room = await apiFetch(`/tournaments/${id}/room`);
+      } catch (error) {
+        section.hidden = true;
+        return;
+      }
+      if (!room.exists) {
+        if (room.is_organizer) {
+          section.hidden = false;
+          body.innerHTML = `<div class="empty">لم تُنشأ مجموعة لهذه البطولة بعد.</div><div class="form-actions"><button class="btn btn-primary" id="room-create" type="button">إنشاء المجموعة</button></div>`;
+          el("room-create").addEventListener("click", createRoom);
+        } else if (room.is_member) {
+          section.hidden = false;
+          body.innerHTML = `<div class="empty">لم تُنشأ مجموعة لهذه البطولة بعد.</div>`;
+        } else {
+          section.hidden = true;
+        }
+        return;
+      }
+      section.hidden = false;
+      if (!room.is_member) {
+        body.innerHTML = `<div class="empty">هذه المجموعة خاصة بأعضاء البطولة — انضم إلى البطولة للمشاركة في النقاش.</div>`;
+        return;
+      }
+      body.innerHTML = `
+        <div id="room-messages" class="room-messages"><div class="empty">جارٍ تحميل المجموعة…</div></div>
+        <form id="room-form" class="room-form">
+          <textarea class="field" id="room-input" rows="2" maxlength="2000" placeholder="اكتب رسالة…"></textarea>
+          <div class="room-form__row">
+            <label class="btn btn-ghost">إرفاق صورة<input type="file" id="room-file" accept="image/png,image/jpeg" hidden /></label>
+            <span class="muted" id="room-file-name"></span>
+            <button class="btn btn-primary" id="room-send" type="submit">إرسال</button>
+          </div>
+        </form>
+        ${room.is_organizer ? `<div class="room-admin"><p class="muted">تُحذف المجموعة تلقائيًا عند حذف البطولة أو بعد 7 أيام من الخمول.</p><button class="btn btn-ghost" id="room-delete" type="button">حذف المجموعة</button></div>` : ""}`;
+      el("room-form").addEventListener("submit", sendRoomMessage);
+      el("room-file").addEventListener("change", (event) => {
+        el("room-file-name").textContent = event.target.files[0] ? event.target.files[0].name : "";
+      });
+      el("room-messages").addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-delete-message]");
+        if (!button) return;
+        try {
+          await apiFetch(`/tournaments/${id}/room/messages/${button.dataset.deleteMessage}`, { method: "DELETE" });
+          await loadRoomMessages();
+        } catch (error) {
+          toast(error.detail || "تعذر تنفيذ العملية.", "error");
+        }
+      });
+      const deleteButton = el("room-delete");
+      if (deleteButton) deleteButton.addEventListener("click", deleteRoom);
+      try {
+        await loadRoomMessages();
+      } catch (error) {
+        el("room-messages").innerHTML = `<div class="empty">${escapeHtml(error.detail || "تعذر تحميل المجموعة.")}</div>`;
+      }
+    }
+
     let currentTournament;
     async function load() {
       if (!id) throw { detail: "معرّف البطولة غير موجود." };
@@ -339,6 +487,7 @@
       renderDrawBoard(tournament, matches);
       if (tournament.format === "league") renderStandings(extra);
       if (tournament.format === "group_knockout") renderGroups(extra);
+      loadRoom();
     }
 
     if (!Auth.loggedIn()) location.href = "/auth.html?next=" + encodeURIComponent(location.pathname + location.search);

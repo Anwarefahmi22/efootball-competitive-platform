@@ -6,6 +6,7 @@ from app.models.match import Match
 from app.models.media_file import MediaFile
 from app.models.rating import PlayerRating
 from app.models.refresh_session import RefreshSession
+from app.models.room import RoomMessage, TournamentRoom
 from app.models.season import Season
 from app.models.social import Comment, Follow, PlayerLike, Post, PostLike
 from app.models.tournament import Tournament, TournamentParticipant
@@ -42,10 +43,12 @@ __all__ = [
     "PostLike",
     "Profile",
     "RefreshSession",
+    "RoomMessage",
     "Season",
     "Tournament",
     "TournamentInvite",
     "TournamentParticipant",
+    "TournamentRoom",
     "TrustEvent",
     "TrustEventType",
     "User",

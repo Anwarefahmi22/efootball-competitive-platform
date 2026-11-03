@@ -25,6 +25,7 @@ import secrets
 
 from fastapi import APIRouter, Header, HTTPException, status
 
+from app.core.rooms import purge_inactive_rooms
 from app.core.tournament_lifecycle import cancel_inactive_tournaments
 
 router = APIRouter()
@@ -47,7 +48,12 @@ async def run_maintenance(
             detail="Unauthorized",
         )
     cancelled = await cancel_inactive_tournaments()
-    return {"status": "ok", "cancelled_tournaments": cancelled}
+    purged_rooms = await purge_inactive_rooms()
+    return {
+        "status": "ok",
+        "cancelled_tournaments": cancelled,
+        "purged_rooms": purged_rooms,
+    }
 
 
 @router.api_route("/internal/migrate", methods=["GET", "POST"])

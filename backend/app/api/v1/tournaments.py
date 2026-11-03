@@ -20,10 +20,12 @@ from app.core.groups import (
     is_valid_group_count,
 )
 from app.core.league import compute_standings, generate_league_schedule
+from app.core.rooms import delete_room_and_media
 from app.core.throttle import enforce_quota
 from app.db.session import get_db
 from app.models.group import Group
 from app.models.match import Match, MatchStatus
+from app.models.room import TournamentRoom
 from app.models.tournament import Tournament, TournamentFormat, TournamentParticipant, TournamentStatus
 from app.models.user import User
 from app.schemas.group import GroupRead, GroupStandingRow
@@ -100,6 +102,11 @@ async def create_tournament(
         season_id=payload.season_id,
     )
     db.add(tournament)
+    await db.flush()
+    if payload.create_room:
+        # The tournament's members-only group («مجموعة البطولة») is born
+        # with the tournament unless the creator opted out.
+        db.add(TournamentRoom(tournament_id=tournament.id, created_by=current_user.id))
     await db.commit()
     loaded = await _load_tournament(db, tournament.id)
     assert loaded is not None
@@ -208,6 +215,14 @@ async def delete_tournament(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Started or completed tournaments cannot be deleted",
         )
+    # The group dies with the tournament — including its stored photos,
+    # which the FK cascade alone would leave behind in media_files.
+    room_result = await db.execute(
+        select(TournamentRoom).where(TournamentRoom.tournament_id == tournament.id)
+    )
+    room = room_result.scalar_one_or_none()
+    if room is not None:
+        await delete_room_and_media(db, room)
     await db.delete(tournament)
     await db.commit()
 

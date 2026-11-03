@@ -1,12 +1,13 @@
 from fastapi import APIRouter
 
-from app.api.v1 import admin, analytics, auth, fraud, invites, matches, players, posts, ratings, seasons, social, tournaments, trust, users
+from app.api.v1 import admin, analytics, auth, fraud, invites, matches, players, posts, ratings, rooms, seasons, social, tournaments, trust, users
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(social.router, prefix="/users", tags=["social"])
 api_router.include_router(tournaments.router, prefix="/tournaments", tags=["tournaments"])
+api_router.include_router(rooms.router, prefix="/tournaments", tags=["rooms"])
 api_router.include_router(matches.router, prefix="/matches", tags=["matches"])
 api_router.include_router(
     matches.tournament_matches_router, prefix="/tournaments", tags=["matches"]

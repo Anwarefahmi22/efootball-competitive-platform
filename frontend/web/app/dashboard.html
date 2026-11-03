@@ -50,7 +50,7 @@
           <div><span>الترتيب العالمي</span><strong class="num" id="identity-rank">—</strong></div>
           <div><span>اللقب التنافسي</span><strong id="identity-title-rank">—</strong></div>
         </div>
-        <div class="identity-trophy"><span class="stage3d stage3d--trophy stage3d--photo"><i class="stage3d__shadow" aria-hidden="true"></i><span class="trophyHero" id="trophyHero"><img class="trophyHero__img" src="/shared/trophy-frames/f0.webp" alt="كأس الساحة" width="445" height="648"><img class="trophyHero__img trophyHero__layer--top" src="/shared/trophy-frames/f1.webp" alt="" aria-hidden="true" width="445" height="648"><span class="trophyHero__reflWrap" aria-hidden="true"><img class="trophyHero__refl" src="/shared/trophy-frames/f0.webp" alt="" width="445" height="648"><img class="trophyHero__refl trophyHero__layer--top" src="/shared/trophy-frames/f1.webp" alt="" width="445" height="648"></span></span></span><span>كأس الساحة</span></div>
+        <div class="identity-trophy"><span class="stage3d stage3d--trophy stage3d--photo"><i class="stage3d__shadow" aria-hidden="true"></i><span class="trophyHero" id="trophyHero"><img class="trophyHero__img" src="/shared/trophy-frames/f0.webp?v=2" alt="كأس الساحة" width="445" height="648"><img class="trophyHero__img trophyHero__layer--top" src="/shared/trophy-frames/f1.webp?v=2" alt="" aria-hidden="true" width="445" height="648"><span class="trophyHero__reflWrap" aria-hidden="true"><img class="trophyHero__refl" src="/shared/trophy-frames/f0.webp?v=2" alt="" width="445" height="648"><img class="trophyHero__refl trophyHero__layer--top" src="/shared/trophy-frames/f1.webp?v=2" alt="" width="445" height="648"></span></span></span><span>كأس الساحة</span></div>
       </section>
 
       <section class="journey card" id="journey" hidden aria-labelledby="journey-title">
@@ -154,7 +154,7 @@
     (function () {
       var hero = document.getElementById("trophyHero");
       if (!hero) return;
-      var STATIC = "/shared/ucl-trophy.webp";
+      var STATIC = "/shared/ucl-trophy.webp?v=2";
       var mains = hero.querySelectorAll(".trophyHero__img");
       var refls = hero.querySelectorAll(".trophyHero__refl");
       var all = Array.prototype.slice.call(hero.querySelectorAll("img"));
@@ -169,7 +169,7 @@
         return;
       }
       var FRAMES = 8, STEP = 1500, idx = 0, showSecond = true;
-      function src(i) { return "/shared/trophy-frames/f" + i + ".webp"; }
+      function src(i) { return "/shared/trophy-frames/f" + i + ".webp?v=2"; }
       for (var i = 0; i < FRAMES; i++) { var p = new Image(); p.src = src(i); }
       timer = setInterval(function () {
         idx = (idx + 1) % FRAMES;

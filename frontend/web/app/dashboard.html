@@ -50,7 +50,7 @@
           <div><span>الترتيب العالمي</span><strong class="num" id="identity-rank">—</strong></div>
           <div><span>اللقب التنافسي</span><strong id="identity-title-rank">—</strong></div>
         </div>
-        <div class="identity-trophy"><span class="stage3d stage3d--trophy stage3d--photo"><i class="stage3d__shadow" aria-hidden="true"></i><span class="trophyHero" id="trophyHero"><img class="trophyHero__img" src="/shared/trophy-frames/f0.webp?v=2" alt="كأس الساحة" width="445" height="648"><img class="trophyHero__img trophyHero__layer--top" src="/shared/trophy-frames/f1.webp?v=2" alt="" aria-hidden="true" width="445" height="648"><span class="trophyHero__reflWrap" aria-hidden="true"><img class="trophyHero__refl" src="/shared/trophy-frames/f0.webp?v=2" alt="" width="445" height="648"><img class="trophyHero__refl trophyHero__layer--top" src="/shared/trophy-frames/f1.webp?v=2" alt="" width="445" height="648"></span></span></span><span>كأس الساحة</span></div>
+        <div class="identity-trophy"><span class="stage3d stage3d--trophy stage3d--photo"><i class="stage3d__shadow" aria-hidden="true"></i><span class="trophyHero" id="trophyHero"><img class="trophyHero__img" src="/shared/trophy-frames/f0.webp?v=3" alt="كأس الساحة" width="456" height="648"><img class="trophyHero__img trophyHero__layer--top" src="/shared/trophy-frames/f1.webp?v=3" alt="" aria-hidden="true" width="456" height="648"><span class="trophyHero__reflWrap" aria-hidden="true"><img class="trophyHero__refl" src="/shared/trophy-frames/f0.webp?v=3" alt="" width="456" height="648"><img class="trophyHero__refl trophyHero__layer--top" src="/shared/trophy-frames/f1.webp?v=3" alt="" width="456" height="648"></span></span></span><span>كأس الساحة</span></div>
       </section>
 
       <section class="journey card" id="journey" hidden aria-labelledby="journey-title">
@@ -146,15 +146,15 @@
   <script src="/shared/nav.js"></script>
   <script src="/shared/arena3d.js?v=11"></script>
   <script>
-    /* Trophy rotator: crossfades between the 8 rendered angles so the cup
-       turns continuously (one 45-degree step every 1.5s, a full revolution
-       in 12s) with no dwell and no jumps. CSS transition duration and
-       STEP must stay equal. Falls back to the static render on error or
-       for prefers-reduced-motion. */
+    /* Trophy rotator: steps through 16 rendered angles (22.5 degrees
+       apart) with a brief 0.25s blend between them — dense enough that
+       the cup turns cleanly with no lingering ghost images. One step
+       every 0.75s, a full revolution in 12s. Falls back to the static
+       render on error or for prefers-reduced-motion. */
     (function () {
       var hero = document.getElementById("trophyHero");
       if (!hero) return;
-      var STATIC = "/shared/ucl-trophy.webp?v=2";
+      var STATIC = "/shared/ucl-trophy.webp?v=3";
       var mains = hero.querySelectorAll(".trophyHero__img");
       var refls = hero.querySelectorAll(".trophyHero__refl");
       var all = Array.prototype.slice.call(hero.querySelectorAll("img"));
@@ -168,8 +168,8 @@
         all.forEach(function (im) { im.src = STATIC; });
         return;
       }
-      var FRAMES = 8, STEP = 1500, idx = 0, showSecond = true;
-      function src(i) { return "/shared/trophy-frames/f" + i + ".webp?v=2"; }
+      var FRAMES = 16, STEP = 750, idx = 0, showSecond = true;
+      function src(i) { return "/shared/trophy-frames/f" + i + ".webp?v=3"; }
       for (var i = 0; i < FRAMES; i++) { var p = new Image(); p.src = src(i); }
       timer = setInterval(function () {
         idx = (idx + 1) % FRAMES;

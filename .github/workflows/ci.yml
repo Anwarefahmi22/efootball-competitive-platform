@@ -57,9 +57,12 @@ jobs:
         run: |
           curl -sf http://localhost:8000/health | grep ok
 
-      - name: Smoke test OpenAPI docs
+      - name: Smoke test OpenAPI docs are locked down
         run: |
-          curl -sf http://localhost:8000/docs > /dev/null
+          # Since the 2026-11-01 security batch, the interactive docs
+          # are intentionally NOT served: /docs returns 404. Assert the
+          # lockdown instead of the pre-lockdown open-docs behavior.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/docs)" = "404"
 
       - name: Smoke test registration + login
         run: |

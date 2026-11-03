@@ -7,7 +7,11 @@ from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+import logging
+
 from app.core.config import settings
+from app.core.email_codes import CooldownActive, TooManyCodes, issue_code, verify_code
+from app.core.mailer import send_verification_email
 from app.core.security import (
     create_refresh_token,
     create_token,
@@ -34,8 +38,17 @@ from app.core.throttle import (
 from app.db.session import get_db
 from app.models.refresh_session import RefreshSession
 from app.models.user import Profile, User
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenPair
+from app.schemas.auth import (
+    LoginRequest,
+    RefreshRequest,
+    ResendVerificationRequest,
+    TokenPair,
+    VerificationPending,
+    VerifyEmailRequest,
+)
 from app.schemas.user import UserRead, UserRegister
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 bearer_scheme = HTTPBearer()
@@ -107,10 +120,26 @@ async def get_current_user(
     return user
 
 
-@router.post("/register", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
+async def _send_verification_code(db: AsyncSession, user: User) -> None:
+    """Issue + email a fresh code. Cooldown/cap and delivery failures
+    are swallowed (logged): the caller must never leak them — the user
+    can always request another code from the verification screen."""
+    try:
+        code = await issue_code(db, user)
+        await db.commit()
+    except (CooldownActive, TooManyCodes):
+        await db.rollback()
+        return
+    try:
+        await send_verification_email(user.email, code)
+    except Exception:
+        logger.exception("verification email delivery failed")
+
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     payload: UserRegister, request: Request, db: AsyncSession = Depends(get_db)
-) -> TokenPair:
+):
     reg_key = f"register:ip:{client_ip(request)}"
     if await is_locked(db, reg_key):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=TOO_MANY)
@@ -130,6 +159,13 @@ async def register(
     db.add(user)
     await db.commit()
     await db.refresh(user)
+    if settings.EMAIL_VERIFICATION_ENABLED:
+        await _send_verification_code(db, user)
+        return VerificationPending(email=user.email)
+    # Verification disabled (pre-provider rollout): the account is
+    # usable immediately, exactly as before the feature existed.
+    user.email_verified = True
+    await db.commit()
     return await _issue_token_pair(db, user)
 
 
@@ -162,8 +198,65 @@ async def login(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+    if settings.EMAIL_VERIFICATION_ENABLED and not user.email_verified:
+        # The frontend keys off this exact detail to route the user to
+        # the code-entry screen (and offer a resend) instead of an error.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="EMAIL_NOT_VERIFIED"
+        )
     await clear_key(db, pair_key)
     return await _issue_token_pair(db, user)
+
+
+# The code itself burns after 5 wrong attempts (core/email_codes);
+# this pair lock is only a backstop against cycling many codes, so it
+# sits well above the per-code burn.
+_VERIFY_PAIR_LIMIT = 20
+
+
+@router.post("/verify-email", response_model=TokenPair)
+async def verify_email(
+    payload: VerifyEmailRequest, request: Request, db: AsyncSession = Depends(get_db)
+) -> TokenPair:
+    ip = client_ip(request)
+    pair_key = f"verify:pair:{payload.email.lower()}|{ip}"
+    if await is_locked(db, pair_key):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=TOO_MANY)
+    result = await db.execute(select(User).where(User.email == payload.email))
+    user = result.scalar_one_or_none()
+    ok = (
+        user is not None
+        and not user.email_verified
+        and await verify_code(db, user, payload.code)
+    )
+    await db.commit()
+    if not ok:
+        await record_hit(
+            db, pair_key, limit=_VERIFY_PAIR_LIMIT, window=LOGIN_WINDOW, lock_for=LOGIN_LOCK
+        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="INVALID_CODE")
+    await clear_key(db, pair_key)
+    return await _issue_token_pair(db, user)
+
+
+@router.post("/resend-verification", status_code=status.HTTP_204_NO_CONTENT)
+async def resend_verification(
+    payload: ResendVerificationRequest, request: Request, db: AsyncSession = Depends(get_db)
+) -> None:
+    # Always 204: the response must not reveal whether the email is
+    # registered or already verified. Cooldown/cap apply silently.
+    ip_key = f"resend:ip:{client_ip(request)}"
+    if await is_locked(db, ip_key):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=TOO_MANY)
+    await record_hit(
+        db, ip_key, limit=REGISTER_IP_LIMIT, window=REGISTER_WINDOW, lock_for=REGISTER_LOCK
+    )
+    if not settings.EMAIL_VERIFICATION_ENABLED:
+        return
+    result = await db.execute(select(User).where(User.email == payload.email))
+    user = result.scalar_one_or_none()
+    if user is not None and not user.email_verified:
+        await _send_verification_code(db, user)
 
 
 @router.post("/refresh", response_model=TokenPair)

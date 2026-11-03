@@ -28,6 +28,7 @@ APP_TABLES = [
     "auth_throttle", "challenge_evidence", "challenge_matches", "comments",
     "follows", "groups", "match_evidence", "match_invites", "matches",
     "media_files", "player_likes", "player_ratings", "player_trust",
+    "email_verification_codes",
     "post_likes", "posts", "profiles", "refresh_sessions", "room_messages", "seasons", "tournament_invites", "tournament_rooms",
     "tournament_participants", "tournaments", "transactions", "trust_events",
     "users", "wallets", "withdrawal_requests",

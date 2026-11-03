@@ -747,6 +747,24 @@
     "صورة مرفقة": { fr: "Photo jointe", en: "Attached photo" },
   });
 
+  // Email verification (OTP screen on the auth page, migration 023).
+  Object.assign(translations, {
+    "أثبت أنه أنت": { fr: "Confirmez que c'est vous", en: "Verify it's you" },
+    "أدخل الرمز المكوّن من 6 أرقام الذي أرسلناه إلى": { fr: "Entrez le code à 6 chiffres que nous avons envoyé à", en: "Enter the 6-digit code we just sent to" },
+    "تأكيد الرمز": { fr: "Vérifier le code", en: "Verify code" },
+    "جارٍ التحقق...": { fr: "Vérification...", en: "Verifying..." },
+    "الرمز غير صحيح. حاول مجددًا.": { fr: "Ce code ne correspond pas. Réessayez.", en: "That code didn't match. Try again." },
+    "محاولات كثيرة — اطلب رمزًا جديدًا": { fr: "Trop d'essais — demandez un nouveau code", en: "Too many attempts — request a new code" },
+    "لم يصلك الرمز؟": { fr: "Vous n'avez pas reçu de code ?", en: "Didn't get a code?" },
+    "إعادة الإرسال خلال": { fr: "Renvoyer dans", en: "Resend in" },
+    "إعادة إرسال الرمز": { fr: "Renvoyer le code", en: "Resend code" },
+    "استخدام بريد آخر": { fr: "Utiliser un autre e-mail", en: "Use a different email" },
+    "أرسلنا رمز تأكيد إلى بريدك": { fr: "Nous avons envoyé un code de vérification à votre e-mail", en: "We sent a verification code to your email" },
+    "بريدك غير مؤكَّد بعد — أدخل الرمز المرسل إليه لإكمال الدخول": { fr: "Votre e-mail n'est pas encore confirmé — entrez le code reçu pour terminer la connexion", en: "Your email isn't verified yet — enter the code we sent to finish logging in" },
+    "أُرسل رمز جديد إلى بريدك": { fr: "Un nouveau code a été envoyé à votre e-mail", en: "A new code was sent to your email" },
+    "تم تأكيد بريدك! أهلًا بك في الساحة 🏟️": { fr: "E-mail confirmé ! Bienvenue dans l'arène 🏟️", en: "Email verified! Welcome to the arena 🏟️" },
+  });
+
   // AUD-33: this file appends further dictionary blocks with
   // Object.assign AFTER this point (page-specific strings added over
   // time). The reverse map (translated text -> Arabic source) used to

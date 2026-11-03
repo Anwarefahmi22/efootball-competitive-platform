@@ -18,6 +18,10 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Email ownership proof (verification-code flow, migration 023).
+    # Deliberately separate from ``is_verified`` — that flag is the
+    # admin-granted identity badge shown on Arena Star cards.
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # Public sequential player number shown on the Arena Star card
     # (ARENA ID #1001+). Database identity column — see migration 017.
     arena_no: Mapped[int] = mapped_column(

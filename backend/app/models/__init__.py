@@ -1,4 +1,5 @@
 from app.models.auth_throttle import AuthThrottle
+from app.models.email_code import EmailVerificationCode
 from app.models.evidence import MatchEvidence
 from app.models.group import Group
 from app.models.invite import ChallengeEvidence, ChallengeMatch, MatchInvite, TournamentInvite
@@ -30,6 +31,7 @@ __all__ = [
     "ChallengeEvidence",
     "ChallengeMatch",
     "Comment",
+    "EmailVerificationCode",
     "Follow",
     "Group",
     "Match",

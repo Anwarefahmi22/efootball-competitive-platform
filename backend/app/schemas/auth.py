@@ -19,3 +19,20 @@ class TokenPair(BaseModel):
 class AccessToken(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=8)
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+class VerificationPending(BaseModel):
+    """Register response while email verification is enabled: the
+    account exists but no session is issued until the code verifies."""
+
+    verification_required: bool = True
+    email: EmailStr

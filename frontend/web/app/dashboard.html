@@ -147,8 +147,8 @@
   <script src="/shared/arena3d.js?v=11"></script>
   <script>
     /* Trophy rotator: crossfades between the 8 rendered angles so the cup
-       turns continuously (one 45-degree step every 2s, a full revolution
-       in 16s) with no dwell and no jumps. CSS transition duration and
+       turns continuously (one 45-degree step every 1.5s, a full revolution
+       in 12s) with no dwell and no jumps. CSS transition duration and
        STEP must stay equal. Falls back to the static render on error or
        for prefers-reduced-motion. */
     (function () {
@@ -168,7 +168,7 @@
         all.forEach(function (im) { im.src = STATIC; });
         return;
       }
-      var FRAMES = 8, STEP = 2000, idx = 0, showSecond = true;
+      var FRAMES = 8, STEP = 1500, idx = 0, showSecond = true;
       function src(i) { return "/shared/trophy-frames/f" + i + ".webp"; }
       for (var i = 0; i < FRAMES; i++) { var p = new Image(); p.src = src(i); }
       timer = setInterval(function () {

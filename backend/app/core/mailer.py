@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import smtplib
+import urllib.error
 import urllib.request
 from email.message import EmailMessage
 
@@ -61,8 +62,14 @@ def _send_resend_sync(to: str, subject: str, text_body: str, html_body: str) -> 
             "Content-Type": "application/json",
         },
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        resp.read()
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            resp.read()
+    except urllib.error.HTTPError as exc:
+        # Surface the provider's own error body in the logs — a bare
+        # "403 Forbidden" cost a full diagnostic round on 2026-11-03.
+        detail = exc.read().decode("utf-8", "replace")[:300]
+        raise RuntimeError(f"resend api error {exc.code}: {detail}") from exc
 
 
 async def send_email(to: str, subject: str, text_body: str, html_body: str) -> None:

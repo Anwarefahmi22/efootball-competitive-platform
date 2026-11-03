@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     # engages when EMAIL_VERIFICATION_ENABLED is set in the deployment
     # environment, so code can deploy before the mail provider's
     # credentials land. MAIL_PROVIDER: "console" (in-process outbox,
-    # for tests/dev) or "smtp" (any SMTP relay — Brevo, Gmail, ...).
+    # for tests/dev), "smtp" (any SMTP relay — Brevo, Gmail, ...) or
+    # "resend" (Resend HTTPS API; needs RESEND_API_KEY).
     EMAIL_VERIFICATION_ENABLED: bool = False
     MAIL_PROVIDER: str = "console"
     MAIL_FROM: str = "eFootball Arena <no-reply@efootballarena.app>"
@@ -28,6 +29,7 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_USE_TLS: bool = True
+    RESEND_API_KEY: str = ""
 
 
 settings = Settings()

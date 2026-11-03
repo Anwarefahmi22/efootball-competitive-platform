@@ -152,3 +152,43 @@ async def test_disabled_mode_registers_with_tokens(client):
     async with AsyncSessionLocal() as db:
         user = await db.execute(select(User).where(User.email == email))
         assert user.scalar_one().email_verified is True
+
+
+def test_resend_provider_posts_to_api(monkeypatch):
+    import json as _json
+    import urllib.request
+
+    from app.core import mailer
+    from app.core.config import settings
+
+    captured = {}
+
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return b'{"id":"test-id"}'
+
+    def fake_urlopen(req, timeout=None):
+        captured["url"] = req.full_url
+        captured["auth"] = req.headers.get("Authorization")
+        captured["payload"] = _json.loads(req.data.decode())
+        return _Resp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(settings, "MAIL_PROVIDER", "resend")
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "re_test_key")
+    monkeypatch.setattr(settings, "MAIL_FROM", "eFootball Arena <onboarding@resend.dev>")
+
+    import asyncio
+
+    asyncio.run(mailer.send_verification_email("player@example.com", "123456"))
+    assert captured["url"] == "https://api.resend.com/emails"
+    assert captured["auth"] == "Bearer re_test_key"
+    assert captured["payload"]["from"] == "eFootball Arena <onboarding@resend.dev>"
+    assert captured["payload"]["to"] == ["player@example.com"]
+    assert "123456" in captured["payload"]["text"]

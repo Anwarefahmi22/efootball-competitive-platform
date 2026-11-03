@@ -8,8 +8,10 @@ app-password, a future custom-domain provider) with no new dependency;
 switching providers is then an environment change, not a code change.
 """
 import asyncio
+import json
 import logging
 import smtplib
+import urllib.request
 from email.message import EmailMessage
 
 from app.core.config import settings
@@ -40,8 +42,34 @@ def _send_smtp_sync(to: str, subject: str, text_body: str, html_body: str) -> No
         smtp.send_message(msg)
 
 
+def _send_resend_sync(to: str, subject: str, text_body: str, html_body: str) -> None:
+    payload = json.dumps(
+        {
+            "from": settings.MAIL_FROM,
+            "to": [to],
+            "subject": subject,
+            "text": text_body,
+            "html": html_body,
+        }
+    ).encode()
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        resp.read()
+
+
 async def send_email(to: str, subject: str, text_body: str, html_body: str) -> None:
-    if settings.MAIL_PROVIDER == "smtp":
+    if settings.MAIL_PROVIDER == "resend":
+        await asyncio.to_thread(_send_resend_sync, to, subject, text_body, html_body)
+        logger.info("mail sent via resend to %s", _mask(to))
+    elif settings.MAIL_PROVIDER == "smtp":
         await asyncio.to_thread(_send_smtp_sync, to, subject, text_body, html_body)
         logger.info("mail sent via smtp to %s", _mask(to))
     else:

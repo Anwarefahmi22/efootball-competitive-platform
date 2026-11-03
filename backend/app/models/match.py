@@ -8,6 +8,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.tournament import Tournament
+
 
 class MatchStatus(str, Enum):
     WAITING = "waiting"
@@ -63,4 +68,4 @@ class Match(Base):
         nullable=False,
     )
 
-    tournament: Mapped["Tournament"] = relationship(back_populates="matches")  # noqa: F821
+    tournament: Mapped["Tournament"] = relationship(back_populates="matches")

@@ -1051,4 +1051,12 @@
     "تم حذف التعليق.": { fr: "Commentaire supprimé.", en: "Comment deleted." },
     "تعذر حذف التعليق.": { fr: "Impossible de supprimer le commentaire.", en: "Could not delete the comment." }
   });
+
+  // AUD-03/27 (remediation Stage 6): paginated deck + explicit
+  // ranking criteria strings.
+  Object.assign(translations, {
+    "عرض المزيد من البطاقات": { fr: "Afficher plus de cartes", en: "Show more cards" },
+    "تعذر تحميل المزيد من البطاقات": { fr: "Impossible de charger plus de cartes", en: "Could not load more cards" },
+    "الترتيب: النقاط أولًا، ثم فارق الأهداف، فالأهداف المسجّلة، فتقييم ELO، فعدد الانتصارات.": { fr: "Classement : d'abord les points, puis la différence de buts, les buts marqués, l'ELO, puis le nombre de victoires.", en: "Ranking: points first, then goal difference, goals scored, ELO rating, then wins." }
+  });
 })();

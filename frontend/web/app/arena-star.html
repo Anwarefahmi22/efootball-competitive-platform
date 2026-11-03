@@ -184,6 +184,7 @@
         <button class="st-nav-btn" id="st-next" type="button" aria-label="البطاقة التالية">←</button>
       </div>
       <p class="st-hint">انقر على الكومة أو اسحب أفقيًا لتدويرها — البطاقة الأمامية فقط تفاعلية</p>
+      <button class="btn btn-ghost" id="st-more" type="button" hidden>عرض المزيد من البطاقات</button>
     </div>
   </div>
   <div class="st-modal" id="st-inv-modal" hidden>
@@ -424,11 +425,53 @@
     });
     deckEl.addEventListener("pointercancel", () => { stDragX = null; stLayout(); });
 
+    /* AUD-03: the deck pages through the cards endpoint (24/page)
+       instead of loading every player at once. New pages append to
+       the back of the fan so the card being viewed never moves. */
+    const ST_PAGE = 24;
+    let stExhausted = false;
+
+    async function loadCardsPage(offset) {
+      const page = await apiFetch(`/players/cards?limit=${ST_PAGE}&offset=${offset}`);
+      if (page.length < ST_PAGE) stExhausted = true;
+      return page;
+    }
+
+    function appendCardEls(cards, startIndex) {
+      return cards.map((p, k) => {
+        const article = document.createElement("article");
+        article.className = "st-card";
+        article.innerHTML = stCardHtml(p, startIndex + k);
+        deckEl.appendChild(article);
+        return article;
+      });
+    }
+
+    async function loadMoreCards() {
+      const btn = el("st-more");
+      btn.disabled = true;
+      try {
+        const page = await loadCardsPage(stCards.length);
+        if (page.length) {
+          const start = stCards.length;
+          stCards = stCards.concat(page);
+          stEls = stEls.concat(appendCardEls(page, start));
+          stOrder = stOrder.concat(page.map((_, k) => start + k));
+          stLayout();
+        }
+      } catch (err) {
+        toast(err.detail || "تعذر تحميل المزيد من البطاقات", "error");
+      } finally {
+        btn.disabled = false;
+        btn.hidden = stExhausted;
+      }
+    }
+
     (async () => {
       if (!(await requireAuthOrRedirect())) return;
       apiFetch("/invites/count").then((r) => { if (r && r.pending_received > 0) { const b = el("invites-alert"); b.textContent = `✉️ لديك ${r.pending_received} دعوة بانتظار الرد — اضغط للعرض`; b.style.display = "block"; } }).catch(() => {});
     try {
-        stCards = await apiFetch("/players/cards");
+        stCards = await loadCardsPage(0);
       } catch (err) {
         el("st-state").textContent = err.detail || "تعذر تحميل البطاقات";
         return;
@@ -437,21 +480,25 @@
         el("st-state").textContent = "لا توجد بطاقات بعد.";
         return;
       }
+      // A shared-card link (?player=) may point past the first page:
+      // keep paging (bounded) until the player is loaded or the deck
+      // is complete, so deep links keep working at any platform size.
+      const wanted = new URLSearchParams(location.search).get("player");
+      for (let hops = 0; wanted && !stExhausted && hops < 10 && !stCards.some((c) => c.user_id === wanted); hops++) {
+        const page = await loadCardsPage(stCards.length);
+        if (!page.length) break;
+        stCards = stCards.concat(page);
+      }
       el("st-state").hidden = true;
       el("st-wrap").hidden = false;
-      stEls = stCards.map((p, i) => {
-        const article = document.createElement("article");
-        article.className = "st-card";
-        article.innerHTML = stCardHtml(p, i);
-        deckEl.appendChild(article);
-        return article;
-      });
-      const wanted = new URLSearchParams(location.search).get("player");
+      stEls = appendCardEls(stCards, 0);
       const startAt = wanted ? stCards.findIndex((c) => c.user_id === wanted) : -1;
       const first = startAt >= 0 ? startAt : 0;
       stOrder = stCards.map((_, i) => i);
       if (first > 0) { stOrder = stOrder.slice(first).concat(stOrder.slice(0, first)); }
       stLayout();
+      el("st-more").hidden = stExhausted;
+      el("st-more").addEventListener("click", loadMoreCards);
       if (stCards.length === 1) {
         toast("أنت النجم الوحيد هنا حتى الآن — شارك بطاقتك ودعُ أصدقاءك للانضمام⭐");
       }

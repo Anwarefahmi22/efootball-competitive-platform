@@ -68,18 +68,42 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+async def _briefs(db: AsyncSession, user_ids: set[UUID]) -> dict[UUID, PlayerBrief]:
+    """Batch-load player briefs in two queries total (AUD-05).
+
+    The per-invite loader this replaces ran two queries PER brief, so
+    an inbox of N invites cost ~4N+ queries. Profile has its own PK;
+    user_id is a unique FK — profiles must be selected by user_id, not
+    fetched with db.get(Profile, ...) (which silently missed every
+    profile and lost the avatars).
+    """
+    if not user_ids:
+        return {}
+    users = {
+        u.id: u
+        for u in (await db.execute(select(User).where(User.id.in_(user_ids)))).scalars()
+    }
+    profiles = {
+        p.user_id: p
+        for p in (
+            await db.execute(select(Profile).where(Profile.user_id.in_(user_ids)))
+        ).scalars()
+    }
+    out: dict[UUID, PlayerBrief] = {}
+    for user_id in user_ids:
+        user = users.get(user_id)
+        profile = profiles.get(user_id)
+        out[user_id] = PlayerBrief(
+            user_id=user_id,
+            display_name=user.display_name if user else "لاعب",
+            avatar_url=profile.avatar_url if profile else None,
+            arena_no=user.arena_no if user else None,
+        )
+    return out
+
+
 async def _brief(db: AsyncSession, user_id: UUID) -> PlayerBrief:
-    user = await db.get(User, user_id)
-    # Profile has its own PK; user_id is a unique FK — db.get(Profile, ...)
-    # by user id would silently miss every profile (avatars lost).
-    profile_result = await db.execute(select(Profile).where(Profile.user_id == user_id))
-    profile = profile_result.scalar_one_or_none()
-    return PlayerBrief(
-        user_id=user_id,
-        display_name=user.display_name if user else "لاعب",
-        avatar_url=profile.avatar_url if profile else None,
-        arena_no=user.arena_no if user else None,
-    )
+    return (await _briefs(db, {user_id}))[user_id]
 
 
 def _effective_status(invite, ttl: timedelta) -> str:
@@ -88,11 +112,11 @@ def _effective_status(invite, ttl: timedelta) -> str:
     return str(invite.status)
 
 
-async def _match_invite_read(db: AsyncSession, invite: MatchInvite) -> MatchInviteRead:
+def _match_invite_read_from(briefs: dict[UUID, PlayerBrief], invite: MatchInvite) -> MatchInviteRead:
     return MatchInviteRead(
         id=invite.id,
-        challenger=await _brief(db, invite.challenger_id),
-        opponent=await _brief(db, invite.opponent_id),
+        challenger=briefs[invite.challenger_id],
+        opponent=briefs[invite.opponent_id],
         status=_effective_status(invite, MATCH_INVITE_TTL),
         challenge_id=invite.challenge_id,
         created_at=invite.created_at,
@@ -100,18 +124,62 @@ async def _match_invite_read(db: AsyncSession, invite: MatchInvite) -> MatchInvi
     )
 
 
-async def _tournament_invite_read(db: AsyncSession, invite: TournamentInvite) -> TournamentInviteRead:
-    tournament = await db.get(Tournament, invite.tournament_id)
+async def _match_invite_read(db: AsyncSession, invite: MatchInvite) -> MatchInviteRead:
+    briefs = await _briefs(db, {invite.challenger_id, invite.opponent_id})
+    return _match_invite_read_from(briefs, invite)
+
+
+async def _match_invite_reads(db: AsyncSession, invites: list[MatchInvite]) -> list[MatchInviteRead]:
+    briefs = await _briefs(
+        db, {i.challenger_id for i in invites} | {i.opponent_id for i in invites}
+    )
+    return [_match_invite_read_from(briefs, i) for i in invites]
+
+
+def _tournament_invite_read_from(
+    briefs: dict[UUID, PlayerBrief],
+    tournaments: dict[UUID, Tournament],
+    invite: TournamentInvite,
+) -> TournamentInviteRead:
+    tournament = tournaments.get(invite.tournament_id)
     return TournamentInviteRead(
         id=invite.id,
         tournament_id=invite.tournament_id,
         tournament_name=tournament.name if tournament else "بطولة",
-        inviter=await _brief(db, invite.inviter_id),
-        invitee=await _brief(db, invite.invitee_id),
+        inviter=briefs[invite.inviter_id],
+        invitee=briefs[invite.invitee_id],
         status=_effective_status(invite, TOURNAMENT_INVITE_TTL),
         created_at=invite.created_at,
         responded_at=invite.responded_at,
     )
+
+
+async def _tournament_invite_read(db: AsyncSession, invite: TournamentInvite) -> TournamentInviteRead:
+    briefs = await _briefs(db, {invite.inviter_id, invite.invitee_id})
+    tournament = await db.get(Tournament, invite.tournament_id)
+    tournaments = {tournament.id: tournament} if tournament else {}
+    return _tournament_invite_read_from(briefs, tournaments, invite)
+
+
+async def _tournament_invite_reads(
+    db: AsyncSession, invites: list[TournamentInvite]
+) -> list[TournamentInviteRead]:
+    briefs = await _briefs(
+        db, {i.inviter_id for i in invites} | {i.invitee_id for i in invites}
+    )
+    tournaments = {}
+    if invites:
+        tournaments = {
+            t.id: t
+            for t in (
+                await db.execute(
+                    select(Tournament).where(
+                        Tournament.id.in_({i.tournament_id for i in invites})
+                    )
+                )
+            ).scalars()
+        }
+    return [_tournament_invite_read_from(briefs, tournaments, i) for i in invites]
 
 
 def _pair_filter(a: UUID, b: UUID):
@@ -216,12 +284,16 @@ async def _latest_evidence(db: AsyncSession, challenge_id: UUID) -> ChallengeEvi
     return result.scalars().first()
 
 
-async def _challenge_read(db: AsyncSession, challenge: ChallengeMatch) -> ChallengeRead:
+def _challenge_read_from(
+    briefs: dict[UUID, PlayerBrief],
+    challenge: ChallengeMatch,
+    evidence: ChallengeEvidence | None,
+) -> ChallengeRead:
     read = ChallengeRead(
         id=challenge.id,
         invite_id=challenge.invite_id,
-        player_a=await _brief(db, challenge.player_a_id),
-        player_b=await _brief(db, challenge.player_b_id),
+        player_a=briefs[challenge.player_a_id],
+        player_b=briefs[challenge.player_b_id],
         status=str(challenge.status),
         score_a=challenge.score_a,
         score_b=challenge.score_b,
@@ -230,14 +302,50 @@ async def _challenge_read(db: AsyncSession, challenge: ChallengeMatch) -> Challe
         completed_at=challenge.completed_at,
         created_at=challenge.created_at,
     )
+    if (
+        challenge.status in {ChallengeStatus.RESULT_SUBMITTED, ChallengeStatus.DISPUTED}
+        and evidence is not None
+    ):
+        read.pending_submitted_by = evidence.submitted_by
+        read.pending_score_a = evidence.claimed_score_a
+        read.pending_score_b = evidence.claimed_score_b
+        read.pending_evidence_id = evidence.id
+    return read
+
+
+async def _challenge_read(db: AsyncSession, challenge: ChallengeMatch) -> ChallengeRead:
+    briefs = await _briefs(db, {challenge.player_a_id, challenge.player_b_id})
+    evidence = None
     if challenge.status in {ChallengeStatus.RESULT_SUBMITTED, ChallengeStatus.DISPUTED}:
         evidence = await _latest_evidence(db, challenge.id)
-        if evidence is not None:
-            read.pending_submitted_by = evidence.submitted_by
-            read.pending_score_a = evidence.claimed_score_a
-            read.pending_score_b = evidence.claimed_score_b
-            read.pending_evidence_id = evidence.id
-    return read
+    return _challenge_read_from(briefs, challenge, evidence)
+
+
+async def _challenge_reads(
+    db: AsyncSession, challenges: list[ChallengeMatch]
+) -> list[ChallengeRead]:
+    """Batch variant (AUD-05): briefs in 2 queries, latest evidence for
+    every pending challenge in 1 query — constant in the list size."""
+    briefs = await _briefs(
+        db, {c.player_a_id for c in challenges} | {c.player_b_id for c in challenges}
+    )
+    pending_ids = [
+        c.id
+        for c in challenges
+        if c.status in {ChallengeStatus.RESULT_SUBMITTED, ChallengeStatus.DISPUTED}
+    ]
+    latest: dict[UUID, ChallengeEvidence] = {}
+    if pending_ids:
+        rows = (
+            await db.execute(
+                select(ChallengeEvidence)
+                .where(ChallengeEvidence.challenge_id.in_(pending_ids))
+                .order_by(ChallengeEvidence.created_at.desc())
+            )
+        ).scalars()
+        for ev in rows:
+            latest.setdefault(ev.challenge_id, ev)
+    return [_challenge_read_from(briefs, c, latest.get(c.id)) for c in challenges]
 
 
 # ---------------------------------------------------------------- invites
@@ -285,15 +393,7 @@ async def accept_match_invite(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ChallengeRead:
-    invite = await db.get(MatchInvite, invite_id)
-    if invite is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الدعوة غير موجودة")
-    if invite.opponent_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="هذه الدعوة ليست موجّهة إليك")
-    if invite.status != InviteStatus.PENDING:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تم الرد على هذه الدعوة من قبل")
-    if invite.created_at < _now() - MATCH_INVITE_TTL:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="انتهت صلاحية هذه الدعوة")
+    invite = await _load_actionable_invite(db, MatchInvite, invite_id, actor_id=current_user.id, actor_field="opponent_id", actor_error="هذه الدعوة ليست موجّهة إليك", ttl=MATCH_INVITE_TTL)
     await _check_pair_can_play(db, invite.challenger_id, invite.opponent_id)
     challenge = ChallengeMatch(
         invite_id=invite.id, player_a_id=invite.challenger_id, player_b_id=invite.opponent_id
@@ -318,6 +418,34 @@ async def accept_match_invite(
     return await _challenge_read(db, challenge)
 
 
+async def _load_actionable_invite(
+    db: AsyncSession,
+    model,
+    invite_id: UUID,
+    *,
+    actor_id: UUID,
+    actor_field: str,
+    actor_error: str,
+    ttl: timedelta | None = None,
+):
+    """AUD-31: the guard sequence every invite response shares —
+    exists (404) -> addressed to the caller (403) -> still pending
+    (400) -> not expired (410, accepts only). Six handlers used to
+    repeat it verbatim; the messages are part of the API contract and
+    are preserved exactly.
+    """
+    invite = await db.get(model, invite_id)
+    if invite is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الدعوة غير موجودة")
+    if getattr(invite, actor_field) != actor_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=actor_error)
+    if invite.status != InviteStatus.PENDING:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تم الرد على هذه الدعوة من قبل")
+    if ttl is not None and invite.created_at < _now() - ttl:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="انتهت صلاحية هذه الدعوة")
+    return invite
+
+
 async def _respond_match_invite(db: AsyncSession, invite: MatchInvite, new_status: str) -> None:
     invite.status = new_status
     invite.responded_at = _now()
@@ -331,13 +459,7 @@ async def decline_match_invite(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> MatchInviteRead:
-    invite = await db.get(MatchInvite, invite_id)
-    if invite is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الدعوة غير موجودة")
-    if invite.opponent_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="هذه الدعوة ليست موجّهة إليك")
-    if invite.status != InviteStatus.PENDING:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تم الرد على هذه الدعوة من قبل")
+    invite = await _load_actionable_invite(db, MatchInvite, invite_id, actor_id=current_user.id, actor_field="opponent_id", actor_error="هذه الدعوة ليست موجّهة إليك")
     await _respond_match_invite(db, invite, InviteStatus.DECLINED)
     return await _match_invite_read(db, invite)
 
@@ -348,13 +470,7 @@ async def cancel_match_invite(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    invite = await db.get(MatchInvite, invite_id)
-    if invite is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الدعوة غير موجودة")
-    if invite.challenger_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="يمكنك إلغاء دعواتك فقط")
-    if invite.status != InviteStatus.PENDING:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تم الرد على هذه الدعوة من قبل")
+    invite = await _load_actionable_invite(db, MatchInvite, invite_id, actor_id=current_user.id, actor_field="challenger_id", actor_error="يمكنك إلغاء دعواتك فقط")
     await _respond_match_invite(db, invite, InviteStatus.CANCELLED)
 
 
@@ -409,15 +525,7 @@ async def accept_tournament_invite(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> TournamentInviteRead:
-    invite = await db.get(TournamentInvite, invite_id)
-    if invite is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الدعوة غير موجودة")
-    if invite.invitee_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="هذه الدعوة ليست موجّهة إليك")
-    if invite.status != InviteStatus.PENDING:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تم الرد على هذه الدعوة من قبل")
-    if invite.created_at < _now() - TOURNAMENT_INVITE_TTL:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="انتهت صلاحية هذه الدعوة")
+    invite = await _load_actionable_invite(db, TournamentInvite, invite_id, actor_id=current_user.id, actor_field="invitee_id", actor_error="هذه الدعوة ليست موجّهة إليك", ttl=TOURNAMENT_INVITE_TTL)
     # AUD-06: lock the tournament row (same lock join_tournament takes)
     # so the capacity re-check below and the participant insert are
     # atomic against concurrent joins and accepts.
@@ -456,13 +564,7 @@ async def decline_tournament_invite(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> TournamentInviteRead:
-    invite = await db.get(TournamentInvite, invite_id)
-    if invite is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الدعوة غير موجودة")
-    if invite.invitee_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="هذه الدعوة ليست موجّهة إليك")
-    if invite.status != InviteStatus.PENDING:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تم الرد على هذه الدعوة من قبل")
+    invite = await _load_actionable_invite(db, TournamentInvite, invite_id, actor_id=current_user.id, actor_field="invitee_id", actor_error="هذه الدعوة ليست موجّهة إليك")
     invite.status = InviteStatus.DECLINED
     invite.responded_at = _now()
     await db.commit()
@@ -476,13 +578,7 @@ async def cancel_tournament_invite(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    invite = await db.get(TournamentInvite, invite_id)
-    if invite is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الدعوة غير موجودة")
-    if invite.inviter_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="يمكنك إلغاء دعواتك فقط")
-    if invite.status != InviteStatus.PENDING:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تم الرد على هذه الدعوة من قبل")
+    invite = await _load_actionable_invite(db, TournamentInvite, invite_id, actor_id=current_user.id, actor_field="inviter_id", actor_error="يمكنك إلغاء دعواتك فقط")
     invite.status = InviteStatus.CANCELLED
     invite.responded_at = _now()
     await db.commit()
@@ -504,10 +600,10 @@ async def get_inbox(
     tour_received = await _list(TournamentInvite, TournamentInvite.invitee_id, current_user.id)
     tour_sent = await _list(TournamentInvite, TournamentInvite.inviter_id, current_user.id)
     return InviteInboxRead(
-        match_received=[await _match_invite_read(db, i) for i in match_received],
-        match_sent=[await _match_invite_read(db, i) for i in match_sent],
-        tournament_received=[await _tournament_invite_read(db, i) for i in tour_received],
-        tournament_sent=[await _tournament_invite_read(db, i) for i in tour_sent],
+        match_received=await _match_invite_reads(db, match_received),
+        match_sent=await _match_invite_reads(db, match_sent),
+        tournament_received=await _tournament_invite_reads(db, tour_received),
+        tournament_sent=await _tournament_invite_reads(db, tour_sent),
     )
 
 
@@ -546,7 +642,7 @@ async def list_challenges(
         .order_by(ChallengeMatch.created_at.desc())
         .limit(50)
     )
-    return [await _challenge_read(db, c) for c in result.scalars().all()]
+    return await _challenge_reads(db, list(result.scalars().all()))
 
 
 async def _get_challenge_or_404(db: AsyncSession, challenge_id: UUID) -> ChallengeMatch:

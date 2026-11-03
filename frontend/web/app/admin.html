@@ -327,7 +327,7 @@
 
     async function loadVerifyPanel() {
       try {
-        verifyState.cards = await apiFetch("/players/cards");
+        verifyState.cards = await apiFetch("/players/cards?limit=100");
         renderVerifyList();
       } catch (err) {
         el("adm-verify-list").innerHTML = `<p class="muted">${esc(err?.detail || "تعذر تحميل قائمة اللاعبين.")}</p>`;

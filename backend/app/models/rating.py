@@ -7,6 +7,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.user import User
+
 
 class PlayerRating(Base):
     __tablename__ = "player_ratings"
@@ -33,4 +38,4 @@ class PlayerRating(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship()  # noqa: F821
+    user: Mapped["User"] = relationship()

@@ -74,9 +74,19 @@ function lqWireIndicator(zone, hoverable) {
   }
   place(activeLi, false);
   window.addEventListener("resize", () => place(zone.querySelector("li.active"), false));
-  /* The brand logo image loads after DOMContentLoaded and widens the
-     brand, shifting the zone — re-place once everything has loaded. */
-  window.addEventListener("load", () => place(zone.querySelector("li.active"), false));
+  /* Late-arriving resources (the brand logo image, the Orbitron /
+     IBM Plex webfonts) can still nudge the zone's geometry after the
+     first placement. Correct with a short glide once they settle —
+     the indicator then never sits wrong while the page finishes
+     loading, and the correction reads as motion, not a jump. The
+     logo's box is aspect-ratio-reserved in CSS, so in practice the
+     font swap is the only mover. Skipped mid-hover: never yank the
+     circle away from a preview. */
+  const correct = () => {
+    if (!zone.classList.contains("lq-previewing")) place(zone.querySelector("li.active"), true);
+  };
+  window.addEventListener("load", correct);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(correct);
   if (hoverable) {
     items.forEach((li) => li.addEventListener("mouseenter", () => {
       items.forEach((x) => x.classList.remove("lq-preview"));

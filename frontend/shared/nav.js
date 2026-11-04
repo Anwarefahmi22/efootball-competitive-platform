@@ -69,7 +69,7 @@ function lqWireIndicator(zone, hoverable) {
     if (!li) { indicator.style.opacity = "0"; return; }
     indicator.style.opacity = "1";
     if (!animate) indicator.classList.add("lq-noanim");
-    indicator.style.left = (li.offsetLeft + li.offsetWidth / 2 - 35) + "px";
+    indicator.style.transform = "translateX(" + (li.offsetLeft + li.offsetWidth / 2 - 35) + "px)";
     if (!animate) { void indicator.offsetWidth; indicator.classList.remove("lq-noanim"); }
   }
   place(activeLi, false);
@@ -78,8 +78,17 @@ function lqWireIndicator(zone, hoverable) {
      brand, shifting the zone — re-place once everything has loaded. */
   window.addEventListener("load", () => place(zone.querySelector("li.active"), false));
   if (hoverable) {
-    items.forEach((li) => li.addEventListener("mouseenter", () => place(li, true)));
-    list.addEventListener("mouseleave", () => place(zone.querySelector("li.active"), true));
+    items.forEach((li) => li.addEventListener("mouseenter", () => {
+      items.forEach((x) => x.classList.remove("lq-preview"));
+      li.classList.add("lq-preview");
+      zone.classList.add("lq-previewing");
+      place(li, true);
+    }));
+    list.addEventListener("mouseleave", () => {
+      items.forEach((x) => x.classList.remove("lq-preview"));
+      zone.classList.remove("lq-previewing");
+      place(zone.querySelector("li.active"), true);
+    });
   }
 }
 

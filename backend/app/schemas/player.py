@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -24,3 +25,7 @@ class PlayerCardRead(BaseModel):
     likes_count: int
     liked_by_me: bool
     is_me: bool
+    # Presence (migration 024): masked (False / None) when the player
+    # hides their status. last_seen_at is an aware UTC datetime.
+    is_online: bool = False
+    last_seen_at: datetime | None = None

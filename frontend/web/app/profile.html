@@ -21,6 +21,7 @@
   <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/presence.js"></script>
   <script>
     (async () => {
       const uid = new URLSearchParams(location.search).get("user");
@@ -60,7 +61,7 @@
                 ${p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="صورة ${escapeHtml(p.display_name)}">` : `<span data-i18n-skip>${initials}</span>`}
               </span></span>
               <div class="profile-identity">
-                <div class="profile-status"><i></i> لاعب نشط</div>
+                <div class="profile-status">${presenceLineHtml(p)}</div>
                 <h1 data-i18n-skip>${escapeHtml(p.display_name)}</h1>
                 ${rating ? `<span class="title-chip">${titleFor(rating.rating)}</span>` : ""}
                 <div class="muted">${p.country ? `<span data-i18n-skip>${escapeHtml(p.country)}</span>` : '<span class="blank-chip">🌍 دولة غير محددة</span>'} <span class="profile-dot">•</span> ${p.efootball_ign ? `<span data-i18n-skip>IGN: ${escapeHtml(p.efootball_ign)}</span>` : '<span class="blank-chip">IGN غير مضاف</span>'}</div>
@@ -94,6 +95,7 @@
             <div><span>نسبة الفوز</span><strong>${winRate}%</strong></div>
             <div><span>المتابعون</span><strong id="followers-count">${fstats?.followers_count ?? 0}</strong></div>
             <div><span>أتابع</span><strong id="following-count">${fstats?.following_count ?? 0}</strong></div>
+            <div><span>زمن النشاط</span><strong>${fmtActiveTime(p.active_seconds)}</strong></div>
           </div>
           ${p.squad_image_url ? `<section class="profile-panel" style="margin-bottom:14px"><div class="section-heading"><h2>تشكيلة اللاعب</h2>${p.formation ? `<span class="badge open">${escapeHtml(p.formation)}${p.squad_strength ? ` · القوة ${p.squad_strength}` : ""}</span>` : ""}</div><img src="${escapeHtml(p.squad_image_url)}" alt="تشكيلة اللاعب" loading="lazy" style="width:100%;border-radius:12px;display:block" /></section>` : ""}
           <div class="profile-panels">

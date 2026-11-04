@@ -30,6 +30,7 @@
   <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/presence.js"></script>
   <script>
     const PODIUM_ART = `<svg class="board-empty__art" viewBox="0 0 200 108" aria-hidden="true"><g fill="none" stroke="#a3ff12" stroke-width="2"><circle cx="55" cy="34" r="13" stroke-opacity=".45" stroke-dasharray="4 5"/><circle cx="100" cy="22" r="15"/><circle cx="145" cy="40" r="12" stroke-opacity=".3" stroke-dasharray="4 5"/></g><g fill="#143325" stroke="#1f4a33"><rect x="76" y="58" width="48" height="42" rx="4"/><rect x="28" y="72" width="44" height="28" rx="4"/><rect x="128" y="78" width="44" height="22" rx="4"/></g><g fill="#a3ff12" font-family="IBM Plex Sans Arabic, sans-serif" font-weight="800" text-anchor="middle"><text x="100" y="86" font-size="17">1</text><text x="50" y="92" font-size="13" fill-opacity=".55">2</text><text x="150" y="95" font-size="12" fill-opacity=".4">3</text></g></svg>`;
     const titleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف الساحة" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";

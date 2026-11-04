@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.v1.auth import get_current_user
+from app.core.presence import presence_view
 from app.db.session import get_db
 from app.models.rating import PlayerRating
 from app.models.social import PlayerLike
@@ -78,6 +79,7 @@ async def player_cards(
     for user in users:
         rating = ratings.get(user.id)
         profile = user.profile
+        is_online, last_seen = presence_view(user)
         cards.append(
             PlayerCardRead(
                 user_id=user.id,
@@ -97,6 +99,8 @@ async def player_cards(
                 likes_count=likes.get(user.id, 0),
                 liked_by_me=user.id in liked_by_me,
                 is_me=user.id == current_user.id,
+                is_online=is_online,
+                last_seen_at=last_seen,
             )
         )
     cards.sort(key=lambda card: (-card.rating, card.arena_no))

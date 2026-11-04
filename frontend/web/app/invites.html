@@ -63,6 +63,7 @@
   <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/presence.js"></script>
   <script>
     const INV_STATUS = {
       pending: ["بانتظار الرد", ""], accepted: ["مقبولة", ""], declined: ["مرفوضة", "bad"],
@@ -79,7 +80,7 @@
       ? `<span class="inv-ava"><img src="${escapeHtml(p.avatar_url)}" alt=""></span>`
       : `<span class="inv-ava">${escapeHtml((p.display_name || "؟").trim().slice(0, 1))}</span>`;
     const when = (iso) => new Intl.DateTimeFormat(i18n.current() === "ar" ? "ar-EG" : i18n.current(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
-    const playerLine = (p) => `${escapeHtml(p.display_name)}${p.arena_no ? ` <span class="inv-sub">#${p.arena_no}</span>` : ""}`;
+    const playerLine = (p) => `${presenceDotHtml(p.is_online)} ${escapeHtml(p.display_name)}${p.arena_no ? ` <span class="inv-sub">#${p.arena_no}</span>` : ""}`;
 
     function matchReceivedHtml(inv) {
       const actions = inv.status === "pending"

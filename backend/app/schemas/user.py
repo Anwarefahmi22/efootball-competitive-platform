@@ -30,6 +30,9 @@ class ProfileUpdate(BaseModel):
     efootball_ign: str | None = None
     formation: str | None = Field(default=None, max_length=16)
     squad_strength: int | None = Field(default=None, ge=0, le=4000)
+    # Presence privacy switch (migration 024). Lives on the User row,
+    # not the profile; update_own_profile pops and applies it there.
+    presence_hidden: bool | None = None
 
 
 class UserRead(BaseModel):
@@ -60,6 +63,14 @@ class PublicProfileRead(BaseModel):
     squad_strength: int | None
     squad_image_url: str | None
     created_at: datetime
+    # Presence (migration 024). last_seen_at is masked to None and
+    # is_online to False while the player hides their status;
+    # presence_hidden itself is the player's own setting (the profile
+    # page renders its toggle from it on the owner's view).
+    is_online: bool = False
+    last_seen_at: datetime | None = None
+    active_seconds: int = 0
+    presence_hidden: bool = False
 
 
 class UserRegister(BaseModel):

@@ -9,6 +9,8 @@ class PlayerBrief(BaseModel):
     display_name: str
     avatar_url: str | None = None
     arena_no: int | None = None
+    # Presence (migration 024): drives the online dot in the inbox.
+    is_online: bool = False
 
 
 class MatchInviteCreate(BaseModel):

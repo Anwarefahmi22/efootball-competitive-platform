@@ -27,6 +27,18 @@ class User(Base):
     arena_no: Mapped[int] = mapped_column(
         BigInteger, Identity(start=1001), unique=True, nullable=False
     )
+    # Presence (migration 024): last heartbeat stamp, accumulated real
+    # activity seconds (capped-gap accrual — see app.core.presence) and
+    # the player's own switch to hide their online state from others.
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    active_seconds: Mapped[int] = mapped_column(
+        BigInteger, default=0, server_default="0", nullable=False
+    )
+    presence_hidden: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

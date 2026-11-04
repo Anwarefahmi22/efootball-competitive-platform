@@ -765,3 +765,11 @@ tr.is-me td:first-child { border-inline-start: 3px solid var(--neon); }
 .room-form__row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .room-form__row .btn-primary { margin-inline-start: auto; }
 .room-admin { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+/* Presence (migration 024): online dot + presence line. */
+.presence-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #5b6b5d; flex: none; vertical-align: middle; }
+.presence-dot.on { background: #22d3ee; box-shadow: 0 0 8px rgba(34, 211, 238, .8); animation: presence-pulse 2s ease-in-out infinite; }
+@keyframes presence-pulse { 0%, 100% { box-shadow: 0 0 4px rgba(34, 211, 238, .5); } 50% { box-shadow: 0 0 11px rgba(34, 211, 238, .95); } }
+.presence-line { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--muted, #9db89f); }
+.presence-when { opacity: .85; }
+@media (prefers-reduced-motion: reduce) { .presence-dot.on { animation: none; } }

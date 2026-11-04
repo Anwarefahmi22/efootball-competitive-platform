@@ -197,6 +197,7 @@
   <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/presence.js"></script>
   <script>
     const stTitleFor = (elo) => elo >= 1300 ? "أسطورة الساحة" : elo >= 1150 ? "محترف" : elo >= 1050 ? "منافس شرس" : elo >= 950 ? "منافس" : "صاعد";
     const stPersonSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`;
@@ -238,6 +239,7 @@
           <div class="st-name"><a href="/app/profile.html?user=${encodeURIComponent(p.user_id)}">${escapeHtml(p.display_name)}</a></div>
           <div class="st-title">${stTitleFor(p.rating)}</div>
           <div class="st-meta">${escapeHtml(meta)}</div>
+          <div class="st-presence">${presenceLineHtml(p)}</div>
         </div>
         <div class="st-avatar">${stAvatarHtml(p)}</div>
       </div>

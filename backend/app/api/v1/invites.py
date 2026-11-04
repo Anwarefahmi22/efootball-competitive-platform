@@ -24,6 +24,7 @@ from app.api.v1.matches import _apply_elo_draw, _apply_elo_win
 from app.core.competition import MAX_SCORE
 from app.core.media import evidence_media_type, normalize_image, read_upload_limited
 from app.core.permissions import get_current_admin
+from app.core.presence import presence_view
 from app.core.storage import MAX_UPLOAD_BYTES
 from app.core.trust import record_confirmed_match, record_dispute_filed, record_dispute_resolved
 from app.db.session import get_db
@@ -98,6 +99,7 @@ async def _briefs(db: AsyncSession, user_ids: set[UUID]) -> dict[UUID, PlayerBri
             display_name=user.display_name if user else "لاعب",
             avatar_url=profile.avatar_url if profile else None,
             arena_no=user.arena_no if user else None,
+            is_online=presence_view(user)[0] if user else False,
         )
     return out
 

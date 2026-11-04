@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.v1.auth import get_current_user
+from app.core.presence import apply_heartbeat, presence_view
 from app.db.session import get_db
 from app.models.user import User
 from app.core.media import (
@@ -39,6 +40,7 @@ async def get_public_profile(user_id: UUID, db: AsyncSession = Depends(get_db)) 
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     profile = user.profile
+    is_online, last_seen = presence_view(user)
     return PublicProfileRead(
         display_name=user.display_name,
         avatar_url=profile.avatar_url if profile else None,
@@ -49,6 +51,10 @@ async def get_public_profile(user_id: UUID, db: AsyncSession = Depends(get_db)) 
         squad_strength=profile.squad_strength if profile else None,
         squad_image_url=profile.squad_image_url if profile else None,
         created_at=user.created_at,
+        is_online=is_online,
+        last_seen_at=last_seen,
+        active_seconds=user.active_seconds or 0,
+        presence_hidden=user.presence_hidden,
     )
 
 
@@ -67,11 +73,15 @@ async def update_own_profile(
         current_user.display_name = display_name.strip()
         if len(current_user.display_name) < 2:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Display name is too short")
+    presence_hidden = data.pop("presence_hidden", None)
+    if presence_hidden is not None:
+        current_user.presence_hidden = presence_hidden
     for field, value in data.items():
         setattr(profile, field, value)
     await db.commit()
     await db.refresh(profile)
     await db.refresh(current_user)
+    is_online, last_seen = presence_view(current_user)
     return PublicProfileRead(
         display_name=current_user.display_name,
         avatar_url=profile.avatar_url,
@@ -82,7 +92,24 @@ async def update_own_profile(
         squad_strength=profile.squad_strength,
         squad_image_url=profile.squad_image_url,
         created_at=current_user.created_at,
+        is_online=is_online,
+        last_seen_at=last_seen,
+        active_seconds=current_user.active_seconds or 0,
+        presence_hidden=current_user.presence_hidden,
     )
+
+
+@router.post("/me/heartbeat", status_code=status.HTTP_204_NO_CONTENT)
+async def heartbeat(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Presence heartbeat (migration 024): the client pings while a
+    logged-in page is visible. Stamps last_seen_at and accrues the
+    capped inter-beat gap into active_seconds — see app.core.presence
+    for the accrual rules. Deliberately returns no body."""
+    apply_heartbeat(current_user)
+    await db.commit()
 
 
 @router.post("/me/avatar", response_model=PublicProfileRead)

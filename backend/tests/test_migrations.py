@@ -35,8 +35,8 @@ def _dsn(dbname: str, *, asyncpg: bool = False) -> str:
 ADMIN_DSN = _dsn("postgres")
 MIG_DSN_ASYNC = _dsn("arena_test_mig", asyncpg=True)
 MIG_DSN_SYNC = _dsn("arena_test_mig")
-HEAD = "023_email_verification"
-PREV = "022_tournament_rooms"
+HEAD = "024_presence"
+PREV = "023_email_verification"
 
 
 def _alembic(*args: str) -> subprocess.CompletedProcess:

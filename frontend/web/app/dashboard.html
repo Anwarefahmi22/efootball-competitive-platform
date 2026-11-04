@@ -135,6 +135,12 @@
       <input class="field" id="edit-squad-file" name="squad_image" type="file" accept="image/jpeg,image/png,image/webp" />
       <small class="muted">ارفع لقطة تشكيلتك القياسية من اللعبة — تُضغط تلقائيًا (WebP) دون فرق ملحوظ في الجودة، وتظهر في بطاقتك في أرينا ستار وملفك الشخصي.</small>
       <button class="btn btn-ghost" id="edit-squad-remove" type="button" hidden>إزالة صورة التشكيلة</button>
+      <label class="lbl" for="edit-presence-hidden">حالة الاتصال</label>
+      <label class="field" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" id="edit-presence-hidden" />
+        <span>إخفاء حالة الاتصال</span>
+      </label>
+      <small class="muted">عند إخفائها تظهر دائمًا غير متصل للاعبين الآخرين، ولا يظهر وقت آخر ظهور لك.</small>
       <div class="avatar-preview" id="avatar-preview">EA</div>
       <div class="form-error" id="profile-form-error" role="alert" hidden></div>
       <div class="dialog-actions"><button class="btn btn-primary" type="submit" id="save-profile">حفظ التغييرات</button><button class="btn btn-ghost" type="button" id="cancel-profile">إلغاء</button></div>
@@ -144,6 +150,7 @@
   <script src="/shared/i18n.js"></script>
   <script src="/shared/api.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/presence.js"></script>
   <script src="/shared/arena3d.js?v=11"></script>
   <script>
     /* Trophy: the approved fluid model (30 real angles, one-direction
@@ -231,6 +238,7 @@
         el("edit-squad-preview").style.display = squadUrl ? "block" : "none";
         if (squadUrl) el("edit-squad-preview").src = squadUrl;
         el("edit-squad-remove").hidden = !squadUrl;
+        apiFetch("/users/" + uid).then((pub) => { el("edit-presence-hidden").checked = !!pub.presence_hidden; }).catch(() => {});
         renderPreview(me.display_name, me.profile?.avatar_url);
         const [board, tournaments, seasons, trust, myRating] = await Promise.all([apiFetch("/ratings/leaderboard"), apiFetch("/tournaments"), apiFetch("/seasons").catch(() => []), apiFetch("/trust/" + uid).catch(() => null), apiFetch("/ratings/" + uid).catch(() => null)]);
         // The leaderboard only lists players who already have a rating row
@@ -270,7 +278,7 @@
     el("cancel-profile").addEventListener("click", () => el("profile-editor").close());
     el("edit-display-name").addEventListener("input", (event) => renderPreview(event.target.value, ""));
     el("edit-avatar-file").addEventListener("change", (event) => { const file = event.target.files[0]; if (file) renderPreview(el("edit-display-name").value, URL.createObjectURL(file)); });
-    el("profile-form").addEventListener("submit", async (event) => { event.preventDefault(); const error = el("profile-form-error"); const save = el("save-profile"); error.hidden = true; save.disabled = true; try { await apiFetch("/users/me/profile", { method: "PATCH", body: JSON.stringify({ display_name: el("edit-display-name").value.trim(), formation: el("edit-formation").value || null, squad_strength: el("edit-squad-strength").value === "" ? null : Number(el("edit-squad-strength").value) }) }); const file = el("edit-avatar-file").files[0]; if (file) { const form = new FormData(); form.append("image", file); await apiFetch("/users/me/avatar", { method: "POST", body: form }); } const squadFile = el("edit-squad-file").files[0]; if (squadFile) { const squadForm = new FormData(); squadForm.append("image", squadFile); await apiFetch("/users/me/squad-image", { method: "POST", body: squadForm }); } else if (squadRemoved) { await apiFetch("/users/me/squad-image", { method: "DELETE" }); } el("profile-editor").close(); toast("تم تحديث الهوية بنجاح.", "success"); setTimeout(() => location.reload(), 1400); } catch (err) { error.textContent = err.detail || "تعذر حفظ التغييرات."; error.hidden = false; } finally { save.disabled = false; } });
+    el("profile-form").addEventListener("submit", async (event) => { event.preventDefault(); const error = el("profile-form-error"); const save = el("save-profile"); error.hidden = true; save.disabled = true; try { await apiFetch("/users/me/profile", { method: "PATCH", body: JSON.stringify({ display_name: el("edit-display-name").value.trim(), formation: el("edit-formation").value || null, squad_strength: el("edit-squad-strength").value === "" ? null : Number(el("edit-squad-strength").value), presence_hidden: el("edit-presence-hidden").checked }) }); const file = el("edit-avatar-file").files[0]; if (file) { const form = new FormData(); form.append("image", file); await apiFetch("/users/me/avatar", { method: "POST", body: form }); } const squadFile = el("edit-squad-file").files[0]; if (squadFile) { const squadForm = new FormData(); squadForm.append("image", squadFile); await apiFetch("/users/me/squad-image", { method: "POST", body: squadForm }); } else if (squadRemoved) { await apiFetch("/users/me/squad-image", { method: "DELETE" }); } el("profile-editor").close(); toast("تم تحديث الهوية بنجاح.", "success"); setTimeout(() => location.reload(), 1400); } catch (err) { error.textContent = err.detail || "تعذر حفظ التغييرات."; error.hidden = false; } finally { save.disabled = false; } });
     if (window.EyesLoader) EyesLoader.wait(el("loading"), { label: "جارٍ تجهيز مركزك التنافسي…" });
     apiFetch("/invites/count").then((r) => { if (r && r.pending_received > 0) { const b = el("invites-alert"); b.textContent = `✉️ لديك ${r.pending_received} دعوة بانتظار الرد — اضغط للعرض`; b.style.display = "block"; } }).catch(() => {});
     load();

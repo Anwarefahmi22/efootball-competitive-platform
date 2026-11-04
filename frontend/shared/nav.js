@@ -241,7 +241,7 @@ function wireBulbs() { document.querySelectorAll(".efa-bulb").forEach(wireBulb);
 
 function renderLiquidNav() {
   const activeKey = lqActiveKey();
-  const brand = `<a class="lq-brand" href="/"><img class="brand-logo" src="/shared/logo-symbol.webp" alt="" />eFootball Arena</a>`;
+  const brand = `<a class="lq-brand" href="/"><span class="brand-badge"><img class="brand-logo" src="/shared/logo-symbol.webp" alt="" /></span>eFootball Arena</a>`;
 
   const header = document.createElement("header");
   header.className = "lq-header";
@@ -254,7 +254,7 @@ function renderLiquidNav() {
     <div class="lq-utils">
       ${bulbToggleHtml(false)}
       ${lqLanguageHtml()}
-      <button class="lq-logout" type="button">خروج</button>
+      <button class="lq-logout" type="button" aria-label="خروج" title="خروج"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4"/><path d="m8 17-5-5 5-5"/><path d="M3 12h12"/></svg></button>
     </div>`;
 
   const topbar = document.createElement("header");
@@ -268,7 +268,7 @@ function renderLiquidNav() {
     <div class="lq-sp"></div>
     ${bulbToggleHtml(true)}
     ${lqLanguageHtml()}
-    <button class="lq-logout" type="button">خروج</button>`;
+    <button class="lq-logout" type="button" aria-label="خروج" title="خروج"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4"/><path d="m8 17-5-5 5-5"/><path d="M3 12h12"/></svg></button>`;
 
   const dock = document.createElement("div");
   dock.className = "lq-dock";
@@ -321,7 +321,7 @@ function renderClassicNav() {
   const logged = Auth.loggedIn();
   const currentPath = location.pathname;
   nav.innerHTML = `
-    <a class="brand" href="/"><img class="brand-logo" src="/shared/logo-symbol.webp" alt="" />eFootball Arena</a>
+    <a class="brand" href="/"><span class="brand-badge"><img class="brand-logo" src="/shared/logo-symbol.webp" alt="" /></span>eFootball Arena</a>
     <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="فتح قائمة التنقل">☰</button>
     <div class="nav-menu" id="nav-menu">
     <div class="spacer"></div>

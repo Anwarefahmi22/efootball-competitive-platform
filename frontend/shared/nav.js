@@ -50,12 +50,12 @@ function lqItemHtml(item, activeKey) {
 
 function lqLanguageHtml() {
   return `<label class="language-picker" title="اللغة">
-      <span aria-hidden="true">文</span>
+      <span class="lang-globe" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
       <span class="sr-only">اللغة</span>
       <select class="nav-language" aria-label="اللغة">
-        <option value="ar">العربية</option>
-        <option value="fr">Français</option>
-        <option value="en">English</option>
+        <option value="ar">AR</option>
+        <option value="fr">FR</option>
+        <option value="en">EN</option>
       </select>
     </label>`;
 }
@@ -339,12 +339,12 @@ function renderClassicNav() {
     `}
     ${bulbToggleHtml(false)}
     <label class="language-picker" title="اللغة">
-      <span aria-hidden="true">文</span>
+      <span class="lang-globe" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
       <span class="sr-only">اللغة</span>
       <select id="nav-language" aria-label="اللغة">
-        <option value="ar">العربية</option>
-        <option value="fr">Français</option>
-        <option value="en">English</option>
+        <option value="ar">AR</option>
+        <option value="fr">FR</option>
+        <option value="en">EN</option>
       </select>
     </label>
     </div>

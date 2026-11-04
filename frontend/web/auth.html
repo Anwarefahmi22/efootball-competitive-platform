@@ -115,6 +115,12 @@
        top corner, where it overlaps the centered logo on narrow cards.
        On this page it sits in flow, end-aligned above the logo instead. */
     .auth-card .auth-language { position: static; display: flex; width: fit-content; margin-inline-start: auto; margin-bottom: 12px; }
+    /* The auth card is a dark surface in BOTH themes, so its picker
+       keeps night colors even when the day theme flips the page
+       variables (otherwise the select text goes dark-on-dark). */
+    .auth-card .language-picker { color: #9dbfae; border-color: #1f4a33; }
+    .auth-card .language-picker select { color: #e8f5ee; }
+    .auth-card .language-picker option { background: #10281c; color: #e8f5ee; }
     .logo { text-align: center; margin-bottom: 22px; }
     .logo .logo-img { height: 108px; width: auto; margin-bottom: 8px; filter: drop-shadow(0 12px 30px rgba(163,255,18,.16)); }
     .logo .mark {
@@ -352,12 +358,12 @@
   </div>
   <div class="auth-card">
     <label class="language-picker auth-language" title="اللغة">
-      <span aria-hidden="true">文</span>
+      <span class="lang-globe" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
       <span class="sr-only">اللغة</span>
       <select id="auth-language" aria-label="اللغة">
-        <option value="ar">العربية</option>
-        <option value="fr">Français</option>
-        <option value="en">English</option>
+        <option value="ar">AR</option>
+        <option value="fr">FR</option>
+        <option value="en">EN</option>
       </select>
     </label>
     <div class="logo">

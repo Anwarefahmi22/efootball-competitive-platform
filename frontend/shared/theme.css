@@ -52,9 +52,29 @@ h1, h2, h3 { margin: 0 0 .5em; }
 .navbar .spacer { flex: 1; }
 .nav-menu { display: flex; align-items: center; gap: 12px; flex: 1; }
 .nav-toggle { display: none; background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font: inherit; cursor: pointer; }
-.language-picker { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; }
-.language-picker select { border: 0; background: transparent; color: var(--text); font: inherit; cursor: pointer; }
-.language-picker option { background: var(--surface); color: var(--text); }
+/* Compact professional language picker (owner request 2026-11-04):
+   pill, globe icon, language CODE in Orbitron, custom chevron. */
+.language-picker {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 10px;
+  color: var(--muted); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.language-picker:hover { border-color: var(--neon-dim); }
+.language-picker:focus-within { border-color: var(--neon-dim); box-shadow: 0 0 0 3px rgba(163, 255, 18, .12); }
+.language-picker .lang-globe { display: grid; place-items: center; flex: none; }
+.language-picker .lang-globe svg { width: 15px; height: 15px; display: block; }
+.language-picker select {
+  appearance: none; -webkit-appearance: none;
+  border: 0; background-color: transparent; color: var(--text);
+  font-family: "Orbitron", monospace; font-size: .74rem; font-weight: 700; letter-spacing: .05em;
+  cursor: pointer; padding-inline-end: 13px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237d927e' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-size: 10px; background-position: right .1rem center;
+}
+html[dir="rtl"] .language-picker select { background-position: left .1rem center; }
+.language-picker option { background: var(--surface); color: var(--text); font-family: "IBM Plex Sans Arabic", sans-serif; letter-spacing: 0; }
 .auth-language { position: absolute; top: 18px; inset-inline-end: 18px; }
 .navbar a.nav-link {
   color: var(--muted); padding: 8px 12px; border-radius: 8px; font-weight: 600;
@@ -909,7 +929,7 @@ li.active .lq-badge { border-color: var(--neon); }
   .lq-brand .brand-logo { height: 28px; }
   .lq-top-links { gap: 10px; }
   .lq-top-links a { font-size: .88rem; }
-  .lq-topbar .language-picker > span[aria-hidden="true"] { display: none; }
+  .lq-topbar .language-picker { height: 30px; padding: 0 8px; gap: 5px; }
   .lq-logout { font-size: .88rem; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -1085,3 +1085,4 @@ li.active .lq-badge { border-color: var(--neon); }
 }
 .lq-logout { display: grid; place-items: center; padding: 6px; }
 .lq-logout svg { width: 21px; height: 21px; display: block; }
+#nav-logout svg { width: 18px; height: 18px; display: block; }

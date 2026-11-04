@@ -254,7 +254,7 @@ function renderLiquidNav() {
     <div class="lq-utils">
       ${bulbToggleHtml(false)}
       ${lqLanguageHtml()}
-      <button class="lq-logout" type="button">خروج</button>
+      <button class="lq-logout" type="button" aria-label="خروج" title="خروج"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4"/><path d="m8 17-5-5 5-5"/><path d="M3 12h12"/></svg></button>
     </div>`;
 
   const topbar = document.createElement("header");
@@ -333,7 +333,7 @@ function renderClassicNav() {
       <a class="nav-link ${currentPath.endsWith("/arena-star.html") ? "active" : ""}" href="/app/arena-star.html">أرينا ستار</a>
       <a class="nav-bell" href="/app/invites.html" aria-label="الدعوات" title="الدعوات">🔔<span class="nav-badge" id="nav-invite-badge" hidden></span></a>
       <button class="user-chip" id="nav-user" type="button" title="لوحة اللاعب">⚽ <span>حسابي</span></button>
-      <button class="btn btn-ghost" type="button" id="nav-logout" style="padding:8px 14px">خروج</button>
+      <button class="btn btn-ghost" type="button" id="nav-logout" style="padding:8px 10px" aria-label="خروج" title="خروج"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4"/><path d="m8 17-5-5 5-5"/><path d="M3 12h12"/></svg></button>
     ` : `
       <a class="btn btn-primary" href="/auth.html" style="padding:8px 18px">دخول / تسجيل</a>
     `}

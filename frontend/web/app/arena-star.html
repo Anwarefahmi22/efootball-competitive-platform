@@ -151,10 +151,45 @@
       font: inherit; font-weight: 700; cursor: pointer;
     }
     .st-modal-item .cnt { color: var(--muted); font-size: .78rem; font-weight: 700; }
-    /* Day theme: the share sheet is chrome (the deck card itself stays
-       dark by design in both themes). */
+    /* Day theme: the share sheet follows the theme as chrome. */
     [data-theme="day"] .st-modal-box { background: #ffffff; }
     [data-theme="day"] .st-modal-item { background: var(--surface-2); }
+    /* Day theme: the deck CARD itself flips too (owner: the dark navy
+       card broke the day page's harmony). Same card, light key: white
+       face, deep-green accents, soft shadow. */
+    [data-theme="day"] .st-card {
+      background: linear-gradient(170deg, #ffffff 0%, #f2f7ec 55%, #e4eed7 100%);
+      border-color: rgba(76, 138, 6, .4);
+      box-shadow: 0 18px 44px rgba(38, 64, 24, .28);
+    }
+    [data-theme="day"] .st-idrow,
+    [data-theme="day"] .st-meta,
+    [data-theme="day"] .st-stat span,
+    [data-theme="day"] .st-cups .lbl,
+    [data-theme="day"] .st-mini,
+    [data-theme="day"] .st-squad-empty { color: #5f7a63; }
+    [data-theme="day"] .st-verified { color: #4c8a06; background: #e6f6c9; border-color: rgba(76, 138, 6, .45); }
+    [data-theme="day"] .st-title,
+    [data-theme="day"] .st-stat b.elo,
+    [data-theme="day"] .st-squad-meta,
+    [data-theme="day"] .st-squad-text b,
+    [data-theme="day"] .st-cups .n,
+    [data-theme="day"] .st-squad-empty a { color: #4c8a06; }
+    [data-theme="day"] .st-avatar {
+      background: radial-gradient(circle at 35% 30%, #f4faec, #d9e7c4);
+      border-color: rgba(76, 138, 6, .5); color: #4c8a06;
+    }
+    [data-theme="day"] .st-divider { background: rgba(76, 138, 6, .22); }
+    [data-theme="day"] .st-squad {
+      background: linear-gradient(180deg, #f4f9ee, #e8f1da);
+      border-color: rgba(76, 138, 6, .32);
+    }
+    [data-theme="day"] .st-squad-img { background: #eef4e2; }
+    [data-theme="day"] .st-squad-text { background: #f4f9ee; border-color: rgba(76, 138, 6, .32); }
+    [data-theme="day"] .st-squad-empty { border-color: rgba(76, 138, 6, .4); }
+    [data-theme="day"] .st-inv.ghost { color: #4c8a06; border-color: #57a306; }
+    [data-theme="day"] .st-next-circle { background: #4c8a06; box-shadow: 0 6px 18px rgba(76, 138, 6, .4); }
+    [data-theme="day"] .st-nav-btn { border-color: #57a306; color: #4c8a06; }
     @media (max-height: 760px) {
       .st-deck { min-height: 520px; }
       .st-squad { min-height: 120px; }

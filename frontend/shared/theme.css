@@ -876,8 +876,11 @@ li.active .lq-badge { border-color: var(--neon); }
   .lq-header .lq-brand .brand-logo { height: 36px; }
   .lq-zone { position: relative; flex: 1; display: flex; }
   .lq-utils { display: flex; align-items: center; gap: 14px; white-space: nowrap; }
-  /* Header: circle hangs below the bar's bottom edge, ears flipped. */
-  .lq-zone .lq-indicator { bottom: -35px; border: 6px solid var(--bg); }
+  /* Header: circle hangs below the bar's bottom edge, ears flipped.
+     Its transform is driven by the rAF spring in nav.js — no CSS
+     transition on transform here (it would double-smooth and lag). */
+  .lq-zone .lq-indicator { bottom: -35px; border: 6px solid var(--bg); transition: opacity .25s; }
+  .lq-zone .lq-icon, .lq-zone .lq-text { transition-duration: .3s; }
   .lq-zone .lq-indicator::before, .lq-zone .lq-indicator::after { bottom: 50%; }
   .lq-zone .lq-indicator::before { left: -22px; box-shadow: 1px 10px 0 0 var(--bg); }
   .lq-zone .lq-indicator::after { right: -22px; box-shadow: -1px 10px 0 0 var(--bg); }

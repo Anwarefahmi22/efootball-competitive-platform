@@ -65,23 +65,56 @@ function lqWireIndicator(zone, hoverable) {
   const list = zone.querySelector("ul");
   const items = Array.from(zone.querySelectorAll("li"));
   const activeLi = zone.querySelector("li.active");
-  function place(li, animate) {
+  const xFor = (li) => li.offsetLeft + li.offsetWidth / 2 - 35;
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Desktop hover-follow is driven by a requestAnimationFrame spring
+     (each frame closes 30% of the remaining distance) instead of a
+     CSS transition: a transition restarts its full duration and
+     easing on every mouseenter, so sweeping across items made the
+     circle perpetually chase the cursor and stutter. The spring's
+     velocity is continuous — target changes mid-flight just bend
+     the path — and it settles in ~250ms with no restart artifacts. */
+  let curX = null, targetX = null, rafId = 0;
+  function apply(x) { indicator.style.transform = "translateX(" + x + "px)"; }
+  function snap(li) {
+    cancelAnimationFrame(rafId); rafId = 0;
+    if (!li) { indicator.style.opacity = "0"; curX = targetX = null; return; }
+    indicator.style.opacity = "1";
+    curX = targetX = xFor(li);
+    indicator.classList.add("lq-noanim");
+    apply(curX);
+    void indicator.offsetWidth;
+    indicator.classList.remove("lq-noanim");
+  }
+  function glide(li) {
     if (!li) { indicator.style.opacity = "0"; return; }
     indicator.style.opacity = "1";
-    if (!animate) indicator.classList.add("lq-noanim");
-    indicator.style.transform = "translateX(" + (li.offsetLeft + li.offsetWidth / 2 - 35) + "px)";
-    if (!animate) { void indicator.offsetWidth; indicator.classList.remove("lq-noanim"); }
+    targetX = xFor(li);
+    if (curX === null || reduced) { snap(li); return; }
+    if (rafId) return;
+    const step = () => {
+      curX += (targetX - curX) * 0.3;
+      if (Math.abs(targetX - curX) < 0.5) { curX = targetX; apply(curX); rafId = 0; return; }
+      apply(curX);
+      rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+  }
+  function place(li, animate) {
+    if (hoverable && animate) glide(li);
+    else snap(li);
   }
   place(activeLi, false);
   window.addEventListener("resize", () => place(zone.querySelector("li.active"), false));
   /* Late-arriving resources (the brand logo image, the Orbitron /
      IBM Plex webfonts) can still nudge the zone's geometry after the
-     first placement. Correct with a short glide once they settle —
-     the indicator then never sits wrong while the page finishes
-     loading, and the correction reads as motion, not a jump. The
-     logo's box is aspect-ratio-reserved in CSS, so in practice the
-     font swap is the only mover. Skipped mid-hover: never yank the
-     circle away from a preview. */
+     first placement. Correct once they settle — a short glide on
+     desktop, a snap on the dock — so the indicator never sits wrong
+     while the page finishes loading. The logo's box is
+     aspect-ratio-reserved in CSS, so in practice the font swap is
+     the only mover. Skipped mid-hover: never yank the circle away
+     from a preview. */
   const correct = () => {
     if (!zone.classList.contains("lq-previewing")) place(zone.querySelector("li.active"), true);
   };

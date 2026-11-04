@@ -1086,3 +1086,15 @@ li.active .lq-badge { border-color: var(--neon); }
 .lq-logout { display: grid; place-items: center; padding: 6px; }
 .lq-logout svg { width: 21px; height: 21px; display: block; }
 #nav-logout svg { width: 18px; height: 18px; display: block; }
+
+/* Animated logout curtain (owner design 2026-11-04): transparent
+   full-page layer above everything; the glowing liquid streams are
+   DOM blobs inside three goo-filtered layers built by nav.js. */
+.efa-lo {
+  position: fixed; inset: 0; z-index: 1200;
+  opacity: 0; transition: opacity .28s ease;
+  background: transparent;
+}
+.efa-lo.on { opacity: 1; }
+.efa-lo-goo { position: absolute; inset: 0; }
+.efa-lo-blob { position: absolute; left: 0; top: 0; border-radius: 50%; will-change: transform; }

@@ -239,6 +239,178 @@ function wireBulb(btn) {
 }
 function wireBulbs() { document.querySelectorAll(".efa-bulb").forEach(wireBulb); }
 
+
+/* ================================================================
+   Animated logout — glowing liquid transition (owner design,
+   2026-11-04): three luminous streams in the site's own colors
+   (white / neon / black) pour from the top of the page — over the
+   page itself, no backdrop — braid around each other at the
+   center, tighten into a knot, and only then does the login page
+   load. Palettes are tuned per theme so the colors stay luminous
+   and harmonious in BOTH modes: night uses the raw neon with a
+   light halo on the black stream; day uses the site's day-neon
+   (#4c8a06) and turns the white stream's glow into a soft shadow
+   so it still reads on the light page.
+   The real logout fires IMMEDIATELY on click (Auth.beginLogout:
+   server revoke + storage clear) — the animation is a curtain
+   and can never trap the user: a tap skips it, a 2.9s hard cap
+   forces navigation, reduced-motion and any engine error fall
+   back to the instant logout. Session expiry (forceReauth in
+   api.js) never plays it.
+   ================================================================ */
+let efaLoRunning = false;
+function efaAnimatedLogout() {
+  if (efaLoRunning) return;
+  const instant = () => {
+    try { Auth.logout(); } catch (e) { location.href = "/auth.html"; }
+  };
+  if (typeof Auth === "undefined" || typeof Auth.beginLogout !== "function") { instant(); return; }
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { instant(); return; }
+  efaLoRunning = true;
+  Auth.beginLogout();
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    location.href = "/auth.html";
+  };
+  const hardCap = setTimeout(finish, 2900);
+  try {
+    efaPlayLogoutTransition(() => { clearTimeout(hardCap); finish(); });
+  } catch (e) {
+    clearTimeout(hardCap);
+    finish();
+  }
+}
+
+function efaPlayLogoutTransition(onDone) {
+  const day = (typeof efaTheme === "function" ? efaTheme() : "night") === "day";
+  const PAL = day
+    ? { w: ["#ffffff", "#5a6e50", 0.8, 0.5], n: ["#4c8a06", "#4c8a06", 1, 0.85], b: ["#101410", "#101410", 0.5, 0.35] }
+    : { w: ["#ffffff", "#ffffff", 1, 0.9], n: ["#a3ff12", "#a3ff12", 1, 0.9], b: ["#101410", "#cfe8d8", 1, 0.85] };
+  const NS = "http://www.w3.org/2000/svg";
+  const ov = document.createElement("div");
+  ov.className = "efa-lo";
+  ov.setAttribute("aria-hidden", "true");
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("width", "0");
+  svg.setAttribute("height", "0");
+  svg.style.position = "absolute";
+  const defs = document.createElementNS(NS, "defs");
+  [["w", PAL.w], ["n", PAL.n], ["b", PAL.b]].forEach(([k, pal]) => {
+    const f = document.createElementNS(NS, "filter");
+    f.setAttribute("id", "efa-goo-" + k);
+    f.setAttribute("x", "-40%"); f.setAttribute("y", "-40%");
+    f.setAttribute("width", "180%"); f.setAttribute("height", "180%");
+    f.innerHTML =
+      '<feGaussianBlur in="SourceGraphic" stdDeviation="10" result="b"/>' +
+      '<feColorMatrix in="b" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -11" result="g"/>' +
+      '<feDropShadow in="g" dx="0" dy="0" stdDeviation="5" flood-color="' + pal[1] + '" flood-opacity="' + pal[2] + '" result="s1"/>' +
+      '<feDropShadow in="s1" dx="0" dy="0" stdDeviation="13" flood-color="' + pal[1] + '" flood-opacity="' + pal[3] + '"/>';
+    defs.appendChild(f);
+  });
+  svg.appendChild(defs);
+  ov.appendChild(svg);
+  const layers = {};
+  [["w", "w"], ["n", "n"], ["b", "b"]].forEach(([k]) => {
+    const d = document.createElement("div");
+    d.className = "efa-lo-goo";
+    d.style.filter = "url(#efa-goo-" + k + ")";
+    ov.appendChild(d);
+    layers[k] = d;
+  });
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add("on"));
+
+  const STREAMS = [
+    { key: "w", color: PAL.w[0], fromX: 0.22, head: 54, delay: 0,   phase: 0.0, orbitA: -Math.PI / 2 },
+    { key: "n", color: PAL.n[0], fromX: 0.50, head: 64, delay: 110, phase: 2.1, orbitA: Math.PI / 6 },
+    { key: "b", color: PAL.b[0], fromX: 0.78, head: 54, delay: 220, phase: 4.2, orbitA: Math.PI * 5 / 6 }
+  ];
+  const TRAILS = 10, DESCENT = 880, FADE_START = 1900, TOTAL = 2200;
+  const W = window.innerWidth, H = window.innerHeight;
+  const CX = W * 0.5, CY = H * 0.46;
+  const clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  const easeInQuad = (q) => q * q;
+  const easeOutCubic = (q) => 1 - Math.pow(1 - q, 3);
+  const easeInOut = (q) => q < .5 ? 2 * q * q : 1 - Math.pow(-2 * q + 2, 2) / 2;
+
+  const units = [];
+  STREAMS.forEach((st) => {
+    const mk = (size) => {
+      const d = document.createElement("div");
+      d.className = "efa-lo-blob";
+      d.style.width = size + "px";
+      d.style.height = size + "px";
+      d.style.background = st.color;
+      d._r = size / 2;
+      layers[st.key].appendChild(d);
+      return d;
+    };
+    units.push({ el: mk(st.head), stream: st, kind: "head", born: st.delay });
+    for (let i = 1; i <= TRAILS; i++) {
+      units.push({ el: mk(st.head * (0.88 - i * 0.047)), stream: st, kind: "trail", lagMs: i * 42, born: st.delay });
+    }
+  });
+  const place = (elm, x, y, s) => {
+    elm.style.transform = "translate(" + (x - elm._r) + "px," + (y - elm._r) + "px) scale(" + s + ")";
+  };
+  function orbitAngle(ot) {
+    if (ot <= 0) return 0;
+    if (ot < 700) return ot * 0.0035 + 0.5 * (0.007 / 700) * ot * ot;
+    return 4.9 + (ot - 700) * 0.0105;
+  }
+  function streamPath(st, t) {
+    const tA = st.delay + DESCENT;
+    if (t <= tA) {
+      const q = clamp01((t - st.delay) / DESCENT);
+      return {
+        x: st.fromX * W + (CX - st.fromX * W) * easeInOut(q) + Math.sin(q * 5.2 + st.phase) * 20 * (1 - q),
+        y: -70 + (CY + 70) * easeInQuad(q),
+        p: q
+      };
+    }
+    const ot = t - tA;
+    let r = 64 * easeOutCubic(clamp01(ot / 240));
+    if (ot > 640) r = 64 - 42 * easeInOut(clamp01((ot - 640) / 300));
+    const ang = st.orbitA + orbitAngle(ot);
+    return { x: CX + r * Math.cos(ang), y: CY + r * Math.sin(ang) * 0.92, p: 1 };
+  }
+  function render(t) {
+    STREAMS.forEach((st) => { st._head = streamPath(st, t); });
+    const shrink = t > 1780 ? Math.max(0.55, 1 - (t - 1780) / 300 * 0.45) : 1;
+    units.forEach((u) => {
+      if (u.kind === "head") {
+        if (t < u.born) { place(u.el, u.stream._head.x, -140, 0.01); return; }
+        place(u.el, u.stream._head.x, u.stream._head.y, shrink);
+      } else {
+        const tp = streamPath(u.stream, t - u.lagMs);
+        if (t < u.born || tp.p <= 0) { place(u.el, tp.x, -140, 0.01); return; }
+        place(u.el, tp.x, tp.y, shrink);
+      }
+    });
+    ov.style.opacity = t > FADE_START ? String(Math.max(0, 1 - (t - FADE_START) / 300)) : "";
+  }
+
+  let raf = 0, startAt = 0, stopped = false;
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    cancelAnimationFrame(raf);
+    ov.remove();
+    onDone();
+  };
+  ov.addEventListener("pointerdown", stop);
+  const frame = (now) => {
+    const t = now - startAt;
+    render(t);
+    if (t >= TOTAL) { stop(); return; }
+    raf = requestAnimationFrame(frame);
+  };
+  startAt = performance.now();
+  raf = requestAnimationFrame(frame);
+}
+
 function renderLiquidNav() {
   const activeKey = lqActiveKey();
   const brand = `<a class="lq-brand" href="/"><span class="brand-badge"><img class="brand-logo" src="/shared/logo-symbol.webp" alt="" /></span>eFootball Arena</a>`;
@@ -288,7 +460,7 @@ function renderLiquidNav() {
   wireBulbs();
 
   document.querySelectorAll(".lq-logout").forEach((b) =>
-    b.addEventListener("click", () => Auth.logout()));
+    b.addEventListener("click", () => efaAnimatedLogout()));
 
   const selects = Array.from(document.querySelectorAll(".nav-language"));
   selects.forEach((sel) => {
@@ -375,7 +547,7 @@ function renderClassicNav() {
     if (nav.classList.contains("menu-open") && !nav.contains(e.target)) closeMenu();
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
-  nav.querySelector("#nav-logout")?.addEventListener("click", () => Auth.logout());
+  nav.querySelector("#nav-logout")?.addEventListener("click", () => efaAnimatedLogout());
   nav.querySelector("#nav-user")?.addEventListener("click", () => location.href = "/app/dashboard.html");
   const language = nav.querySelector("#nav-language");
   language.value = i18n.current();

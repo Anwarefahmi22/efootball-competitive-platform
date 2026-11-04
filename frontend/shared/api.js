@@ -25,9 +25,11 @@ const Auth = {
   loggedIn() {
     return !!localStorage.getItem(TOKEN_KEY);
   },
-  logout() {
-    // AUD-10: revoke the session server-side (best effort — local
-    // cleanup proceeds whatever the network does).
+  // AUD-10: revoke the session server-side (best effort — local
+  // cleanup proceeds whatever the network does) and clear storage,
+  // WITHOUT navigating. The animated logout (nav.js) calls this the
+  // instant the user clicks, then plays its curtain and navigates.
+  beginLogout() {
     const refresh = localStorage.getItem(REFRESH_KEY);
     if (refresh) {
       fetch(API_BASE + "/auth/logout", {
@@ -40,6 +42,9 @@ const Auth = {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
+  },
+  logout() {
+    this.beginLogout();
     location.href = "/auth.html";
   },
 };

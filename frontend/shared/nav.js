@@ -254,7 +254,7 @@ function renderLiquidNav() {
     <div class="lq-utils">
       ${bulbToggleHtml(false)}
       ${lqLanguageHtml()}
-      <button class="lq-logout" type="button" aria-label="خروج" title="خروج"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4"/><path d="m8 17-5-5 5-5"/><path d="M3 12h12"/></svg></button>
+      <button class="lq-logout" type="button">خروج</button>
     </div>`;
 
   const topbar = document.createElement("header");

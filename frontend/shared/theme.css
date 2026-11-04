@@ -1033,22 +1033,32 @@ li.active .lq-badge { border-color: var(--neon); }
   .efa-bulb-glass, .efa-bulb-filament, .efa-bulb-glow { transition: none; }
 }
 
-/* Logo badge + icon logout (owner request 2026-11-04): the logo
-   symbol is dark-surface artwork that washes out on the white day
-   bar, so it now sits on a dark stadium disc with a neon rim in
-   BOTH themes — readable at any size, on any bar. The liquid
-   logout is an icon (door + exit arrow) instead of the word. */
-.brand-badge {
+/* Logo badge + icon logout (owner requests 2026-11-04, scoped by
+   him to the PHONE bars only): on phones the logo symbol — dark-
+   surface artwork that washes out on the white day bar — sits on
+   a dark stadium disc with a neon rim, and the liquid topbar
+   logout is an icon (door + exit arrow) instead of the word.
+   Desktop keeps the plain logo and the خروج word. */
+/* Owner clarification: the badge applies to the PHONE bars only;
+   on desktop the span is display:contents and the plain logo +
+   original sizing rules apply untouched. */
+.brand-badge { display: contents; }
+.lq-topbar .brand-badge {
   display: grid; place-items: center; flex: none;
-  width: 44px; height: 44px; border-radius: 50%;
+  width: 37px; height: 37px; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #173b26, #081309);
   border: 1.5px solid rgba(163, 255, 18, .55);
 }
-.brand-badge .brand-logo { height: 33px; }
-.lq-topbar .brand-badge { width: 37px; height: 37px; }
 .lq-topbar .brand-badge .brand-logo { height: 27px; }
-.navbar .brand-badge { width: 47px; height: 47px; }
-.navbar .brand-badge .brand-logo { height: 36px; }
+@media (max-width: 899.5px) {
+  .navbar .brand-badge {
+    display: grid; place-items: center; flex: none;
+    width: 42px; height: 42px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #173b26, #081309);
+    border: 1.5px solid rgba(163, 255, 18, .55);
+  }
+  .navbar .brand-badge .brand-logo { height: 31px; }
+}
 @media (max-width: 560px) {
   .lq-topbar .brand-badge { width: 34px; height: 34px; }
   .lq-topbar .brand-badge .brand-logo { height: 25px; }

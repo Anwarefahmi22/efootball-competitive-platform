@@ -915,3 +915,120 @@ li.active .lq-badge { border-color: var(--neon); }
 @media (prefers-reduced-motion: reduce) {
   .lq-icon, .lq-text, .lq-indicator { transition: none !important; }
 }
+
+/* ================================================================
+   Day theme + bulb toggle (owner-approved 2026-11-04).
+   The bulb is a bar-sized adaptation of the pull-cord lamp video:
+   it lives in the nav utils, the cord stretches from the bulb's
+   base while pulled, and on release the CORD ONLY pendulum-swings
+   (damped, driven from nav.js) while the bulb body stays fixed.
+   Lit bulb = day, unlit = night. Night is the default (:root);
+   [data-theme="day"] on <html> flips the variables + the rules
+   below. Artwork surfaces (logo, trophy, avatar photo tiles, the
+   Arena Star card, the auth card) stay dark by design.
+   ================================================================ */
+[data-theme="day"] {
+  --bg: #edf3e8;
+  --bg-alt: #e0ebd6;
+  --surface: #ffffff;
+  --surface-2: #eff5e6;
+  --line: #bfceac;
+  --text: #14260f;
+  --muted: #5a6e50;
+  --neon-dim: #4c8a06;
+  --danger: #d92638;
+  --warn: #9a6a00;
+  --lq-bar: #0a1409;
+  color-scheme: light;
+}
+[data-theme="day"] body {
+  background: radial-gradient(1200px 600px at 50% -10%, #14362400, transparent),
+              linear-gradient(180deg, var(--bg) 0%, #dfe9d1 100%);
+}
+/* Neon as TEXT is unreadable on light surfaces — it goes deep green.
+   Neon as FILL (buttons, indicator, chips) keeps the brand color. */
+[data-theme="day"] a,
+[data-theme="day"] .lq-brand,
+[data-theme="day"] .lq-top-links a.active,
+[data-theme="day"] .navbar .brand,
+[data-theme="day"] .navbar a.nav-link:hover,
+[data-theme="day"] .navbar a.nav-link.active,
+[data-theme="day"] .navbar .user-chip:hover,
+[data-theme="day"] .profile-badge,
+[data-theme="day"] .match-player-avatar,
+[data-theme="day"] .title-chip,
+[data-theme="day"] .empty-arena-mark,
+[data-theme="day"] .dashboard-hero__orb,
+[data-theme="day"] .post-context-badge,
+[data-theme="day"] .discover-avatar,
+[data-theme="day"] .post-action:hover,
+[data-theme="day"] .post-action.is-liked,
+[data-theme="day"] .journey-step[data-state="current"] .journey-node { color: #4c8a06; }
+[data-theme="day"] .navbar { background: rgba(255, 255, 255, .86); }
+[data-theme="day"] .navbar.menu-open { background: #f2f7ec; }
+[data-theme="day"] .lq-topbar { background: rgba(255, 255, 255, .92); }
+[data-theme="day"] .lq-header { background: #ffffff; }
+[data-theme="day"] .lq-navigation { background: #ffffff; }
+[data-theme="day"] .lq-text { color: #14260f; }
+[data-theme="day"] .lq-logout { color: #d6336c; }
+[data-theme="day"] .lq-badge { border-color: #ffffff; }
+[data-theme="day"] .lq-navigation .lq-indicator { border-color: #dfe9d1; }
+[data-theme="day"] .lq-navigation .lq-indicator::before { box-shadow: 1px -10px 0 0 #dfe9d1; }
+[data-theme="day"] .lq-navigation .lq-indicator::after { box-shadow: -1px -10px 0 0 #dfe9d1; }
+/* Dark-translucent inner panels become a light green wash. */
+[data-theme="day"] .profile-panel,
+[data-theme="day"] .profile-metric-strip,
+[data-theme="day"] .profile-complete,
+[data-theme="day"] .profile-rating,
+[data-theme="day"] .comment,
+[data-theme="day"] .draw-chip,
+[data-theme="day"] .bracket-match,
+[data-theme="day"] .identity-facts,
+[data-theme="day"] .journey-step,
+[data-theme="day"] .format-card,
+[data-theme="day"] .tournament-stats span,
+[data-theme="day"] .record-blocks > div { background: rgba(20, 40, 16, .05); }
+[data-theme="day"] .profile-shell { background: var(--surface); }
+[data-theme="day"] .profile-cover {
+  background: radial-gradient(circle at 10% 0%, rgba(163,255,18,.22), transparent 35%),
+              linear-gradient(135deg, #d9ecc4, #eef5e2 72%);
+}
+[data-theme="day"] .next-action { background: linear-gradient(120deg, rgba(163,255,18,.16), var(--surface-2)); }
+[data-theme="day"] .season-card { background: linear-gradient(135deg, rgba(163,255,18,.16), var(--surface)); }
+[data-theme="day"] .my-rank { background: linear-gradient(120deg, rgba(163,255,18,.14), var(--surface-2)); }
+[data-theme="day"] input.field,
+[data-theme="day"] select.field,
+[data-theme="day"] textarea.field { background: #ffffff; }
+[data-theme="day"] .progress { background: #dde8d2; }
+[data-theme="day"] .toast { background: var(--surface); }
+[data-theme="day"] .fill-ring__track { stroke: #bfceac; }
+[data-theme="day"] .discover-row { border-bottom-color: rgba(120, 150, 105, .45); }
+
+/* ---------- The bulb toggle ---------- */
+.efa-bulb {
+  position: relative; width: 44px; height: 64px; flex: none;
+  background: none; border: 0; cursor: pointer; padding: 0;
+  touch-action: none; align-self: center;
+}
+.efa-bulb svg { width: 44px; height: 64px; display: block; overflow: visible; }
+.efa-bulb--mini { width: 36px; height: 50px; }
+.efa-bulb--mini svg { width: 36px; height: 50px; }
+.efa-bulb-glass { fill: rgba(255,255,255,.06); stroke: #cfe6d4; stroke-width: 1.6; transition: fill .35s ease, stroke .35s ease; }
+.efa-bulb-filament { stroke: #5f7a66; stroke-width: 1.6; fill: none; stroke-linecap: round; transition: stroke .35s ease; }
+.efa-bulb-base { fill: #8d9a90; }
+.efa-bulb-glow { opacity: 0; transition: opacity .45s ease; }
+.efa-bulb-cord { stroke: #9db3a2; stroke-width: 1.6; stroke-linecap: round; transform: scaleY(var(--stretch, 1)); transform-origin: 22px 34px; }
+.efa-bulb-bead { fill: #cfe6d4; }
+.efa-bulb-bead-g { transform: translateY(var(--pull, 0px)); }
+.efa-cord-swing { transform: rotate(var(--swing, 0deg)); transform-origin: 22px 34px; }
+.efa-bulb.spring .efa-bulb-cord,
+.efa-bulb.spring .efa-bulb-bead-g { transition: transform .38s cubic-bezier(.22, 1, .36, 1); }
+[data-theme="day"] .efa-bulb-glass { fill: #ffeeb0; stroke: #d9a514; }
+[data-theme="day"] .efa-bulb-filament { stroke: #f59e0b; }
+[data-theme="day"] .efa-bulb-glow { opacity: .85; }
+[data-theme="day"] .efa-bulb-cord { stroke: #6d7f63; }
+[data-theme="day"] .efa-bulb-bead { fill: #57684e; }
+.lq-topbar .efa-bulb { margin-inline-end: -4px; }
+@media (prefers-reduced-motion: reduce) {
+  .efa-bulb-glass, .efa-bulb-filament, .efa-bulb-glow { transition: none; }
+}

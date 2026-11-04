@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#0b1e13" />
   <title>أرينا ستار — eFootball Arena</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/shared/theme.css" />
+  <script>try{if(localStorage.getItem("efa_theme")==="day")document.documentElement.dataset.theme="day"}catch(e){}</script>
+    <link rel="stylesheet" href="/shared/theme.css" />
   <link rel="icon" type="image/png" sizes="32x32" href="/shared/favicon-32.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="/shared/favicon-192.png" />
   <link rel="apple-touch-icon" href="/shared/favicon-192.png" />
@@ -150,6 +151,10 @@
       font: inherit; font-weight: 700; cursor: pointer;
     }
     .st-modal-item .cnt { color: var(--muted); font-size: .78rem; font-weight: 700; }
+    /* Day theme: the share sheet is chrome (the deck card itself stays
+       dark by design in both themes). */
+    [data-theme="day"] .st-modal-box { background: #ffffff; }
+    [data-theme="day"] .st-modal-item { background: var(--surface-2); }
     @media (max-height: 760px) {
       .st-deck { min-height: 520px; }
       .st-squad { min-height: 120px; }

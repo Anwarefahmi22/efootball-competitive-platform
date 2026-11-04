@@ -135,6 +135,110 @@ function lqWireIndicator(zone, hoverable) {
   }
 }
 
+
+/* ================================================================
+   Day/Night theme — bulb toggle (owner-approved 2026-11-04).
+   The stored choice lives in localStorage "efa_theme" ("day" |
+   "night"); pages also carry a tiny <head> snippet that applies
+   it before first paint. The bulb: pull the cord (or click) to
+   flip; on release the cord alone pendulum-swings (damped) while
+   the bulb body stays fixed — exactly the owner's spec.
+   ================================================================ */
+const EFA_THEME_KEY = "efa_theme";
+function efaTheme() {
+  try { return localStorage.getItem(EFA_THEME_KEY) === "day" ? "day" : "night"; }
+  catch (e) { return "night"; }
+}
+function efaApplyTheme() { document.documentElement.dataset.theme = efaTheme(); }
+function efaSetTheme(t) {
+  try { localStorage.setItem(EFA_THEME_KEY, t); } catch (e) {}
+  efaApplyTheme();
+}
+efaApplyTheme();
+
+let efaBulbSeq = 0;
+function bulbToggleHtml(mini) {
+  efaBulbSeq += 1;
+  const gid = "efaBulbGlow" + efaBulbSeq;
+  return `<button class="efa-bulb${mini ? " efa-bulb--mini" : ""}" type="button" aria-label="الوضع النهاري / الليلي" title="الوضع النهاري / الليلي">
+    <svg viewBox="0 0 44 64" aria-hidden="true">
+      <defs><radialGradient id="${gid}"><stop offset="0%" stop-color="#ffd75e" stop-opacity=".75"/><stop offset="100%" stop-color="#ffd75e" stop-opacity="0"/></radialGradient></defs>
+      <circle class="efa-bulb-glow" cx="22" cy="16" r="21" fill="url(#${gid})"/>
+      <g>
+        <path class="efa-bulb-glass" d="M22 2.5a10.5 10.5 0 1 1-7.4 17.9c1 .8 1.9 1.9 1.9 3.1h11c0-1.2.9-2.3 1.9-3.1A10.5 10.5 0 0 1 22 2.5Z"/>
+        <path class="efa-bulb-filament" d="M17.5 23.5v-5l2.2 3 2.3-4 2.3 4 2.2-3v5"/>
+        <rect class="efa-bulb-base" x="16.5" y="25" width="11" height="2.6" rx="1.1"/>
+        <rect class="efa-bulb-base" x="16.5" y="28.4" width="11" height="2.6" rx="1.1"/>
+        <rect class="efa-bulb-base" x="19" y="31.8" width="6" height="2.4" rx="1.1"/>
+      </g>
+      <g class="efa-cord-swing">
+        <line class="efa-bulb-cord" x1="22" y1="34" x2="22" y2="54"/>
+        <g class="efa-bulb-bead-g"><circle class="efa-bulb-bead" cx="22" cy="57.5" r="3"/></g>
+      </g>
+    </svg>
+  </button>`;
+}
+
+function wireBulb(btn) {
+  let startY = null, pulled = 0, dragged = false, swingRaf = null;
+  function startSwing(amplitude) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (swingRaf) cancelAnimationFrame(swingRaf);
+    const t0 = performance.now();
+    const omega = (2 * Math.PI) / 450;
+    const lambda = 0.0021;
+    function frame(now) {
+      const t = now - t0;
+      const angle = amplitude * Math.exp(-lambda * t) * Math.sin(omega * t);
+      btn.style.setProperty("--swing", angle.toFixed(2) + "deg");
+      if (Math.abs(angle) > 0.04 || t < 250) swingRaf = requestAnimationFrame(frame);
+      else { btn.style.setProperty("--swing", "0deg"); swingRaf = null; }
+    }
+    swingRaf = requestAnimationFrame(frame);
+  }
+  function setPull(px) {
+    btn.style.setProperty("--pull", px + "px");
+    btn.style.setProperty("--stretch", 1 + px / 20);
+  }
+  function release() {
+    btn.classList.add("spring");
+    setPull(0);
+    setTimeout(() => btn.classList.remove("spring"), 400);
+  }
+  function flip() { efaSetTheme(efaTheme() === "day" ? "night" : "day"); }
+  btn.addEventListener("pointerdown", (e) => {
+    if (swingRaf) { cancelAnimationFrame(swingRaf); swingRaf = null; }
+    btn.style.setProperty("--swing", "0deg");
+    startY = e.clientY; pulled = 0; dragged = false;
+    btn.classList.remove("spring");
+    try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  btn.addEventListener("pointermove", (e) => {
+    if (startY === null) return;
+    pulled = Math.max(0, Math.min(14, e.clientY - startY));
+    if (pulled > 3) dragged = true;
+    setPull(dragged ? pulled : 0);
+  });
+  let suppressClick = false;
+  btn.addEventListener("pointerup", () => {
+    suppressClick = true;
+    if (startY === null) return;
+    const shouldFlip = pulled >= 7 || !dragged;
+    const amp = 13 + Math.min(11, pulled * 0.8);
+    startY = null;
+    release();
+    startSwing(amp);
+    if (shouldFlip) setTimeout(flip, 90);
+  });
+  btn.addEventListener("pointercancel", () => { startY = null; release(); });
+  btn.addEventListener("click", () => {
+    if (suppressClick) { suppressClick = false; return; }
+    startSwing(14);
+    flip();
+  });
+}
+function wireBulbs() { document.querySelectorAll(".efa-bulb").forEach(wireBulb); }
+
 function renderLiquidNav() {
   const activeKey = lqActiveKey();
   const brand = `<a class="lq-brand" href="/"><img class="brand-logo" src="/shared/logo-symbol.webp" alt="" />eFootball Arena</a>`;
@@ -148,6 +252,7 @@ function renderLiquidNav() {
       <div class="lq-indicator"></div>
     </div>
     <div class="lq-utils">
+      ${bulbToggleHtml(false)}
       ${lqLanguageHtml()}
       <button class="lq-logout" type="button">خروج</button>
     </div>`;
@@ -161,6 +266,7 @@ function renderLiquidNav() {
       <a href="/app/ratings.html" class="${activeKey === "ratings" ? "active" : ""}">التصنيف</a>
     </nav>
     <div class="lq-sp"></div>
+    ${bulbToggleHtml(true)}
     ${lqLanguageHtml()}
     <button class="lq-logout" type="button">خروج</button>`;
 
@@ -179,6 +285,7 @@ function renderLiquidNav() {
 
   lqWireIndicator(header.querySelector(".lq-zone"), true);
   lqWireIndicator(dock.querySelector(".lq-navigation"), false);
+  wireBulbs();
 
   document.querySelectorAll(".lq-logout").forEach((b) =>
     b.addEventListener("click", () => Auth.logout()));
@@ -230,6 +337,7 @@ function renderClassicNav() {
     ` : `
       <a class="btn btn-primary" href="/auth.html" style="padding:8px 18px">دخول / تسجيل</a>
     `}
+    ${bulbToggleHtml(false)}
     <label class="language-picker" title="اللغة">
       <span aria-hidden="true">文</span>
       <span class="sr-only">اللغة</span>
@@ -242,6 +350,7 @@ function renderClassicNav() {
     </div>
   `;
   document.body.prepend(nav);
+  wireBulbs();
   const menu = nav.querySelector("#nav-menu");
   const toggle = nav.querySelector("#nav-toggle");
   const closeMenu = () => {

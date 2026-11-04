@@ -23,6 +23,7 @@
     "التصنيف": { fr: "Classement", en: "Leaderboard" },
     "المجتمع": { fr: "Communauté", en: "Community" },
     "حسابي": { fr: "Mon compte", en: "My account" },
+    "الدعوات": { fr: "Invitations", en: "Invites" },
     "خروج": { fr: "Déconnexion", en: "Log out" },
     "دخول / تسجيل": { fr: "Connexion / Inscription", en: "Log in / Sign up" },
     "فتح قائمة التنقل": { fr: "Ouvrir le menu", en: "Open navigation menu" },
